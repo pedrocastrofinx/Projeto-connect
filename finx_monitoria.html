@@ -147,6 +147,7 @@ input[type=checkbox],input[type=radio]{width:18px;height:18px;accent-color:var(-
 .linha-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-items:end}
 .dropzone{border:2px dashed var(--azul-med);border-radius:16px;padding:28px 18px;text-align:center;background:var(--azul-cl);cursor:pointer;transition:background .15s,border-color .15s;color:var(--azul-esc)}
 .dropzone:hover,.dropzone.sobre{border-color:var(--azul);background:#D8E6FF}
+.pl-ajustes summary{cursor:pointer;font-weight:700;color:var(--azul-esc)}
 .input-com-botao{display:flex;gap:8px;align-items:stretch}
 .input-com-botao .btn{white-space:nowrap}
 .link-mini{margin-left:4px;text-decoration:none;font-weight:800;color:var(--azul);border:1px solid var(--azul-med);border-radius:8px;padding:0 6px;display:inline-block}
@@ -563,6 +564,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
             <label class="interruptor" for="c-som"><input type="checkbox" id="c-som"> Sons ativados</label>
             <label class="interruptor" for="c-conf"><input type="checkbox" id="c-conf"> Confirmar antes de excluir registros</label>
           </div>
+          <div class="campo" style="margin-top:12px"><label for="c-site">Endereço do site de monitoria (usado pelo botão ⚡ Conectar ao site)</label><input type="text" id="c-site" maxlength="300" spellcheck="false" autocomplete="off"></div>
           <div class="campo" style="margin-top:12px"><label for="c-api">Endereço da API do site de monitoria (ex.: /api/monitoria)</label><input type="text" id="c-api" maxlength="200" spellcheck="false" autocomplete="off"></div>
           <div class="campo" style="margin-top:12px"><label for="c-url">Endereço do lead no Dryve (use {lead} no lugar do código)</label><input type="text" id="c-url" maxlength="300" spellcheck="false" autocomplete="off"></div>
         </div>
@@ -580,9 +582,19 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
           <small>Aceita Excel (.xlsx) e CSV, vários de uma vez. O painel reconhece sozinho o que é cada arquivo.</small>
         </div>
         <div class="acoes">
-          <a class="btn btn-sec" href="https://projectlocus.pages.dev/monitoria" target="_blank" rel="noopener noreferrer" title="Abre o site de monitoria em outra aba para você exportar os arquivos">↗ Abrir o site de monitoria</a>
-          <button type="button" class="btn btn-primario" id="dz-dl" title="Abre a janela de arquivos já na pasta Downloads">📂 Pegar dos Downloads</button>
+          <button type="button" class="btn btn-primario" id="dz-conectar" title="Abre o site de monitoria ligado a este painel">⚡ Conectar ao site</button>
+          <a class="btn btn-sec" id="dz-site" href="https://projectlocus.pages.dev/monitoria" target="_blank" rel="noopener noreferrer" title="Abre o site de monitoria em outra aba (sem ligar ao painel)">↗ Só abrir o site</a>
+          <button type="button" class="btn btn-sec" id="dz-dl" title="Abre a janela de arquivos já na pasta Downloads">📂 Pegar dos Downloads</button>
         </div>
+        <details class="pl-ajustes">
+          <summary>⚡ Atualização com 1 clique (favorito) — como usar</summary>
+          <div style="display:grid;gap:10px;margin-top:10px">
+            <p class="dica"><b>Uma vez só:</b> arraste este botão para a barra de favoritos do navegador (se a barra estiver escondida: Ctrl + Shift + B). <b>Sempre que quiser atualizar:</b> clique em “⚡ Conectar ao site” aqui, e na aba do site que abrir (já logado) clique no favorito. Ele aciona o “Sincronizar” do site e passa a mandar para este painel tudo que o site carregar (auditorias e, ao clicar em “Carregar” no Kanban, os leads).</p>
+            <div class="acoes"><a class="btn btn-primario" id="dz-fav" href="#" draggable="true" title="Arraste para a barra de favoritos">⚡ FINX → painel</a>
+              <button type="button" class="btn btn-linha" id="dz-fav-copiar">Copiar o código do favorito</button></div>
+            <p class="dica">Se não conseguir arrastar: crie um favorito novo, dê o nome “FINX → painel” e cole o código copiado no campo do endereço (URL).</p>
+          </div>
+        </details>
         <ul id="dz-log" class="frases" style="margin:0" aria-live="polite"></ul>
       </div>
 
@@ -701,7 +713,8 @@ var CONFIG_PADRAO = {
   sons: true,
   confirmarExclusao: true,
   urlLead: 'https://app.dryve.pro/dashboard/opportunities?keyword={lead}',
-  apiSite: '/api/monitoria'
+  apiSite: '/api/monitoria',
+  siteUrl: 'https://projectlocus.pages.dev/monitoria'
 };
 
 function $(sel, raiz) { return (raiz || document).querySelector(sel); }
@@ -851,6 +864,7 @@ function inteiroEntre(v, min, max) {
 }
 /* Mescla uma configuração desconhecida com a padrão, descartando valores inválidos */
 function urlLeadValida(u) { return typeof u === 'string' && u.length <= 300 && /^https?:\/\/[^\s]+$/i.test(u.trim()) && u.indexOf('{lead}') !== -1; }
+function siteUrlValida(u) { return typeof u === 'string' && u.length <= 300 && /^https?:\/\/[^\s]+$/i.test(u.trim()); }
 function apiSiteValida(u) { return typeof u === 'string' && u.length <= 200 && /^(\/[A-Za-z0-9_.\-\/]*|https?:\/\/[^\s]+)$/.test(u.trim()); }
 function mesclarConfig(c) {
   var p = copiar(CONFIG_PADRAO);
@@ -873,6 +887,7 @@ function mesclarConfig(c) {
   }
   ['mostrarSegundos', 'sons', 'confirmarExclusao'].forEach(function (k) { if (typeof c[k] === 'boolean') p[k] = c[k]; });
   if (urlLeadValida(c.urlLead)) p.urlLead = c.urlLead.trim();
+  if (siteUrlValida(c.siteUrl)) p.siteUrl = c.siteUrl.trim();
   if (apiSiteValida(c.apiSite)) p.apiSite = c.apiSite.trim().replace(/\/+$/, '');
   if (p.metas.rotina + p.metas.documentacao + p.metas.perdido <= 0) p.metas = copiar(CONFIG_PADRAO.metas);
   return p;
@@ -1080,12 +1095,15 @@ function converterMonitorias(lista, formularios, mesIni) {
   return { itens: itens, invalidos: invalidos, ignorados: ignorados, origemSite: true };
 }
 /* Troca os itens vindos do site pelos novos e remove, da planilha manual, as auditorias que o site já traz (mesmo lead e operador, ±1 dia) */
-function mesclarSite(itens, executar) {
+function mesclarSite(itens, executar, acumular) {
   var chave = function (b) { return b.codigoNorm + '|' + normBusca(b.avaliado); }, porChave = new Map();
   itens.forEach(function (b) { var k = chave(b); if (!porChave.has(k)) porChave.set(k, []); porChave.get(k).push(b.data); });
-  var mantidos = [], substituidos = 0, antigos = 0;
+  var mantidos = [], substituidos = 0, antigos = 0, novosIds = new Set(itens.map(function (b) { return b.id; })), mesIni = primeiroDiaMes(dataISO(new Date()));
   estado.baseLeads.forEach(function (b) {
-    if (b.id.indexOf('site-') === 0) { antigos++; return; }
+    if (b.id.indexOf('site-') === 0) {
+      if (acumular && !novosIds.has(b.id) && b.data >= mesIni) mantidos.push(b); else antigos++;
+      return;
+    }
     var datas = porChave.get(chave(b));
     if (datas && datas.some(function (d) { return Math.abs(diasEntre(b.data, d)) <= 1; })) { substituidos++; return; }
     mantidos.push(b);
@@ -2937,6 +2955,7 @@ function renderConfig() {
   $('#c-alm-ini').value = c.horarios.almocoInicio; $('#c-alm-fim').value = c.horarios.almocoFim;
   $('#c-url').value = c.urlLead;
   $('#c-api').value = c.apiSite;
+  $('#c-site').value = c.siteUrl;
   $('#c-seg').checked = c.mostrarSegundos; $('#c-som').checked = c.sons; $('#c-conf').checked = c.confirmarExclusao;
   $('#c-erro').hidden = true;
   renderBase();
@@ -2952,6 +2971,7 @@ function renderConfig() {
 }
 
 function renderBase() {
+  atualizarLinksSite();
   $('#b-site').hidden = !siteDisponivel();
   var datas = estado.baseLeads.map(function (b) { return b.data; }).sort();
   var distintos = new Set(estado.baseLeads.map(function (b) { return b.codigoNorm; })).size;
@@ -3425,7 +3445,7 @@ async function restaurarBackup(arquivo) {
 }
 
 /* ---------- Kanban e plano: importação e ações ---------- */
-async function importarKanbanLinhas(linhas, nomeArquivo) {
+async function importarKanbanLinhas(linhas, nomeArquivo, semConfirmar) {
   var res;
   try { res = analisarKanban(linhas); } catch (e) { res = { erro: 'O conteúdo não pôde ser interpretado como kanban.' }; }
   if (res.erro) { await avisoModal('Kanban inválido', res.erro); return; }
@@ -3440,7 +3460,7 @@ async function importarKanbanLinhas(linhas, nomeArquivo) {
     else cont[t]++;
   });
   var antes = estado.kanban.leads.length;
-  var ok = await confirmar({ titulo: 'Importar o kanban?', rotuloOk: 'Importar',
+  var ok = semConfirmar || await confirmar({ titulo: 'Importar o kanban?', rotuloOk: 'Importar',
     corpo: [el('p', null, 'Leitura de ', el('b', null, nomeArquivo || 'texto colado'), ':'),
       el('ul', { class: 'frases' },
         el('li', null, el('b', null, String(res.itens.length)), ' leads lidos (' + res.invalidos + ' linhas inválidas ignoradas).'),
@@ -3671,6 +3691,92 @@ async function escolherDosDownloads() {
   }
   $('#file-multi').click();
 }
+/* ---- Favorito "FINX → painel" ----
+   Este código roda DENTRO do site (com o login do usuário): observa as respostas da API do site e as envia para a janela do painel
+   que abriu o site (window.opener). Nada é enviado para outro lugar. */
+function finxColetor() {
+  var W = window, op = W.opener;
+  function aviso(t) {
+    var d = document.getElementById('finx-aviso');
+    if (!d) { d = document.createElement('div'); d.id = 'finx-aviso'; d.style.cssText = 'position:fixed;z-index:2147483647;right:16px;bottom:16px;max-width:320px;background:#0057FF;color:#fff;padding:10px 14px;border-radius:10px;font:600 14px system-ui,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.4)'; document.body.appendChild(d); }
+    d.textContent = t; clearTimeout(d._t); d._t = setTimeout(function () { d.remove(); }, 7000);
+  }
+  function enviar(u, t) {
+    if (!/\/api\//.test(u) || typeof t !== 'string') return;
+    try { if (op && !op.closed) op.postMessage({ finx: 1, url: u, texto: t }, '*'); } catch (e) { /* painel fechado */ }
+  }
+  if (!op) { aviso('FINX: abra o site pelo botão “⚡ Conectar ao site” do painel e clique no favorito de novo.'); return; }
+  if (!W.__finxLigado) {
+    W.__finxLigado = 1;
+    var F = W.fetch;
+    W.fetch = function () {
+      var a = arguments, u = a[0] && a[0].url ? a[0].url : String(a[0]);
+      return F.apply(this, a).then(function (r) { try { r.clone().text().then(function (t) { enviar(u, t); }); } catch (e) { /* ignora */ } return r; });
+    };
+    var O = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function (m, u) {
+      var x = this;
+      x.addEventListener('load', function () {
+        try { enviar(String(u), !x.responseType || x.responseType === 'text' ? x.responseText : x.responseType === 'json' ? JSON.stringify(x.response) : null); } catch (e) { /* ignora */ }
+      });
+      return O.apply(this, arguments);
+    };
+  }
+  var b = [].slice.call(document.querySelectorAll('button')).filter(function (x) { return /sincronizar/i.test(x.textContent); })[0];
+  aviso('FINX ligado: o que este site carregar vai para o painel.' + (b ? ' Sincronizando…' : ' Abra a lista (Relatórios → Auditorias, Kanban → Carregar).'));
+  if (b) b.click();
+}
+function codigoFavorito() { return 'javascript:' + encodeURIComponent('(' + finxColetor.toString() + ')()'); }
+function origemSite() { try { return new URL(estado.config.siteUrl).origin; } catch (e) { return ''; } }
+var siteVisto = new Set(), ultimoToastSite = 0;
+function logSite(txt) {
+  var log = $('#dz-log'); if (!log) return;
+  log.appendChild(el('li', null, '⚡ ' + pad(new Date().getHours()) + ':' + pad(new Date().getMinutes()) + ' — ' + txt));
+  while (log.children.length > 12) log.firstChild.remove();
+}
+/* Recebe, do site, uma resposta da API (JSON) e usa o que reconhece */
+async function receberDoSite(m) {
+  if (!m || m.finx !== 1 || typeof m.texto !== 'string' || typeof m.url !== 'string' || m.url.length > 600 || m.texto.length > 80e6) return;
+  var json; try { json = JSON.parse(m.texto); } catch (e) { return; }
+  var lista = listaDe(json);
+  if (!lista || !lista.length || !lista[0] || typeof lista[0] !== 'object') return;
+  var primeiro = lista[0], agora = Date.now();
+  if ('codigo_lead' in primeiro && 'avaliado_id' in primeiro) {
+    var res = converterMonitorias(lista, lerFormulariosSalvos(), primeiroDiaMes(dataISO(new Date())));
+    var r = mesclarSite(res.itens, true, true);
+    salvarBase(); Armazenamento.gravar(CH.sync, String(agora)); renderTudo();
+    logSite('auditorias do site: ' + r.total + ' do mês (' + r.substituidos + ' já estavam na planilha).');
+    if (agora - ultimoToastSite > 4000) { ultimoToastSite = agora; toast('Site → painel: ' + r.total + ' auditorias do mês.'); }
+    return;
+  }
+  if (/formularios/.test(m.url) && 'nome' in primeiro && 'id' in primeiro) {
+    var mapa = {};
+    lista.forEach(function (x) { if (x && x.id !== undefined && x.nome) mapa[x.id] = limparTexto(x.nome).slice(0, 80); });
+    Armazenamento.gravar(CH.forms, JSON.stringify(mapa));
+    return;
+  }
+  /* Leads do kanban: usa as chaves do JSON como cabeçalho e vê se bate com o formato conhecido */
+  var chaves = Object.keys(primeiro).filter(function (k) { return typeof primeiro[k] !== 'object' || primeiro[k] === null; });
+  var linhas = [chaves].concat(lista.slice(0, 100000).map(function (o) { return chaves.map(function (k) { var v = o && o[k]; return v === null || v === undefined ? '' : String(v); }); }));
+  if (tipoDasLinhas(linhas) === 'kanban') {
+    await importarKanbanLinhas(linhas, 'site (automático)', true);
+    logSite('kanban do site: ' + lista.length + ' leads.');
+    return;
+  }
+  var chave = m.url.split('?')[0];
+  if (!siteVisto.has(chave)) { siteVisto.add(chave); logSite('recebi ' + chave + ' (' + lista.length + ' itens) mas não reconheço o formato. Campos: ' + chaves.slice(0, 14).join(', ')); }
+}
+/* Abre o site ligado ao painel (window.open mantém a ligação para o favorito conseguir responder) */
+function conectarAoSite() {
+  var w = window.open(estado.config.siteUrl, 'finx-site');
+  if (!w) { toast('O navegador bloqueou a janela. Permita pop-ups para este arquivo e tente de novo.', { tipo: 'erro' }); return; }
+  logSite('site aberto. Na aba do site, clique no favorito “⚡ FINX → painel”.');
+}
+function atualizarLinksSite() {
+  var a = $('#dz-site'); if (a) a.href = estado.config.siteUrl;
+  var f = $('#dz-fav'); if (f) f.href = codigoFavorito();
+}
+
 /* Área "arraste os arquivos": reconhece o que é cada arquivo e manda para a importação certa */
 async function processarArquivos(arquivos) {
   var log = $('#dz-log');
@@ -3702,8 +3808,9 @@ function salvarFormConfig() {
   var metas = { rotina: inteiroEntre(g('#c-rotina'), 0, 9999), documentacao: inteiroEntre(g('#c-doc'), 0, 9999), perdido: inteiroEntre(g('#c-perd'), 0, 9999) };
   var mensal = inteiroEntre(g('#c-mensal'), 0, 999);
   var hor = { inicio: g('#c-ini'), fim: g('#c-fim'), almocoInicio: g('#c-alm-ini'), almocoFim: g('#c-alm-fim') };
-  var url = g('#c-url'), api = g('#c-api'), msg = null;
-  if (!apiSiteValida(api)) msg = 'O endereço da API deve começar com / (ex.: /api/monitoria) ou https://.';
+  var url = g('#c-url'), api = g('#c-api'), site = g('#c-site'), msg = null;
+  if (!siteUrlValida(site)) msg = 'O endereço do site deve começar com https:// (ou http://).';
+  else if (!apiSiteValida(api)) msg = 'O endereço da API deve começar com / (ex.: /api/monitoria) ou https://.';
   else if (!urlLeadValida(url)) msg = 'O endereço do Dryve deve começar com https:// e conter {lead} no lugar do código do lead.';
   else if (metas.rotina === null || metas.documentacao === null || metas.perdido === null) msg = 'As metas diárias devem ser números inteiros entre 0 e 9999.';
   else if (metas.rotina + metas.documentacao + metas.perdido <= 0) msg = 'A soma das metas diárias deve ser maior que zero.';
@@ -3713,7 +3820,7 @@ function salvarFormConfig() {
   if (msg) { erro.textContent = msg; erro.hidden = false; tocar('erro'); return; }
   erro.hidden = true;
   estado.config.metas = metas; estado.config.horarios = hor; estado.config.metaMensalPadrao = mensal;
-  estado.config.urlLead = url; estado.config.apiSite = api.replace(/\/+$/, '');
+  estado.config.urlLead = url; estado.config.apiSite = api.replace(/\/+$/, ''); estado.config.siteUrl = site;
   estado.config.mostrarSegundos = $('#c-seg').checked; estado.config.sons = $('#c-som').checked; estado.config.confirmarExclusao = $('#c-conf').checked;
   salvarConfig(); aplicarConfigNaUI(); renderTudo();
   toast('Configurações salvas.');
@@ -3841,6 +3948,12 @@ function ligarEventos() {
   $('#file-json').addEventListener('change', function (e) { var f = e.target.files[0]; e.target.value = ''; restaurarBackup(f); });
   var dz = $('#dz'), multi = $('#file-multi');
   $('#dz-dl').addEventListener('click', escolherDosDownloads);
+  $('#dz-conectar').addEventListener('click', conectarAoSite);
+  $('#dz-fav').addEventListener('click', function (e) { e.preventDefault(); toast('Arraste este botão para a barra de favoritos; não clique nele aqui.', { tipo: 'aviso' }); });
+  $('#dz-fav-copiar').addEventListener('click', function () {
+    copiarTexto(codigoFavorito()).then(function (ok) { toast(ok ? 'Código do favorito copiado.' : 'Não consegui copiar automaticamente.', { tipo: ok ? 'ok' : 'erro' }); });
+  });
+  window.addEventListener('message', function (e) { if (e.origin === origemSite()) receberDoSite(e.data); });
   dz.addEventListener('click', function () { multi.click(); });
   dz.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); multi.click(); } });
   multi.addEventListener('change', function (e) { var fs = Array.from(e.target.files); e.target.value = ''; if (fs.length) processarArquivos(fs); });
