@@ -579,6 +579,10 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
           <b>Arraste aqui</b> os arquivos exportados do site (Relatórios → Auditorias, Kanban) ou <u>clique para escolher</u>.<br>
           <small>Aceita Excel (.xlsx) e CSV, vários de uma vez. O painel reconhece sozinho o que é cada arquivo.</small>
         </div>
+        <div class="acoes">
+          <a class="btn btn-sec" href="https://projectlocus.pages.dev/monitoria" target="_blank" rel="noopener noreferrer" title="Abre o site de monitoria em outra aba para você exportar os arquivos">↗ Abrir o site de monitoria</a>
+          <button type="button" class="btn btn-primario" id="dz-dl" title="Abre a janela de arquivos já na pasta Downloads">📂 Pegar dos Downloads</button>
+        </div>
         <ul id="dz-log" class="frases" style="margin:0" aria-live="polite"></ul>
       </div>
 
@@ -3652,6 +3656,21 @@ function tipoDasLinhas(linhas) {
   if (tem(CAB_AUD_CODIGO) && tem(CAB_AUD_DATA)) return 'auditorias';
   return null;
 }
+/* Abre a janela de arquivos já na pasta Downloads (Chrome/Edge); nos demais navegadores usa o seletor comum */
+async function escolherDosDownloads() {
+  if (window.showOpenFilePicker) {
+    try {
+      var hs = await window.showOpenFilePicker({
+        multiple: true, startIn: 'downloads', id: 'finx-downloads',
+        types: [{ description: 'Planilhas (Excel/CSV)', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'], 'text/csv': ['.csv'], 'text/plain': ['.txt', '.tsv'] } }]
+      });
+      var fs = await Promise.all(hs.map(function (h) { return h.getFile(); }));
+      if (fs.length) processarArquivos(fs);
+      return;
+    } catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  $('#file-multi').click();
+}
 /* Área "arraste os arquivos": reconhece o que é cada arquivo e manda para a importação certa */
 async function processarArquivos(arquivos) {
   var log = $('#dz-log');
@@ -3821,6 +3840,7 @@ function ligarEventos() {
   $('#d-rest').addEventListener('click', function () { $('#file-json').click(); });
   $('#file-json').addEventListener('change', function (e) { var f = e.target.files[0]; e.target.value = ''; restaurarBackup(f); });
   var dz = $('#dz'), multi = $('#file-multi');
+  $('#dz-dl').addEventListener('click', escolherDosDownloads);
   dz.addEventListener('click', function () { multi.click(); });
   dz.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); multi.click(); } });
   multi.addEventListener('change', function (e) { var fs = Array.from(e.target.files); e.target.value = ''; if (fs.length) processarArquivos(fs); });
