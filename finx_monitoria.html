@@ -145,6 +145,10 @@ input[type=text],input[type=search],input[type=number],input[type=date],input[ty
 input:focus,select:focus,textarea:focus{border-color:var(--azul)}
 input[type=checkbox],input[type=radio]{width:18px;height:18px;accent-color:var(--azul)}
 .linha-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-items:end}
+.input-com-botao{display:flex;gap:8px;align-items:stretch}
+.input-com-botao .btn{white-space:nowrap}
+.link-mini{margin-left:4px;text-decoration:none;font-weight:800;color:var(--azul);border:1px solid var(--azul-med);border-radius:8px;padding:0 6px;display:inline-block}
+.link-mini:hover{background:var(--azul-cl)}
 .acoes{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .form-reg{display:grid;gap:14px}
 .chips-tipo{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -557,6 +561,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
             <label class="interruptor" for="c-som"><input type="checkbox" id="c-som"> Sons ativados</label>
             <label class="interruptor" for="c-conf"><input type="checkbox" id="c-conf"> Confirmar antes de excluir registros</label>
           </div>
+          <div class="campo" style="margin-top:12px"><label for="c-url">Endereço do lead no Dryve (use {lead} no lugar do código)</label><input type="text" id="c-url" maxlength="300" spellcheck="false" autocomplete="off"></div>
         </div>
         <div id="c-erro" class="erro-form" role="alert" hidden></div>
         <div class="acoes">
@@ -676,7 +681,8 @@ var CONFIG_PADRAO = {
   plano: { janelaPerdido: 30, etapas: {}, dryveUsers: '9ce01eb9-513f-4411-abd2-cc0483b987eb' },
   mostrarSegundos: true,
   sons: true,
-  confirmarExclusao: true
+  confirmarExclusao: true,
+  urlLead: 'https://app.dryve.pro/dashboard/opportunities?keyword={lead}'
 };
 
 function $(sel, raiz) { return (raiz || document).querySelector(sel); }
@@ -825,6 +831,7 @@ function inteiroEntre(v, min, max) {
   return typeof n === 'number' && Number.isInteger(n) && n >= min && n <= max ? n : null;
 }
 /* Mescla uma configuração desconhecida com a padrão, descartando valores inválidos */
+function urlLeadValida(u) { return typeof u === 'string' && u.length <= 300 && /^https?:\/\/[^\s]+$/i.test(u.trim()) && u.indexOf('{lead}') !== -1; }
 function mesclarConfig(c) {
   var p = copiar(CONFIG_PADRAO);
   if (!c || typeof c !== 'object') return p;
@@ -844,6 +851,7 @@ function mesclarConfig(c) {
     });
   }
   ['mostrarSegundos', 'sons', 'confirmarExclusao'].forEach(function (k) { if (typeof c[k] === 'boolean') p[k] = c[k]; });
+  if (urlLeadValida(c.urlLead)) p.urlLead = c.urlLead.trim();
   if (p.metas.rotina + p.metas.documentacao + p.metas.perdido <= 0) p.metas = copiar(CONFIG_PADRAO.metas);
   return p;
 }
@@ -995,6 +1003,7 @@ function relinkarOrfaos() {
 /* ---- Base de leads já auditados (planilha de auditorias do mês) ----
    Serve apenas para avisar, na hora do registro, que o lead já passou por auditoria
    (Rotina ou outro formulário). Não entra nas metas do dia. Telefones não são guardados. */
+var UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 function sanitizarBaseItem(x) {
   if (!x || typeof x !== 'object') return null;
   var codigo = limparTexto(x.codigo).slice(0, 60), norm = normLead(codigo), data = String(x.data || '');
@@ -1003,7 +1012,8 @@ function sanitizarBaseItem(x) {
     id: limparTexto(x.id).slice(0, 30), avaliado: limparTexto(x.avaliado).slice(0, 120), avaliador: limparTexto(x.avaliador).slice(0, 120),
     formulario: limparTexto(x.formulario).slice(0, 80) || 'Auditoria', conformidade: limparTexto(x.conformidade).slice(0, 20),
     esteira: limparTexto(x.esteira).slice(0, 40), atendimento: limparTexto(x.atendimento).slice(0, 40),
-    codigo: codigo, codigoNorm: norm, data: data
+    codigo: codigo, codigoNorm: norm, data: data,
+    uuid: (UUID_RE.exec(String(x.uuid || '')) || [''])[0].toLowerCase()
   };
 }
 function chaveBase(b) { return b.id ? 'id:' + b.id : [b.codigoNorm, b.data, normBusca(b.avaliado), normBusca(b.formulario)].join('|'); }
@@ -1033,7 +1043,8 @@ function analisarBase(texto) {
   var col = {
     id: achar(['id']), avaliado: achar(['avaliado']), avaliador: achar(['avaliador']), formulario: achar(['formulario']),
     conformidade: achar(['conformidade']), esteira: achar(['esteira']), atendimento: achar(['tipoatendimento', 'atendimento']),
-    codigo: achar(['codigolead', 'codigo', 'lead', 'nlead']), data: achar(['dataauditoria', 'data'])
+    codigo: achar(['codigolead', 'codigo', 'lead', 'nlead']), data: achar(['dataauditoria', 'data']),
+    uuid: achar(['uuid', 'oportunidadeid', 'idoportunidade', 'oportunidade', 'opportunityid', 'linkdryve', 'link', 'url'])
   };
   if (col.codigo < 0 || col.data < 0) return { erro: 'Cabeçalho não reconhecido. São obrigatórias as colunas CodigoLead e DataAuditoria.' };
   var itens = [], invalidos = 0;
@@ -1043,7 +1054,7 @@ function analisarBase(texto) {
     var b = sanitizarBaseItem({
       id: cel(l, 'id'), avaliado: cel(l, 'avaliado'), avaliador: cel(l, 'avaliador'), formulario: cel(l, 'formulario'),
       conformidade: cel(l, 'conformidade'), esteira: cel(l, 'esteira'), atendimento: cel(l, 'atendimento'),
-      codigo: cel(l, 'codigo'), data: parseDataCSV(cel(l, 'data'))
+      codigo: cel(l, 'codigo'), data: parseDataCSV(cel(l, 'data')), uuid: cel(l, 'uuid')
     });
     if (b) itens.push(b); else invalidos++;
   }
@@ -1384,10 +1395,30 @@ function ocorrenciasTotais(leadNorm) {
   });
   (indexBase().get(leadNorm) || []).forEach(function (b) {
     var det = [b.id ? 'ID ' + b.id : '', b.avaliador ? 'avaliador: ' + b.avaliador : '', b.conformidade ? 'conformidade ' + fmtConf(b.conformidade) : '', b.esteira ? 'esteira ' + b.esteira : ''].filter(Boolean).join(' · ');
-    out.push({ fonte: 'planilha', data: b.data, hora: '', quem: b.avaliado || '—', tipo: b.formulario, detalhe: det });
+    out.push({ fonte: 'planilha', data: b.data, hora: '', quem: b.avaliado || '—', tipo: b.formulario, detalhe: det, uuid: b.uuid });
   });
   out.sort(function (a, b) { var x = a.data + ' ' + a.hora, y = b.data + ' ' + b.hora; return x < y ? -1 : x > y ? 1 : 0; });
   return out;
+}
+/* Endereço do lead no Dryve: usa o UUID da oportunidade quando a planilha o informa; senão, busca pelo código */
+function urlDryve(codigo, uuid) {
+  var c = limparTexto(codigo);
+  if (!c) return '';
+  var modelo = estado.config.urlLead;
+  /* 1º: lead importado do kanban (já tem o endereço direto, com o filtro de usuários) */
+  var nk = normLead(c), noKanban = estado.kanban.leads.find(function (l) { return l.codigoNorm === nk && l.uuid; });
+  if (noKanban) return urlLeadDryve(noKanban);
+  if (uuid && UUID_RE.test(uuid)) {
+    try { return new URL(modelo.split('{lead}').join('x')).origin + '/dashboard/opportunities/' + uuid + '?keyword=' + encodeURIComponent(c); } catch (e) { /* usa o modelo */ }
+  }
+  return modelo.split('{lead}').join(encodeURIComponent(c));
+}
+function uuidDe(oc) {
+  for (var i = oc.length - 1; i >= 0; i--) if (oc[i].uuid) return oc[i].uuid;
+  return '';
+}
+function linkLeadDryve(codigo, rotulo, classe, uuid) {
+  return el('a', { href: urlDryve(codigo, uuid), target: '_blank', rel: 'noopener noreferrer', class: classe, title: 'Abrir este lead no Dryve (nova aba)' }, rotulo);
 }
 function ehRepetido(a) { var i = indiceLeads().info.get(a.id); return !!i && i.ordem > 1; }
 function ocorrenciasLead(leadNorm, excluirId) {
@@ -2176,7 +2207,8 @@ function criarFormRegistro() {
   refs.btnDesfazer = el('button', { type: 'button', class: 'btn btn-linha', title: 'Remove o último registro feito', onclick: desfazerUltimo }, '⎌ Desfazer último registro');
   f.appendChild(el('div', { class: 'card-cab', style: 'margin:0' }, el('h3', null, 'Registro rápido'), el('span', { class: 'dica' }, 'Data e hora são automáticas')));
   f.appendChild(campoModal('Operador', refs.fOperador, 'f-operador'));
-  f.appendChild(campoModal('Lead ou ID do lead', refs.fLead, 'f-lead'));
+  refs.fLink = el('a', { class: 'btn btn-sec', target: '_blank', rel: 'noopener noreferrer', hidden: true, 'aria-label': 'Abrir o lead no Dryve (nova aba)', title: 'Abrir este lead no Dryve (nova aba)' }, '↗ Dryve');
+  f.appendChild(el('div', { class: 'campo' }, el('label', { for: 'f-lead' }, 'Lead ou ID do lead'), el('div', { class: 'input-com-botao' }, refs.fLead, refs.fLink)));
   f.appendChild(refs.fDica);
   f.appendChild(el('div', { class: 'campo' }, el('span', { class: 'rotulo' }, 'Tipo'), chips));
   f.appendChild(campoModal('Observação (opcional)', refs.fObs, 'f-obs'));
@@ -2189,7 +2221,7 @@ function criarFormRegistro() {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); registrarDoForm(); }
   });
   f.addEventListener('input', function () { esconderErroForm(); });
-  refs.fLead.addEventListener('input', atualizarDicaLead);
+  refs.fLead.addEventListener('input', aoDigitarLead);
   refs.fOperador.addEventListener('change', function () {
     estado.ultimoOperadorId = refs.fOperador.value; salvarEstadoUI(); esconderErroForm();
   });
@@ -2212,8 +2244,16 @@ function definirOperadorForm(id) {
 }
 function mostrarErroForm(msg) { refs.fErro.textContent = msg; refs.fErro.hidden = false; }
 function esconderErroForm() { refs.fErro.hidden = true; }
+/* Se colar o endereço do Dryve, extrai só o código do lead (parâmetro keyword) */
+function aoDigitarLead() {
+  var v = refs.fLead.value, m = /[?&]keyword=([^&#\s]+)/i.exec(v);
+  if (m && /dryve/i.test(v)) { try { refs.fLead.value = decodeURIComponent(m[1]); } catch (e) { refs.fLead.value = m[1]; } }
+  atualizarDicaLead();
+}
 function atualizarDicaLead() {
-  var n = normLead(refs.fLead.value), oc = n ? ocorrenciasTotais(n) : [];
+  var n = normLead(refs.fLead.value), oc = n ? ocorrenciasTotais(n) : [], cod = limparTexto(refs.fLead.value);
+  refs.fLink.hidden = !cod;
+  if (cod) refs.fLink.href = urlDryve(cod, uuidDe(oc));
   if (!oc.length) { refs.fDica.hidden = true; return; }
   var u = oc[oc.length - 1];
   refs.fDica.textContent = '⚠ LEAD JÁ AUDITADO (' + oc.length + ' ' + plural(oc.length, 'vez', 'vezes') + '). Última: ' + u.tipo + ' em ' + dataBR(u.data) + (u.hora ? ' às ' + u.hora : '') + ' — ' + (u.fonte === 'planilha' ? 'avaliado: ' : 'operador: ') + u.quem + '.';
@@ -2662,7 +2702,7 @@ function linhaHistorico(a, compacta) {
   if (!compacta) cels.push(el('td', { class: 'num' }, dataBR(a.data)));
   cels.push(el('td', { class: 'num' }, a.hora));
   cels.push(el('td', null, nomeOperadorAtual(a)));
-  cels.push(el('td', { class: 'lead' }, a.lead));
+  cels.push(el('td', { class: 'lead' }, a.lead, ' ', linkLeadDryve(a.lead, '↗', 'link-mini', '')));
   cels.push(el('td', null, tag(TIPOS[a.tipo].rotulo, 'azul')));
   cels.push(el('td', { class: 'obs' }, a.obs));
   cels.push(el('td', null, rep ? tag('LEAD REPETIDO · ' + idx.ordem + 'ª vez', 'solido-vermelho', 'Este lead já havia sido auditado ' + (idx.ordem - 1) + ' vez(es) antes') : ''));
@@ -2799,6 +2839,7 @@ function renderConfig() {
   $('#c-mensal').value = c.metaMensalPadrao;
   $('#c-ini').value = c.horarios.inicio; $('#c-fim').value = c.horarios.fim;
   $('#c-alm-ini').value = c.horarios.almocoInicio; $('#c-alm-fim').value = c.horarios.almocoFim;
+  $('#c-url').value = c.urlLead;
   $('#c-seg').checked = c.mostrarSegundos; $('#c-som').checked = c.sons; $('#c-conf').checked = c.confirmarExclusao;
   $('#c-erro').hidden = true;
   renderBase();
@@ -2825,6 +2866,7 @@ function renderBase() {
   cont.replaceChildren();
   if (!n) return;
   var oc = ocorrenciasTotais(n);
+  cont.appendChild(el('div', { class: 'acoes', style: 'margin-bottom:8px' }, linkLeadDryve($('#b-busca').value, '↗ Abrir no Dryve', 'btn btn-sec btn-peq', uuidDe(oc))));
   if (!oc.length) { cont.appendChild(el('div', { class: 'vazio' }, 'Nenhuma auditoria encontrada para este lead.')); return; }
   cont.appendChild(el('p', { class: 'aviso-lead vermelho', style: 'margin-bottom:8px' }, 'Lead já auditado ' + oc.length + ' ' + plural(oc.length, 'vez', 'vezes') + '.'));
   cont.appendChild(el('ul', { class: 'ocorrencias' }, oc.slice().reverse().map(function (a) {
@@ -2875,6 +2917,7 @@ function corpoLeadRepetido(lead, oc) {
   var recentes = oc.slice().reverse().slice(0, 6);
   return [
     el('p', null, 'O lead ', el('b', null, lead), ' já consta nas auditorias registradas (sistema ou planilha do mês).'),
+    el('div', { class: 'acoes' }, linkLeadDryve(lead, '↗ Abrir lead no Dryve', 'btn btn-sec', uuidDe(oc))),
     el('dl', { class: 'kv', style: 'margin:0' },
       el('div', null, el('dt', null, 'Lead informado'), el('dd', null, lead)),
       el('div', null, el('dt', null, 'Auditorias anteriores'), el('dd', null, oc.length + (daPlanilha ? ' (' + doSistema + ' no sistema, ' + daPlanilha + ' na planilha)' : ''))),
@@ -3451,8 +3494,9 @@ function salvarFormConfig() {
   var metas = { rotina: inteiroEntre(g('#c-rotina'), 0, 9999), documentacao: inteiroEntre(g('#c-doc'), 0, 9999), perdido: inteiroEntre(g('#c-perd'), 0, 9999) };
   var mensal = inteiroEntre(g('#c-mensal'), 0, 999);
   var hor = { inicio: g('#c-ini'), fim: g('#c-fim'), almocoInicio: g('#c-alm-ini'), almocoFim: g('#c-alm-fim') };
-  var msg = null;
-  if (metas.rotina === null || metas.documentacao === null || metas.perdido === null) msg = 'As metas diárias devem ser números inteiros entre 0 e 9999.';
+  var url = g('#c-url'), msg = null;
+  if (!urlLeadValida(url)) msg = 'O endereço do Dryve deve começar com https:// e conter {lead} no lugar do código do lead.';
+  else if (metas.rotina === null || metas.documentacao === null || metas.perdido === null) msg = 'As metas diárias devem ser números inteiros entre 0 e 9999.';
   else if (metas.rotina + metas.documentacao + metas.perdido <= 0) msg = 'A soma das metas diárias deve ser maior que zero.';
   else if (mensal === null) msg = 'A meta mensal padrão deve ser um número inteiro entre 0 e 999.';
   else if (Object.keys(hor).some(function (k) { return !/^([01]\d|2[0-3]):[0-5]\d$/.test(hor[k]); })) msg = 'Preencha todos os horários do expediente.';
@@ -3460,6 +3504,7 @@ function salvarFormConfig() {
   if (msg) { erro.textContent = msg; erro.hidden = false; tocar('erro'); return; }
   erro.hidden = true;
   estado.config.metas = metas; estado.config.horarios = hor; estado.config.metaMensalPadrao = mensal;
+  estado.config.urlLead = url;
   estado.config.mostrarSegundos = $('#c-seg').checked; estado.config.sons = $('#c-som').checked; estado.config.confirmarExclusao = $('#c-conf').checked;
   salvarConfig(); aplicarConfigNaUI(); renderTudo();
   toast('Configurações salvas.');
