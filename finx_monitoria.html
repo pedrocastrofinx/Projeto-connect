@@ -678,7 +678,7 @@ var CONFIG_PADRAO = {
   metas: { rotina: 30, documentacao: 8, perdido: 6 },
   horarios: { inicio: '09:00', fim: '18:00', almocoInicio: '12:00', almocoFim: '13:00' },
   metaMensalPadrao: 1,
-  plano: { janelaPerdido: 30, etapas: {}, dryveUsers: '9ce01eb9-513f-4411-abd2-cc0483b987eb' },
+  plano: { janelaPerdido: 30, apenasMes: true, etapas: {}, dryveUsers: '9ce01eb9-513f-4411-abd2-cc0483b987eb' },
   mostrarSegundos: true,
   sons: true,
   confirmarExclusao: true,
@@ -844,6 +844,7 @@ function mesclarConfig(c) {
   var mm = inteiroEntre(c.metaMensalPadrao, 0, 999); if (mm !== null) p.metaMensalPadrao = mm;
   var pl = c.plano && typeof c.plano === 'object' ? c.plano : {};
   var jp = inteiroEntre(pl.janelaPerdido, 1, KANBAN_RETENCAO_DIAS); if (jp !== null) p.plano.janelaPerdido = jp;
+  if (typeof pl.apenasMes === 'boolean') p.plano.apenasMes = pl.apenasMes;
   if (typeof pl.dryveUsers === 'string' && (pl.dryveUsers.trim() === '' || UUID_RE.test(pl.dryveUsers.trim()))) p.plano.dryveUsers = pl.dryveUsers.trim().toLowerCase();
   if (pl.etapas && typeof pl.etapas === 'object' && !Array.isArray(pl.etapas)) {
     Object.keys(pl.etapas).slice(0, 60).forEach(function (k) {
@@ -1741,6 +1742,13 @@ function pontuarLead(l, t, s, hoje) {
 }
 var PRIORIDADES = { alta: { rot: 'ALTA', cor: 'vermelho' }, media: { rot: 'MÉDIA', cor: 'amarelo' }, normal: { rot: 'NORMAL', cor: 'cinza' } };
 
+/* Data que define se o lead é "do mês": aprovação/pedido/lead (documentação), perda (perdidos) ou criação do lead (rotina) */
+function dataRefLead(l, t) { return t === 'documentacao' ? (l.dAprov || l.dPedido || l.dLead) : t === 'perdido' ? l.dPerdido : l.dLead; }
+function foraDoMes(l, t, hoje) {
+  if (!estado.config.plano.apenasMes) return false;
+  var r = dataRefLead(l, t);
+  return !!r && r < primeiroDiaMes(hoje);
+}
 function calcPlanoSemanal(agora) {
   var cfg = estado.config, hr = horariosMin(), hoje = dataISO(agora), aberto = minutosDoDia(agora) < hr.fim;
   var segunda = inicioSemana(hoje), sexta = somarDias(segunda, 4), proxima = false;
@@ -1752,7 +1760,7 @@ function calcPlanoSemanal(agora) {
   var cHoje = contagemPeriodo(hoje, hoje).total, hojeUtil = ehDiaUtil(parseData(hoje));
   var plano = { hoje: hoje, dias: dias, proxima: proxima, segunda: segunda, sexta: sexta, mesRef: mesRef, uteisMes: uteisMes, uteisRestMes: restoMes.length,
     periodos: {}, ritmo: { porTipo: {}, total: { necessario: 0, meta: 0 } }, quotas: {}, extra: {}, itens: [], porDia: {}, pool: {}, faltaLeads: {},
-    foraEquipe: [], excluidos: { auditados: 0, foraJanela: 0, limpeza: 0, inativos: 0 }, temKanban: estado.kanban.leads.length > 0 };
+    foraEquipe: [], excluidos: { auditados: 0, foraJanela: 0, foraMes: 0, limpeza: 0, inativos: 0 }, temKanban: estado.kanban.leads.length > 0 };
 
   function periodo(rotulo, nDias, cont) {
     var o = { rotulo: rotulo, porTipo: {}, total: { meta: 0, feito: 0, falta: 0 } };
@@ -1790,6 +1798,7 @@ function calcPlanoSemanal(agora) {
   estado.kanban.leads.forEach(function (l) {
     var t = tipoDoLead(l);
     if (!t) return;
+    if (foraDoMes(l, t, hoje)) { plano.excluidos.foraMes++; return; }
     if (t === 'perdido') {
       if (!l.dPerdido || diasEntre(l.dPerdido, hoje) > janela) { plano.excluidos.foraJanela++; return; }
       if (normBusca(l.motivo).indexOf('limpeza') !== -1) { plano.excluidos.limpeza++; return; }
@@ -2435,6 +2444,8 @@ function construirAjustesPlano(pl) {
   var jan = el('input', { type: 'number', id: 'pl-janela', min: '1', max: String(KANBAN_RETENCAO_DIAS), step: '1', inputmode: 'numeric', value: String(estado.config.plano.janelaPerdido) });
   var msg = el('div', { class: 'erro-form', role: 'alert', hidden: true });
   var usr = el('input', { type: 'text', id: 'pl-users', maxlength: '36', placeholder: 'Opcional', autocomplete: 'off', spellcheck: 'false', value: estado.config.plano.dryveUsers });
+  var soMes = el('input', { type: 'checkbox', id: 'pl-so-mes' }); soMes.checked = estado.config.plano.apenasMes;
+  soMes.addEventListener('change', function () { estado.config.plano.apenasMes = soMes.checked; salvarConfig(); renderTudo(); });
   var etapas = new Map();
   estado.kanban.leads.forEach(function (l) {
     var k = normBusca(l.etapa), e = etapas.get(k);
@@ -2467,6 +2478,7 @@ function construirAjustesPlano(pl) {
       campoModal('Usuário no link do Dryve (users=)', usr, 'pl-users'),
       el('div', { class: 'campo' }, el('button', { type: 'submit', class: 'btn btn-sec' }, 'Aplicar'))),
     msg,
+    el('label', { class: 'interruptor', for: 'pl-so-mes' }, soMes, 'Só leads do dia 1 do mês em diante (ignora os mais antigos)'),
     linhas.length ? el('div', { class: 'tabela-wrap', style: 'max-height:none' }, el('table', { style: 'min-width:480px' },
       el('thead', null, el('tr', null, ['Etapa do board', 'Leads', 'Auditar como'].map(function (t) { return el('th', { scope: 'col' }, el('span', null, t)); }))),
       el('tbody', null, linhas))) : null,
@@ -2546,7 +2558,7 @@ function renderPlano() {
     el('div', { class: 'secao-titulo' }, el('h2', null, 'Plano até sexta'), el('span', null, total + ' ' + plural(total, 'lead', 'leads'))),
     avisos,
     el('article', { class: 'card' }, el('ul', { class: 'frases', style: 'margin:0' }, frases.map(function (t) { return el('li', null, t); })),
-      el('p', { class: 'dica', style: 'margin-top:10px' }, 'Já fora do plano: ' + ex.auditados + ' já auditados · ' + ex.foraJanela + ' perdidos fora da janela de ' + estado.config.plano.janelaPerdido + ' dias · ' + ex.limpeza + ' “Limpeza Board” · ' + ex.inativos + ' de closers inativos · ' + somaLista(pl.foraEquipe.map(function (f) { return f.n; })) + ' de closers fora da equipe (ignorados).')),
+      el('p', { class: 'dica', style: 'margin-top:10px' }, 'Já fora do plano: ' + ex.auditados + ' já auditados · ' + ex.foraMes + ' de antes do dia 1 do mês · ' + ex.foraJanela + ' perdidos fora da janela de ' + estado.config.plano.janelaPerdido + ' dias · ' + ex.limpeza + ' “Limpeza Board” · ' + ex.inativos + ' de closers inativos · ' + somaLista(pl.foraEquipe.map(function (f) { return f.n; })) + ' de closers fora da equipe (ignorados).')),
     el('div', { class: 'card filtros-card', style: 'margin-top:14px' }, resumoDia,
       el('div', { class: 'linha-form' }, campoModal('Tipo de auditoria', selTipo, 'pl-f-tipo'), campoModal('Closer', selCloser, 'pl-f-closer'),
         el('div', { class: 'campo' }, el('span', { class: 'rotulo' }, 'Plano completo'), el('div', { class: 'acoes' },
@@ -3331,10 +3343,11 @@ async function importarKanbanLinhas(linhas, nomeArquivo) {
   if (res.erro) { await avisoModal('Kanban inválido', res.erro); return; }
   if (!res.itens.length) { await avisoModal('Nada para importar', 'Nenhum lead válido encontrado (' + res.invalidos + ' linhas inválidas).'); return; }
   var hoje = dataISO(new Date()), ret = reterRelevantes(res.itens, hoje), janela = estado.config.plano.janelaPerdido;
-  var cont = { rotina: 0, documentacao: 0, perdido: 0, fora: 0 };
+  var cont = { rotina: 0, documentacao: 0, perdido: 0, fora: 0, foraMes: 0 };
   ret.mantidos.forEach(function (l) {
     var t = tipoDoLead(l);
     if (!t) cont.fora++;
+    else if (foraDoMes(l, t, hoje)) cont.foraMes++;
     else if (t === 'perdido') { if (l.dPerdido && diasEntre(l.dPerdido, hoje) <= janela) cont.perdido++; }
     else cont[t]++;
   });
@@ -3345,6 +3358,7 @@ async function importarKanbanLinhas(linhas, nomeArquivo) {
         el('li', null, el('b', null, String(res.itens.length)), ' leads lidos (' + res.invalidos + ' linhas inválidas ignoradas).'),
         el('li', null, 'Para auditar: ' + cont.rotina + ' Rotina · ' + cont.documentacao + ' Documentação · ' + cont.perdido + ' Perdidos (últimos ' + janela + ' dias).'),
         el('li', null, cont.fora + ' em etapas fora do plano (ganhos).'),
+        cont.foraMes ? el('li', null, cont.foraMes + ' de antes do dia 1 do mês (ficam fora do plano).') : null,
         ret.descartados ? el('li', null, ret.descartados + ' perdidos com mais de ' + KANBAN_RETENCAO_DIAS + ' dias não serão guardados.') : null),
       el('p', { class: 'dica' }, antes ? 'O kanban atual (' + antes + ' leads) será substituído: o kanban é uma foto do board. Auditorias já registradas não são afetadas.' : 'Nome, telefone e CPF dos leads não são guardados.')] });
   if (!ok) return;
