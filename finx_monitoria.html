@@ -561,6 +561,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
             <label class="interruptor" for="c-som"><input type="checkbox" id="c-som"> Sons ativados</label>
             <label class="interruptor" for="c-conf"><input type="checkbox" id="c-conf"> Confirmar antes de excluir registros</label>
           </div>
+          <div class="campo" style="margin-top:12px"><label for="c-api">Endereço da API do site de monitoria (ex.: /api/monitoria)</label><input type="text" id="c-api" maxlength="200" spellcheck="false" autocomplete="off"></div>
           <div class="campo" style="margin-top:12px"><label for="c-url">Endereço do lead no Dryve (use {lead} no lugar do código)</label><input type="text" id="c-url" maxlength="300" spellcheck="false" autocomplete="off"></div>
         </div>
         <div id="c-erro" class="erro-form" role="alert" hidden></div>
@@ -575,7 +576,8 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
         <p class="dica">Os leads desta base avisam na hora do registro que já passaram por auditoria (Rotina ou outro formulário). Cole as linhas copiadas da planilha, com o cabeçalho <b>ID, Avaliado, Avaliador, Formulario, Conformidade, Esteira, TipoAtendimento, CodigoLead, DataAuditoria</b>, ou importe um CSV. Telefones não são guardados.</p>
         <dl class="kv" style="margin:0" id="b-info"></dl>
         <div class="acoes">
-          <button type="button" class="btn btn-primario" id="b-colar">📋 Colar da planilha</button>
+          <button type="button" class="btn btn-primario" id="b-site">↻ Atualizar do site</button>
+          <button type="button" class="btn btn-sec" id="b-colar">📋 Colar da planilha</button>
           <button type="button" class="btn btn-sec" id="b-arq">⭱ Importar arquivo CSV</button>
           <button type="button" class="btn btn-perigo-linha" id="b-limpar">Limpar base</button>
         </div>
@@ -647,7 +649,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
 var VERSAO = 1;
 var CH = {
   aud: 'finx_auditorias', op: 'finx_operadores', cfg: 'finx_configuracoes', ver: 'finx_versao',
-  salvo: 'finx_salvo_em', estado: 'finx_estado', backup: 'finx_ultimo_backup', base: 'finx_base_leads', kanban: 'finx_kanban'
+  salvo: 'finx_salvo_em', estado: 'finx_estado', backup: 'finx_ultimo_backup', base: 'finx_base_leads', kanban: 'finx_kanban', sync: 'finx_sync_site', forms: 'finx_formularios_site'
 };
 var TIPOS = {
   rotina: { rotulo: 'Rotina', titulo: 'Rotina' },
@@ -682,7 +684,8 @@ var CONFIG_PADRAO = {
   mostrarSegundos: true,
   sons: true,
   confirmarExclusao: true,
-  urlLead: 'https://app.dryve.pro/dashboard/opportunities?keyword={lead}'
+  urlLead: 'https://app.dryve.pro/dashboard/opportunities?keyword={lead}',
+  apiSite: '/api/monitoria'
 };
 
 function $(sel, raiz) { return (raiz || document).querySelector(sel); }
@@ -832,6 +835,7 @@ function inteiroEntre(v, min, max) {
 }
 /* Mescla uma configuração desconhecida com a padrão, descartando valores inválidos */
 function urlLeadValida(u) { return typeof u === 'string' && u.length <= 300 && /^https?:\/\/[^\s]+$/i.test(u.trim()) && u.indexOf('{lead}') !== -1; }
+function apiSiteValida(u) { return typeof u === 'string' && u.length <= 200 && /^(\/[A-Za-z0-9_.\-\/]*|https?:\/\/[^\s]+)$/.test(u.trim()); }
 function mesclarConfig(c) {
   var p = copiar(CONFIG_PADRAO);
   if (!c || typeof c !== 'object') return p;
@@ -853,6 +857,7 @@ function mesclarConfig(c) {
   }
   ['mostrarSegundos', 'sons', 'confirmarExclusao'].forEach(function (k) { if (typeof c[k] === 'boolean') p[k] = c[k]; });
   if (urlLeadValida(c.urlLead)) p.urlLead = c.urlLead.trim();
+  if (apiSiteValida(c.apiSite)) p.apiSite = c.apiSite.trim().replace(/\/+$/, '');
   if (p.metas.rotina + p.metas.documentacao + p.metas.perdido <= 0) p.metas = copiar(CONFIG_PADRAO.metas);
   return p;
 }
@@ -1032,8 +1037,57 @@ function fmtConf(c) {
   return isFinite(n) ? fmtPct(n) : c;
 }
 /* Interpreta texto colado do Excel (tabulação) ou CSV (; ou ,) com cabeçalho */
+/* ---- Dados do site de monitoria (API /api/monitoria) ---- */
+function listaDe(resp) { return Array.isArray(resp) ? resp : resp && Array.isArray(resp.data) ? resp.data : null; }
+function lerFormulariosSalvos() {
+  try { var o = JSON.parse(Armazenamento.ler(CH.forms) || '{}'); return o && typeof o === 'object' && !Array.isArray(o) ? o : {}; } catch (e) { return {}; }
+}
+/* Converte as auditorias do site em itens da base. Só entram auditorias finalizadas, com lead, do dia 1 do mês em diante. */
+function converterMonitorias(lista, formularios, mesIni) {
+  var itens = [], invalidos = 0, ignorados = 0;
+  lista.forEach(function (m) {
+    if (!m || typeof m !== 'object') { invalidos++; return; }
+    if (m.status !== 'finalizada' || !m.codigo_lead) { ignorados++; return; }
+    var d = new Date(m.data_realizacao || m.data_finalizacao);
+    if (isNaN(d.getTime())) { invalidos++; return; }
+    var data = dataISO(d); /* data no fuso local */
+    if (mesIni && data < mesIni) { ignorados++; return; }
+    var pct = Number(m.nota_maxima) > 0 ? Number(m.nota_final) / Number(m.nota_maxima) * 100 : NaN;
+    var b = sanitizarBaseItem({
+      id: 'site-' + m.id, avaliado: m.avaliado_id, avaliador: m.avaliador_id,
+      formulario: formularios[m.formulario_id] || 'Formulário ' + m.formulario_id,
+      conformidade: isFinite(pct) ? pct.toFixed(2) + '%' : '', esteira: m.esteira, atendimento: m.tipo_atendimento,
+      codigo: String(m.codigo_lead), data: data, uuid: ''
+    });
+    if (b) itens.push(b); else invalidos++;
+  });
+  return { itens: itens, invalidos: invalidos, ignorados: ignorados, origemSite: true };
+}
+/* Troca os itens vindos do site pelos novos e remove, da planilha manual, as auditorias que o site já traz (mesmo lead e operador, ±1 dia) */
+function mesclarSite(itens, executar) {
+  var chave = function (b) { return b.codigoNorm + '|' + normBusca(b.avaliado); }, porChave = new Map();
+  itens.forEach(function (b) { var k = chave(b); if (!porChave.has(k)) porChave.set(k, []); porChave.get(k).push(b.data); });
+  var mantidos = [], substituidos = 0, antigos = 0;
+  estado.baseLeads.forEach(function (b) {
+    if (b.id.indexOf('site-') === 0) { antigos++; return; }
+    var datas = porChave.get(chave(b));
+    if (datas && datas.some(function (d) { return Math.abs(diasEntre(b.data, d)) <= 1; })) { substituidos++; return; }
+    mantidos.push(b);
+  });
+  if (executar) estado.baseLeads = mantidos.concat(itens);
+  return { total: itens.length, substituidos: substituidos, antigos: antigos };
+}
 function analisarBase(texto) {
-  texto = String(texto || '').replace(/^﻿/, '');
+  texto = String(texto || '').replace(/^\uFEFF/, '');
+  var ini = texto.trim().charAt(0);
+  if (ini === '{' || ini === '[') {
+    var obj;
+    try { obj = JSON.parse(texto); } catch (e) { return { erro: 'O JSON colado está incompleto ou inválido. Copie a resposta inteira (Ctrl + A, Ctrl + C) e cole de novo.' }; }
+    var lista = listaDe(obj);
+    if (!lista) return { erro: 'Não encontrei a lista de auditorias no JSON (esperado {"data": [ ... ]}).' };
+    if (lista.length && !('codigo_lead' in lista[0]) && !('avaliado_id' in lista[0])) return { erro: 'Esse JSON não parece ser a lista de auditorias (monitorias) do site.' };
+    return converterMonitorias(lista, lerFormulariosSalvos(), primeiroDiaMes(dataISO(new Date())));
+  }
   var primeira = texto.split(/\r?\n/).filter(function (l) { return l.trim() !== ''; })[0] || '';
   var sep = primeira.indexOf('\t') !== -1 ? '\t' : primeira.indexOf(';') !== -1 ? ';' : ',';
   var linhas = parseCSV(texto, sep);
@@ -2635,7 +2689,7 @@ function cardOperador(s, eq) {
       el('span', null, 'No mês: ', el('b', null, 'Rotina ' + s.tipos.rotina + ' · Doc. ' + s.tipos.documentacao + ' · Perdidos ' + s.tipos.perdido)),
       el('span', null, 'Participação no total mensal: ', el('b', null, fmtPct(s.part))),
       el('span', null, 'Entrada: ', el('b', null, op.entrada ? dataBR(op.entrada) + ' (' + diasDeCasa(op.entrada, eq.refData) + ' dias de casa)' : 'não informada')),
-      s.daBase ? el('span', null, 'Inclui ', el('b', null, String(s.daBase)), ' ' + plural(s.daBase, 'auditoria', 'auditorias') + ' da planilha') : null),
+      s.daBase ? el('span', null, 'Inclui ', el('b', null, String(s.daBase)), ' ' + plural(s.daBase, 'auditoria', 'auditorias') + ' da base (planilha/site)') : null),
     el('div', { class: 'op-acoes' },
       op.ativo ? el('button', { type: 'button', class: 'btn btn-primario btn-peq', dataset: { acao: 'registrar', id: op.id } }, '✚ Registrar') : null,
       el('button', { type: 'button', class: 'btn btn-linha btn-peq', dataset: { acao: 'editar', id: op.id }, 'aria-label': 'Editar ' + op.nome }, '✎ Editar'),
@@ -2852,6 +2906,7 @@ function renderConfig() {
   $('#c-ini').value = c.horarios.inicio; $('#c-fim').value = c.horarios.fim;
   $('#c-alm-ini').value = c.horarios.almocoInicio; $('#c-alm-fim').value = c.horarios.almocoFim;
   $('#c-url').value = c.urlLead;
+  $('#c-api').value = c.apiSite;
   $('#c-seg').checked = c.mostrarSegundos; $('#c-som').checked = c.sons; $('#c-conf').checked = c.confirmarExclusao;
   $('#c-erro').hidden = true;
   renderBase();
@@ -2871,7 +2926,9 @@ function renderBase() {
   var distintos = new Set(estado.baseLeads.map(function (b) { return b.codigoNorm; })).size;
   var info = [
     ['Auditorias na base', String(estado.baseLeads.length)], ['Leads distintos', String(distintos)],
-    ['Período', datas.length ? dataBR(datas[0]) + ' a ' + dataBR(datas[datas.length - 1]) : '—']
+    ['Período', datas.length ? dataBR(datas[0]) + ' a ' + dataBR(datas[datas.length - 1]) : '—'],
+    ['Do site (API)', String(estado.baseLeads.filter(function (b) { return b.id.indexOf('site-') === 0; }).length)],
+    ['Última atualização do site', Number(Armazenamento.ler(CH.sync)) ? dataHoraBR(Number(Armazenamento.ler(CH.sync))) : 'nunca']
   ];
   $('#b-info').replaceChildren.apply($('#b-info'), info.map(function (i) { return el('div', null, el('dt', null, i[0]), el('dd', null, i[1])); }));
   var n = normLead($('#b-busca').value), cont = $('#b-resultado');
@@ -3455,7 +3512,20 @@ async function importarBase(texto) {
   var res;
   try { res = analisarBase(texto); } catch (e) { res = { erro: 'O conteúdo não pôde ser interpretado.' }; }
   if (res.erro) { await avisoModal('Planilha inválida', res.erro); return; }
-  if (!res.itens.length) { await avisoModal('Nada para importar', 'Nenhuma linha válida encontrada (' + res.invalidos + ' inválidas).'); return; }
+  if (!res.itens.length) { await avisoModal('Nada para importar', 'Nenhuma auditoria válida encontrada (' + res.invalidos + ' inválidas' + (res.ignorados ? ', ' + res.ignorados + ' fora do mês ou sem lead/finalização' : '') + ').'); return; }
+  if (res.origemSite) {
+    var m = mesclarSite(res.itens, false);
+    var okS = await confirmar({ titulo: 'Atualizar com os dados do site?', rotuloOk: 'Atualizar',
+      corpo: [el('ul', { class: 'frases' },
+        el('li', null, el('b', null, String(m.total)), ' ' + plural(m.total, 'auditoria', 'auditorias') + ' do dia 1 do mês em diante.'),
+        el('li', null, m.substituidos + ' da planilha manual já estão no site (serão substituídas).'),
+        el('li', null, res.ignorados + ' ignoradas (antes do dia 1, não finalizadas ou sem lead); ' + res.invalidos + ' inválidas.')),
+        el('p', { class: 'dica' }, 'Telefones e outros dados pessoais do site não são guardados.')] });
+    if (!okS) return;
+    mesclarSite(res.itens, true); salvarBase(); renderTudo();
+    toast(m.total + ' ' + plural(m.total, 'auditoria atualizada', 'auditorias atualizadas') + ' a partir do site.');
+    return;
+  }
   var c = contarMescla(res.itens);
   var ok = await confirmar({ titulo: 'Atualizar a base de leads?', rotuloOk: 'Importar',
     corpo: [el('ul', { class: 'frases' },
@@ -3467,12 +3537,58 @@ async function importarBase(texto) {
   mesclarBase(res.itens); salvarBase(); renderTudo();
   toast(c.novos + ' ' + plural(c.novos, 'auditoria adicionada', 'auditorias adicionadas') + ' à base de leads.');
 }
+/* Busca direta na API do site: só funciona com o painel aberto no próprio endereço do site (mesma origem, com o login ativo) */
+async function buscarApi(url) {
+  var mesmaOrigem = new URL(url, location.href).origin === location.origin;
+  var r = await fetch(url, { credentials: mesmaOrigem ? 'same-origin' : 'include', headers: { Accept: 'application/json' } });
+  if (!r.ok) { var e = new Error('HTTP ' + r.status); e.status = r.status; throw e; }
+  try { return await r.json(); } catch (x) { var e2 = new Error('resposta sem JSON'); e2.semJson = true; throw e2; }
+}
+function urlMonitoriasSite() { return estado.config.apiSite.replace(/\/+$/, '') + '/monitorias?order=data_realizacao.desc&limit=5000&offset=0'; }
+async function atualizarDoSite(silencioso) {
+  var btn = $('#b-site');
+  if (estado.sincronizando) return;
+  if (location.protocol === 'file:') {
+    if (!silencioso) await avisoModal('Abra o painel pelo site', [
+      'Com o arquivo aberto no computador, o navegador não deixa ler a API do site (outro endereço e login diferente).',
+      el('p', null, 'Opção 1: publique/abra este painel dentro do site (projectlocus.pages.dev/monitoria) e clique de novo em Atualizar.'),
+      el('p', null, 'Opção 2: com o site aberto e logado, abra o endereço abaixo, aperte Ctrl + A e Ctrl + C e use “Colar da planilha” aqui:'),
+      el('p', null, el('code', { style: 'word-break:break-all' }, 'https://projectlocus.pages.dev' + urlMonitoriasSite()))]);
+    return;
+  }
+  estado.sincronizando = true; if (btn) { btn.disabled = true; btn.textContent = '↻ Atualizando…'; }
+  try {
+    var mon = await buscarApi(urlMonitoriasSite()), lista = listaDe(mon);
+    if (!lista) throw new Error('formato inesperado');
+    var forms = lerFormulariosSalvos();
+    try {
+      var f = listaDe(await buscarApi(estado.config.apiSite.replace(/\/+$/, '') + '/formularios?order=nome.asc')) || [];
+      var mapa = {};
+      f.forEach(function (x) { if (x && x.id !== undefined && x.nome) mapa[x.id] = limparTexto(x.nome).slice(0, 80); });
+      if (Object.keys(mapa).length) { forms = mapa; Armazenamento.gravar(CH.forms, JSON.stringify(mapa)); }
+    } catch (e) { /* usa os nomes já guardados */ }
+    var res = converterMonitorias(lista, forms, primeiroDiaMes(dataISO(new Date())));
+    var m = mesclarSite(res.itens, true);
+    salvarBase(); Armazenamento.gravar(CH.sync, String(Date.now())); renderTudo();
+    if (!silencioso) toast('Site atualizado: ' + m.total + ' ' + plural(m.total, 'auditoria', 'auditorias') + ' do mês (' + m.substituidos + ' já estavam na planilha).');
+  } catch (e) {
+    if (!silencioso) {
+      var causa = e && (e.status === 401 || e.status === 403) ? 'O site respondeu “' + e.status + '”: o login/permissão não foi aceito por esta requisição. Abra o site, entre normalmente e tente de novo. Se continuar, o site usa outro tipo de login e preciso do cabeçalho de autorização usado nas requisições.'
+        : e && e.status === 404 ? 'O endereço da API não foi encontrado (404). Confira o campo “Endereço da API do site” em Ajustes.'
+        : e && e.semJson ? 'O site devolveu uma página em vez de dados (provavelmente a tela de login). Entre no site e tente de novo.'
+        : 'Não consegui falar com a API (' + (e && e.message ? e.message : 'erro de rede') + ').';
+      await avisoModal('Não foi possível atualizar do site', [causa, el('p', { class: 'dica' }, 'Alternativa: abra ' + urlMonitoriasSite() + ' no site, copie tudo (Ctrl + A, Ctrl + C) e use “Colar da planilha”.')]);
+    }
+  } finally {
+    estado.sincronizando = false; if (btn) { btn.disabled = false; btn.textContent = '↻ Atualizar do site'; }
+  }
+}
 async function colarBase() {
   var ta = el('textarea', { id: 'b-texto', rows: '9', spellcheck: 'false', style: 'font-family:Consolas,monospace;font-size:.82rem;min-height:190px', placeholder: 'ID\tAvaliado\tAvaliador\tFormulario\tConformidade\tEsteira\tTipoAtendimento\tCodigoLead\t...' });
   var msg = el('div', { class: 'erro-form', role: 'alert', hidden: true });
   var r = await abrirModal({
     titulo: 'Colar planilha de leads auditados',
-    corpo: [el('p', null, 'Copie as linhas da planilha (incluindo o cabeçalho) e cole abaixo.'), campoModal('Linhas da planilha', ta, 'b-texto'), msg],
+    corpo: [el('p', null, 'Copie as linhas da planilha (com o cabeçalho) ou o JSON das auditorias do site e cole abaixo.'), campoModal('Linhas da planilha', ta, 'b-texto'), msg],
     botoes: [{ rotulo: 'Cancelar', valor: false, classe: 'btn-linha' },
       { rotulo: 'Analisar', valor: true, classe: 'btn-primario', validar: function () {
         if (!ta.value.trim()) { msg.textContent = 'Cole as linhas da planilha antes de continuar.'; msg.hidden = false; return false; }
@@ -3508,8 +3624,9 @@ function salvarFormConfig() {
   var metas = { rotina: inteiroEntre(g('#c-rotina'), 0, 9999), documentacao: inteiroEntre(g('#c-doc'), 0, 9999), perdido: inteiroEntre(g('#c-perd'), 0, 9999) };
   var mensal = inteiroEntre(g('#c-mensal'), 0, 999);
   var hor = { inicio: g('#c-ini'), fim: g('#c-fim'), almocoInicio: g('#c-alm-ini'), almocoFim: g('#c-alm-fim') };
-  var url = g('#c-url'), msg = null;
-  if (!urlLeadValida(url)) msg = 'O endereço do Dryve deve começar com https:// e conter {lead} no lugar do código do lead.';
+  var url = g('#c-url'), api = g('#c-api'), msg = null;
+  if (!apiSiteValida(api)) msg = 'O endereço da API deve começar com / (ex.: /api/monitoria) ou https://.';
+  else if (!urlLeadValida(url)) msg = 'O endereço do Dryve deve começar com https:// e conter {lead} no lugar do código do lead.';
   else if (metas.rotina === null || metas.documentacao === null || metas.perdido === null) msg = 'As metas diárias devem ser números inteiros entre 0 e 9999.';
   else if (metas.rotina + metas.documentacao + metas.perdido <= 0) msg = 'A soma das metas diárias deve ser maior que zero.';
   else if (mensal === null) msg = 'A meta mensal padrão deve ser um número inteiro entre 0 e 999.';
@@ -3518,7 +3635,7 @@ function salvarFormConfig() {
   if (msg) { erro.textContent = msg; erro.hidden = false; tocar('erro'); return; }
   erro.hidden = true;
   estado.config.metas = metas; estado.config.horarios = hor; estado.config.metaMensalPadrao = mensal;
-  estado.config.urlLead = url;
+  estado.config.urlLead = url; estado.config.apiSite = api.replace(/\/+$/, '');
   estado.config.mostrarSegundos = $('#c-seg').checked; estado.config.sons = $('#c-som').checked; estado.config.confirmarExclusao = $('#c-conf').checked;
   salvarConfig(); aplicarConfigNaUI(); renderTudo();
   toast('Configurações salvas.');
@@ -3644,6 +3761,7 @@ function ligarEventos() {
   $('#d-bkp').addEventListener('click', fazerBackup);
   $('#d-rest').addEventListener('click', function () { $('#file-json').click(); });
   $('#file-json').addEventListener('change', function (e) { var f = e.target.files[0]; e.target.value = ''; restaurarBackup(f); });
+  $('#b-site').addEventListener('click', function () { atualizarDoSite(false); });
   $('#b-colar').addEventListener('click', colarBase);
   $('#b-arq').addEventListener('click', function () { $('#file-base').click(); });
   $('#file-base').addEventListener('change', function (e) { var f = e.target.files[0]; e.target.value = ''; importarArquivoBase(f); });
@@ -3695,6 +3813,11 @@ function iniciar() {
   mostrarAba('geral', { semRolar: true });
   renderTudo();
   setInterval(tick, 1000);
+  /* Hospedado no site (pages.dev) ou com API absoluta configurada: atualiza sozinho ao abrir e a cada 15 minutos */
+  if (/^https?:$/.test(location.protocol) && (/pages\.dev$/.test(location.hostname) || /^https?:/i.test(estado.config.apiSite))) {
+    if (Date.now() - (Number(Armazenamento.ler(CH.sync)) || 0) > 10 * 60000) atualizarDoSite(true);
+    setInterval(function () { atualizarDoSite(true); }, 15 * 60000);
+  }
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar); else iniciar();
