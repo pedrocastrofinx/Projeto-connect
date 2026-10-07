@@ -3552,8 +3552,7 @@ async function atualizarDoSite(silencioso) {
     if (!silencioso) await avisoModal('Abra o painel pelo site', [
       'Com o arquivo aberto no computador, o navegador não deixa ler a API do site (outro endereço e login diferente).',
       el('p', null, 'Opção 1: publique/abra este painel dentro do site (projectlocus.pages.dev/monitoria) e clique de novo em Atualizar.'),
-      el('p', null, 'Opção 2: com o site aberto e logado, abra o endereço abaixo, aperte Ctrl + A e Ctrl + C e use “Colar da planilha” aqui:'),
-      el('p', null, el('code', { style: 'word-break:break-all' }, 'https://projectlocus.pages.dev' + urlMonitoriasSite()))]);
+      el('p', null, 'Opção 2 (sem depender do site): exporte as auditorias do mês pelo próprio site (Excel/CSV) ou copie a tabela, abra no Excel, selecione tudo (Ctrl + A), copie (Ctrl + C) e use “Colar da planilha” aqui. Também dá para usar “Importar arquivo CSV”.')]);
     return;
   }
   estado.sincronizando = true; if (btn) { btn.disabled = true; btn.textContent = '↻ Atualizando…'; }
@@ -3577,7 +3576,7 @@ async function atualizarDoSite(silencioso) {
         : e && e.status === 404 ? 'O endereço da API não foi encontrado (404). Confira o campo “Endereço da API do site” em Ajustes.'
         : e && e.semJson ? 'O site devolveu uma página em vez de dados (provavelmente a tela de login). Entre no site e tente de novo.'
         : 'Não consegui falar com a API (' + (e && e.message ? e.message : 'erro de rede') + ').';
-      await avisoModal('Não foi possível atualizar do site', [causa, el('p', { class: 'dica' }, 'Alternativa: abra ' + urlMonitoriasSite() + ' no site, copie tudo (Ctrl + A, Ctrl + C) e use “Colar da planilha”.')]);
+      await avisoModal('Não foi possível atualizar do site', [causa, el('p', { class: 'dica' }, 'Alternativa: exporte as auditorias do mês pelo site (Excel/CSV), copie as linhas com o cabeçalho e use “Colar da planilha” ou “Importar arquivo CSV”.')]);
     }
   } finally {
     estado.sincronizando = false; if (btn) { btn.disabled = false; btn.textContent = '↻ Atualizar do site'; }
