@@ -2405,13 +2405,6 @@ function renderPlano() {
   TIPOS_ORDEM.forEach(function (t) {
     if (pl.faltaLeads[t] > 0) avisos.push(el('div', { class: 'banner amarelo' }, el('span', null, 'Faltam ', el('b', null, String(pl.faltaLeads[t])), ' leads de ' + TIPOS[t].titulo + ' para cumprir as cotas até sexta: só há ' + pl.pool[t] + ' disponíveis (um lead = uma auditoria). Importe um kanban mais novo' + (t === 'perdido' ? ', aumente a janela dos perdidos' : '') + ' ou revise o formulário de cada etapa nos ajustes.')));
   });
-  if (pl.foraEquipe.length) {
-    avisos.push(el('div', { class: 'banner azul' },
-      el('span', null, 'Leads de ' + pl.foraEquipe.length + ' ' + plural(pl.foraEquipe.length, 'closer fora', 'closers fora') + ' da equipe cadastrada não entram no plano. Cadastre quem você audita:'),
-      el('span', { class: 'acoes' }, pl.foraEquipe.slice(0, 6).map(function (f) {
-        return el('button', { type: 'button', class: 'btn btn-linha btn-peq', title: f.n + ' leads elegíveis', onclick: function () { adicionarOperador(f.nome, ''); } }, '＋ ' + f.nome + ' (' + f.n + ')');
-      }))));
-  }
   var ex = pl.excluidos;
   var frases = [
     'Plano ' + (pl.proxima ? 'da semana que vem' : 'até sexta (' + dataBR(pl.sexta).slice(0, 5) + ')') + ': ' + total + ' ' + plural(total, 'auditoria', 'auditorias') + ' em ' + pl.dias.length + ' ' + plural(pl.dias.length, 'dia útil', 'dias úteis') + ' — ' +
@@ -2444,7 +2437,7 @@ function renderPlano() {
     el('div', { class: 'secao-titulo' }, el('h2', null, 'Plano até sexta'), el('span', null, total + ' ' + plural(total, 'lead', 'leads'))),
     avisos,
     el('article', { class: 'card' }, el('ul', { class: 'frases', style: 'margin:0' }, frases.map(function (t) { return el('li', null, t); })),
-      el('p', { class: 'dica', style: 'margin-top:10px' }, 'Já fora do plano: ' + ex.auditados + ' já auditados · ' + ex.foraJanela + ' perdidos fora da janela de ' + estado.config.plano.janelaPerdido + ' dias · ' + ex.limpeza + ' “Limpeza Board” · ' + ex.inativos + ' de closers inativos.')),
+      el('p', { class: 'dica', style: 'margin-top:10px' }, 'Já fora do plano: ' + ex.auditados + ' já auditados · ' + ex.foraJanela + ' perdidos fora da janela de ' + estado.config.plano.janelaPerdido + ' dias · ' + ex.limpeza + ' “Limpeza Board” · ' + ex.inativos + ' de closers inativos · ' + somaLista(pl.foraEquipe.map(function (f) { return f.n; })) + ' de closers fora da equipe (ignorados).')),
     el('div', { class: 'card filtros-card', style: 'margin-top:14px' }, resumoDia,
       el('div', { class: 'linha-form' }, campoModal('Tipo de auditoria', selTipo, 'pl-f-tipo'), campoModal('Closer', selCloser, 'pl-f-closer'),
         el('div', { class: 'campo' }, el('span', { class: 'rotulo' }, 'Plano completo'), el('div', { class: 'acoes' },
