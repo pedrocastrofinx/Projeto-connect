@@ -2149,7 +2149,7 @@ async function importarCSV(arquivo) {
   var texto;
   try {
     texto = await lerArquivo(arquivo, 'UTF-8');
-    if (texto.indexOf('�') !== -1) texto = await lerArquivo(arquivo, 'windows-1252');
+    if (texto.indexOf('\uFFFD') !== -1) texto = await lerArquivo(arquivo, 'windows-1252');
   } catch (e) { await avisoModal('Erro ao ler o arquivo', 'Não foi possível ler o arquivo selecionado.'); return; }
   var res;
   try { res = analisarCSV(texto); } catch (e) { res = { erro: 'O conteúdo do arquivo não pôde ser interpretado como CSV.' }; }
