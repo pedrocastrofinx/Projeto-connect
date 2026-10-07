@@ -521,6 +521,19 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
         </div>
       </form>
 
+      <div class="secao-titulo"><h2>Base de leads já auditados</h2><span>Planilha de auditorias do mês</span></div>
+      <div class="card" style="display:grid;gap:14px">
+        <p class="dica">Os leads desta base avisam na hora do registro que já passaram por auditoria (Rotina ou outro formulário). Cole as linhas copiadas da planilha, com o cabeçalho <b>ID, Avaliado, Avaliador, Formulario, Conformidade, Esteira, TipoAtendimento, CodigoLead, DataAuditoria</b>, ou importe um CSV. Telefones não são guardados.</p>
+        <dl class="kv" style="margin:0" id="b-info"></dl>
+        <div class="acoes">
+          <button type="button" class="btn btn-primario" id="b-colar">📋 Colar da planilha</button>
+          <button type="button" class="btn btn-sec" id="b-arq">⭱ Importar arquivo CSV</button>
+          <button type="button" class="btn btn-perigo-linha" id="b-limpar">Limpar base</button>
+        </div>
+        <div class="campo"><label for="b-busca">Consultar um lead (base e registros do sistema)</label><input type="search" id="b-busca" autocomplete="off" placeholder="Digite o número do lead"></div>
+        <div id="b-resultado" aria-live="polite"></div>
+      </div>
+
       <div class="secao-titulo"><h2>Dados e backup</h2></div>
       <div class="card" style="display:grid;gap:14px">
         <div class="banner azul" style="margin:0">
@@ -557,6 +570,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 <input type="file" id="file-csv" accept=".csv,text/csv" hidden>
 <input type="file" id="file-json" accept=".json,application/json" hidden>
+<input type="file" id="file-base" accept=".csv,.tsv,.txt,text/csv,text/plain" hidden>
 
 <script>
 /* =========================================================
@@ -583,7 +597,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
 var VERSAO = 1;
 var CH = {
   aud: 'finx_auditorias', op: 'finx_operadores', cfg: 'finx_configuracoes', ver: 'finx_versao',
-  salvo: 'finx_salvo_em', estado: 'finx_estado', backup: 'finx_ultimo_backup'
+  salvo: 'finx_salvo_em', estado: 'finx_estado', backup: 'finx_ultimo_backup', base: 'finx_base_leads'
 };
 var TIPOS = {
   rotina: { rotulo: 'Rotina', titulo: 'Rotina' },
@@ -718,7 +732,7 @@ var Armazenamento = {
    3. ESTADO E SANITIZAÇÃO
    ===================================================== */
 var estado = {
-  auditorias: [], operadores: [], config: null,
+  auditorias: [], operadores: [], baseLeads: [], config: null,
   rev: 0, registrando: false, diaRender: '', minutoRender: -1,
   ultimoOperadorId: '', ultimoTipo: '', avisoBackupFechado: false,
   ui: {
@@ -822,6 +836,160 @@ function relinkarOrfaos() {
   return mudou;
 }
 
+  var BASE_SEMENTE = [
+    'ID;Avaliado;Avaliador;Formulario;Conformidade;Esteira;TipoAtendimento;CodigoLead;DataAuditoria',
+    '4342;Matheus Candido Menin;Anderson Nascimento Domingos;Auditoria de Rotina;100.00%;Condicional;Ambos;3358317;07/10/2026',
+    '4335;Carolina Lima Lopes;Guilherme Ribeiro da Silva;Auditoria de Rotina;100.00%;Condicional;Ambos;3360004;07/10/2026',
+    '4331;João Batista Dos Santos;Anderson Nascimento Domingos;Auditoria de Rotina;40.00%;Condicional;Ambos;3351022;06/10/2026',
+    '4330;Josana Paula Silva Araújo De Deus;Anderson Nascimento Domingos;Auditoria de Rotina;100.00%;Condicional;Ambos;3348158;06/10/2026',
+    '4327;Renan Gonzaga Cauchick;Guilherme Ribeiro da Silva;Auditoria de Rotina;100.00%;Condicional;Ambos;3348374;06/10/2026',
+    '4325;Nathalia Santana Sena De Souza;Anderson Nascimento Domingos;Auditoria de Rotina;100.00%;Condicional;Ambos;3309274;06/10/2026',
+    '4324;Nathalia Santana Sena De Souza;Anderson Nascimento Domingos;Auditoria de Rotina;80.00%;Condicional;Ambos;3342649;06/10/2026',
+    '4311;Renan Gonzaga Cauchick;Guilherme Ribeiro da Silva;Auditoria de Rotina;80.00%;Condicional;Ambos;3285983;06/10/2026',
+    '4306;Renan Gonzaga Cauchick;Guilherme Ribeiro da Silva;Auditoria de Rotina;60.00%;Condicional;Ambos;3325065;06/10/2026',
+    '4299;Matheus Candido Menin;Anderson Nascimento Domingos;Auditoria de Rotina;100.00%;Condicional;Ambos;3303342;06/10/2026',
+    '4297;Matheus Candido Menin;Anderson Nascimento Domingos;Auditoria de Rotina;100.00%;Condicional;Ambos;3307970;06/10/2026',
+    '4293;Isabelly Rocha de Souza;Alexandre Gomes da Silva;Auditoria de Rotina;100.00%;Condicional;Ambos;3310941;06/10/2026',
+    '4292;Isabelly Rocha de Souza;Alexandre Gomes da Silva;Auditoria de Rotina;100.00%;Condicional;Ambos;3341877;06/10/2026',
+    '4291;Isabelly Rocha de Souza;Alexandre Gomes da Silva;Auditoria de Rotina;100.00%;Condicional;Ambos;3342342;06/10/2026',
+    '4290;Isabelly Rocha de Souza;Alexandre Gomes da Silva;Auditoria de Rotina;100.00%;Condicional;Ambos;3329897;06/10/2026',
+    '4287;Isabelly Rocha de Souza;Alexandre Gomes da Silva;Auditoria de Rotina;80.00%;Condicional;Ambos;3352612;06/10/2026',
+    '4286;Matheus Candido Menin;Anderson Nascimento Domingos;Auditoria de Rotina;100.00%;Condicional;Ambos;3311980;06/10/2026',
+    '4284;Vitória Amendola Rodrigues;Guilherme Ribeiro da Silva;Auditoria de Rotina;60.00%;Condicional;Ambos;3317583;06/10/2026',
+    '4276;Antônio Carlos Silva Gouvêa;Anderson Nascimento Domingos;Auditoria de Rotina;80.00%;Condicional;Ambos;3253158;06/10/2026',
+    '4275;Antônio Carlos Silva Gouvêa;Anderson Nascimento Domingos;Auditoria de Rotina;100.00%;Condicional;Ambos;3262268;06/10/2026',
+    '4269;Ingrid Calderoni Martins;Pedro Henrique de Castro;Auditoria de Rotina;40.00%;Condicional;Ambos;3344325;05/10/2026',
+    '4267;Ingrid Calderoni Martins;Pedro Henrique de Castro;Auditoria de Rotina;100.00%;Condicional;Ambos;3333499;05/10/2026',
+    '4266;Nathalia Santana Sena De Souza;Anderson Nascimento Domingos;Auditoria de Rotina;80.00%;Condicional;Ambos;3342649;05/10/2026',
+    '4256;Caren Cristina Balbino;Guilherme Ribeiro da Silva;Auditoria de Rotina;60.00%;Movida;Ambos;3317508;05/10/2026',
+    '4255;João Batista Dos Santos;Anderson Nascimento Domingos;Auditoria de Rotina;20.00%;Condicional;Ambos;3304789;05/10/2026',
+    '4253;Adrielli Angela Maccio Moreto;Alexandre Gomes da Silva;Auditoria de Rotina;100.00%;Condicional;Ambos;3311405;05/10/2026',
+    '4252;Adrielli Angela Maccio Moreto;Alexandre Gomes da Silva;Auditoria de Rotina;100.00%;Condicional;Ambos;3312517;05/10/2026',
+    '4251;Adrielli Angela Maccio Moreto;Alexandre Gomes da Silva;Auditoria de Rotina;100.00%;Condicional;Fonado;3316480;05/10/2026',
+    '4250;Adrielli Angela Maccio Moreto;Alexandre Gomes da Silva;Auditoria de Rotina;60.00%;Condicional;Ambos;3340133;05/10/2026',
+    '4249;Adrielli Angela Maccio Moreto;Alexandre Gomes da Silva;Auditoria de Rotina;0.00%;Condicional;Digital;3338251;05/10/2026',
+    '4238;Cleidiane Maria Barros Da Cunha;Guilherme Ribeiro da Silva;Auditoria de Rotina;80.00%;Condicional;Ambos;3300721;05/10/2026',
+    '4228;Claudia Ribeiro Luis;Anderson Nascimento Domingos;Auditoria de Rotina;60.00%;Condicional;Ambos;3317462;05/10/2026',
+    '4225;Vitória Amendola Rodrigues;Guilherme Ribeiro da Silva;Auditoria de Rotina;80.00%;Condicional;Ambos;3301043;05/10/2026',
+    '4223;Otavio Augusto Soares Greghi;Pedro Henrique de Castro;Auditoria de Rotina;40.00%;Condicional;Ambos;3289750;04/10/2026',
+    '4222;Otavio Augusto Soares Greghi;Pedro Henrique de Castro;Auditoria de Rotina;60.00%;Condicional;Ambos;3309386;04/10/2026',
+    '4221;Otavio Augusto Soares Greghi;Pedro Henrique de Castro;Auditoria de Rotina;80.00%;Condicional;Fonado;3315538;04/10/2026',
+    '4220;Otavio Augusto Soares Greghi;Pedro Henrique de Castro;Auditoria de Rotina;60.00%;Condicional;Ambos;3227661;04/10/2026',
+    '4219;Otavio Augusto Soares Greghi;Pedro Henrique de Castro;Auditoria de Rotina;20.00%;Condicional;Ambos;3295912;04/10/2026',
+    '4218;Adriano Robson Gomes;Pedro Henrique de Castro;Auditoria de Rotina;60.00%;Condicional;Ambos;3305747;04/10/2026',
+    '4217;Adriano Robson Gomes;Pedro Henrique de Castro;Auditoria de Rotina;100.00%;Condicional;Ambos;3310561;04/10/2026',
+    '4216;Adriano Robson Gomes;Pedro Henrique de Castro;Auditoria de Rotina;60.00%;Condicional;Ambos;3312035;04/10/2026',
+    '4215;Adriano Robson Gomes;Pedro Henrique de Castro;Auditoria de Rotina;40.00%;Condicional;Digital;3244054;04/10/2026',
+    '4214;Adriano Robson Gomes;Pedro Henrique de Castro;Auditoria de Rotina;60.00%;Condicional;Digital;3293795;04/10/2026',
+    '4213;Adriano Robson Gomes;Pedro Henrique de Castro;Auditoria de Rotina;60.00%;Condicional;Ambos;3299465;04/10/2026',
+    '4212;Larissa Domingues Silva;Pedro Henrique de Castro;Auditoria de Rotina;40.00%;Condicional;Ambos;3264174;02/10/2026',
+    '4209;Patrícia Da Silva;Anderson Nascimento Domingos;Auditoria de Rotina;60.00%;Condicional;Ambos;3273033;02/10/2026',
+    '4208;Larissa Domingues Silva;Pedro Henrique de Castro;Auditoria de Rotina;80.00%;Condicional;Ambos;3279491;02/10/2026',
+    '4207;Patrícia Da Silva;Anderson Nascimento Domingos;Auditoria de Rotina;80.00%;Condicional;Ambos;3297902;02/10/2026',
+    '4205;Josana Paula Silva Araújo De Deus;Anderson Nascimento Domingos;Auditoria de Rotina;100.00%;Condicional;Ambos;3178908;02/10/2026',
+    '4204;Larissa Domingues Silva;Pedro Henrique de Castro;Auditoria de Rotina;80.00%;Condicional;Ambos;3299281;02/10/2026',
+    '4203;Josana Paula Silva Araújo De Deus;Anderson Nascimento Domingos;Auditoria de Rotina;100.00%;Condicional;Ambos;3192209;02/10/2026',
+    '4201;Josana Paula Silva Araújo De Deus;Anderson Nascimento Domingos;Auditoria de Rotina;100.00%;Condicional;Ambos;3199773;02/10/2026',
+    '4200;Josana Paula Silva Araújo De Deus;Anderson Nascimento Domingos;Auditoria de Rotina;100.00%;Condicional;Ambos;3288911;02/10/2026',
+    '4199;Larissa Domingues Silva;Pedro Henrique de Castro;Auditoria de Rotina;100.00%;Condicional;Ambos;3316433;02/10/2026',
+    '4198;Josana Paula Silva Araújo De Deus;Anderson Nascimento Domingos;Auditoria de Rotina;100.00%;Condicional;Ambos;3293253;02/10/2026',
+    '4196;Isadora Pereira Lopes;Pedro Henrique de Castro;Auditoria de Rotina;80.00%;Condicional;Ambos;3307744;02/10/2026',
+    '4195;Isadora Pereira Lopes;Pedro Henrique de Castro;Auditoria de Rotina;60.00%;Condicional;Ambos;3314113;02/10/2026',
+    '4191;Eduarda Vitória Do Nascimento Mançano;Guilherme Ribeiro da Silva;Auditoria de Rotina;40.00%;Movida;Ambos;3257181;02/10/2026',
+    '4188;Eduarda Vitória Do Nascimento Mançano;Guilherme Ribeiro da Silva;Auditoria de Rotina;40.00%;Movida;Ambos;3258446;02/10/2026',
+    '4186;Gabriel Almenara;Guilherme Ribeiro da Silva;Auditoria de Rotina;100.00%;Condicional;Ambos;3296852;02/10/2026',
+    '4185;Josana Paula Silva Araújo De Deus;Anderson Nascimento Domingos;Auditoria de Rotina;100.00%;Condicional;Ambos;3178908;02/10/2026',
+    '4175;Valéria Claro Da Silva;Guilherme Ribeiro da Silva;Auditoria de Rotina;100.00%;Condicional;Fonado;3260957;01/10/2026',
+    '4173;Claudia Ribeiro Luis;Anderson Nascimento Domingos;Auditoria de Rotina;80.00%;Condicional;Ambos;3295056;01/10/2026',
+    '4172;Josana Paula Silva Araújo De Deus;Anderson Nascimento Domingos;Auditoria de Rotina;100.00%;Condicional;Ambos;3304501;01/10/2026',
+    '4171;Josana Paula Silva Araújo De Deus;Anderson Nascimento Domingos;Auditoria de Rotina;80.00%;Condicional;Ambos;3293253;01/10/2026',
+    '4169;Jessica Lara Amaral De Souza;Guilherme Ribeiro da Silva;Auditoria de Rotina;80.00%;Condicional;Ambos;3264157;01/10/2026',
+    '4167;Jessica Lara Amaral De Souza;Guilherme Ribeiro da Silva;Auditoria de Rotina;80.00%;Condicional;Ambos;3288429;01/10/2026',
+    '4164;Jessica Lara Amaral De Souza;Guilherme Ribeiro da Silva;Auditoria de Rotina;80.00%;Condicional;Ambos;3296782;01/10/2026',
+    '4162;Jessica Lara Amaral De Souza;Guilherme Ribeiro da Silva;Auditoria de Rotina;60.00%;Condicional;Ambos;3049339;01/10/2026',
+    '4161;Jessica Lara Amaral De Souza;Guilherme Ribeiro da Silva;Auditoria de Rotina;80.00%;Condicional;Ambos;3241959;01/10/2026',
+    '4160;Josana Paula Silva Araújo De Deus;Alexandre Gomes da Silva;Auditoria de Rotina;60.00%;Condicional;Ambos;3191847;01/10/2026',
+    '4159;Josana Paula Silva Araújo De Deus;Alexandre Gomes da Silva;Auditoria de Rotina;40.00%;Condicional;Ambos;3191278;01/10/2026',
+    '4158;Josana Paula Silva Araújo De Deus;Alexandre Gomes da Silva;Auditoria de Rotina;60.00%;Condicional;Ambos;3183210;01/10/2026',
+    '4157;Josana Paula Silva Araújo De Deus;Alexandre Gomes da Silva;Auditoria de Rotina;60.00%;Condicional;Ambos;3178908;01/10/2026',
+    '4156;Josana Paula Silva Araújo De Deus;Alexandre Gomes da Silva;Auditoria de Rotina;40.00%;Condicional;Ambos;3169958;01/10/2026',
+    '4154;Iasmin De Oliveira Renzi Vicente;Anderson Nascimento Domingos;Auditoria de Rotina;100.00%;Condicional;Ambos;3289883;01/10/2026'
+  ].join('\n');
+
+/* ---- Base de leads já auditados (planilha de auditorias do mês) ----
+   Serve apenas para avisar, na hora do registro, que o lead já passou por auditoria
+   (Rotina ou outro formulário). Não entra nas metas do dia. Telefones não são guardados. */
+function sanitizarBaseItem(x) {
+  if (!x || typeof x !== 'object') return null;
+  var codigo = limparTexto(x.codigo).slice(0, 60), norm = normLead(codigo), data = String(x.data || '');
+  if (!norm || !dataValida(data)) return null;
+  return {
+    id: limparTexto(x.id).slice(0, 30), avaliado: limparTexto(x.avaliado).slice(0, 120), avaliador: limparTexto(x.avaliador).slice(0, 120),
+    formulario: limparTexto(x.formulario).slice(0, 80) || 'Auditoria', conformidade: limparTexto(x.conformidade).slice(0, 20),
+    esteira: limparTexto(x.esteira).slice(0, 40), atendimento: limparTexto(x.atendimento).slice(0, 40),
+    codigo: codigo, codigoNorm: norm, data: data
+  };
+}
+function chaveBase(b) { return b.id ? 'id:' + b.id : [b.codigoNorm, b.data, normBusca(b.avaliado), normBusca(b.formulario)].join('|'); }
+function sanitizarBase(lista) {
+  var mapa = new Map(), descartados = 0;
+  (Array.isArray(lista) ? lista : []).forEach(function (x) {
+    var b = sanitizarBaseItem(x);
+    if (!b) { descartados++; return; }
+    mapa.set(chaveBase(b), b);
+  });
+  return { itens: Array.from(mapa.values()), descartados: descartados };
+}
+function fmtConf(c) {
+  var n = parseFloat(String(c).replace(',', '.'));
+  return isFinite(n) ? fmtPct(n) : c;
+}
+/* Interpreta texto colado do Excel (tabulação) ou CSV (; ou ,) com cabeçalho */
+function analisarBase(texto) {
+  texto = String(texto || '').replace(/^﻿/, '');
+  var primeira = texto.split(/\r?\n/).filter(function (l) { return l.trim() !== ''; })[0] || '';
+  var sep = primeira.indexOf('\t') !== -1 ? '\t' : primeira.indexOf(';') !== -1 ? ';' : ',';
+  var linhas = parseCSV(texto, sep);
+  if (linhas.length < 2) return { erro: 'Não encontrei linhas de dados. Cole também a linha de cabeçalho (ID, Avaliado, Avaliador, Formulario, Conformidade, Esteira, TipoAtendimento, CodigoLead, DataAuditoria).' };
+  if (linhas.length > 100001) return { erro: 'Linhas demais (máximo de 100.000).' };
+  var cab = linhas[0].map(function (c) { return normBusca(c).replace(/[^a-z0-9]/g, ''); });
+  function achar(nomes) { for (var i = 0; i < nomes.length; i++) { var k = cab.indexOf(nomes[i]); if (k >= 0) return k; } return -1; }
+  var col = {
+    id: achar(['id']), avaliado: achar(['avaliado']), avaliador: achar(['avaliador']), formulario: achar(['formulario']),
+    conformidade: achar(['conformidade']), esteira: achar(['esteira']), atendimento: achar(['tipoatendimento', 'atendimento']),
+    codigo: achar(['codigolead', 'codigo', 'lead', 'nlead']), data: achar(['dataauditoria', 'data'])
+  };
+  if (col.codigo < 0 || col.data < 0) return { erro: 'Cabeçalho não reconhecido. São obrigatórias as colunas CodigoLead e DataAuditoria.' };
+  var itens = [], invalidos = 0;
+  function cel(l, k) { return col[k] >= 0 && l[col[k]] !== undefined ? l[col[k]] : ''; }
+  for (var i = 1; i < linhas.length; i++) {
+    var l = linhas[i];
+    var b = sanitizarBaseItem({
+      id: cel(l, 'id'), avaliado: cel(l, 'avaliado'), avaliador: cel(l, 'avaliador'), formulario: cel(l, 'formulario'),
+      conformidade: cel(l, 'conformidade'), esteira: cel(l, 'esteira'), atendimento: cel(l, 'atendimento'),
+      codigo: cel(l, 'codigo'), data: parseDataCSV(cel(l, 'data'))
+    });
+    if (b) itens.push(b); else invalidos++;
+  }
+  return { itens: itens, invalidos: invalidos };
+}
+function contarMescla(itens) {
+  var existentes = new Set(estado.baseLeads.map(chaveBase)), novos = 0, atualizados = 0, vistos = new Set();
+  itens.forEach(function (b) {
+    var k = chaveBase(b);
+    if (vistos.has(k)) return;
+    vistos.add(k);
+    if (existentes.has(k)) atualizados++; else novos++;
+  });
+  return { novos: novos, atualizados: atualizados };
+}
+function mesclarBase(itens) {
+  var mapa = new Map();
+  estado.baseLeads.forEach(function (b) { mapa.set(chaveBase(b), b); });
+  itens.forEach(function (b) { mapa.set(chaveBase(b), b); });
+  estado.baseLeads = Array.from(mapa.values());
+}
+
 function carregarJSON(chave, validar) {
   var bruto = Armazenamento.ler(chave);
   if (bruto === null) return { novo: true };
@@ -851,6 +1019,11 @@ function carregarTudo() {
   if (s.descartadosA || s.descartadosO) problemas.push('registros inválidos ignorados');
   relinkarOrfaos();
 
+  var rb = carregarJSON(CH.base, Array.isArray);
+  if (rb.corrompido) problemas.push('base de leads');
+  if (rb.valor) estado.baseLeads = sanitizarBase(rb.valor).itens;
+  else if (rb.novo) { estado.baseLeads = sanitizarBase(analisarBase(BASE_SEMENTE).itens).itens; salvarBase(); }
+
   var re = carregarJSON(CH.estado, function (v) { return v && typeof v === 'object'; });
   if (re.valor) {
     estado.ultimoOperadorId = typeof re.valor.ultimoOperadorId === 'string' ? re.valor.ultimoOperadorId : '';
@@ -875,6 +1048,7 @@ function salvarChave(chave, valor) {
 }
 function salvarAuditorias() { estado.rev++; return salvarChave(CH.aud, estado.auditorias); }
 function salvarOperadores() { estado.rev++; return salvarChave(CH.op, estado.operadores); }
+function salvarBase() { estado.rev++; return salvarChave(CH.base, estado.baseLeads); }
 function salvarConfig() { return salvarChave(CH.cfg, estado.config); }
 function salvarEstadoUI() {
   Armazenamento.gravar(CH.estado, JSON.stringify({ ultimoOperadorId: estado.ultimoOperadorId, ultimoTipo: estado.ultimoTipo }));
@@ -942,12 +1116,43 @@ function indiceLeads() {
     if (!g) { g = []; grupos.set(a.leadNorm, g); }
     g.push(a);
   });
-  grupos.forEach(function (g) {
+  var base = indexBase();
+  grupos.forEach(function (g, chave) {
     g.sort(porTempoAsc);
-    g.forEach(function (a, i) { info.set(a.id, { ordem: i + 1, total: g.length }); });
+    var b = base.get(chave) || [];
+    g.forEach(function (a, i) {
+      var antes = b.filter(function (x) { return x.data <= a.data; }).length; /* auditorias anteriores da planilha */
+      info.set(a.id, { ordem: antes + i + 1, total: b.length + g.length });
+    });
   });
   cacheIdx = { rev: estado.rev, dados: { grupos: grupos, info: info } };
   return cacheIdx.dados;
+}
+var cacheBase = { rev: -1, mapa: null };
+function indexBase() {
+  if (cacheBase.rev === estado.rev && cacheBase.mapa) return cacheBase.mapa;
+  var m = new Map();
+  estado.baseLeads.forEach(function (b) {
+    var g = m.get(b.codigoNorm);
+    if (!g) { g = []; m.set(b.codigoNorm, g); }
+    g.push(b);
+  });
+  m.forEach(function (g) { g.sort(function (a, b) { return a.data < b.data ? -1 : a.data > b.data ? 1 : 0; }); });
+  cacheBase = { rev: estado.rev, mapa: m };
+  return m;
+}
+/* Ocorrências de um lead no sistema e na planilha, da mais antiga para a mais recente */
+function ocorrenciasTotais(leadNorm) {
+  var out = [];
+  ocorrenciasLead(leadNorm, null).forEach(function (a) {
+    out.push({ fonte: 'sistema', data: a.data, hora: a.hora, quem: nomeOperadorAtual(a), tipo: TIPOS[a.tipo].rotulo, detalhe: a.obs });
+  });
+  (indexBase().get(leadNorm) || []).forEach(function (b) {
+    var det = [b.id ? 'ID ' + b.id : '', b.avaliador ? 'avaliador: ' + b.avaliador : '', b.conformidade ? 'conformidade ' + fmtConf(b.conformidade) : '', b.esteira ? 'esteira ' + b.esteira : ''].filter(Boolean).join(' · ');
+    out.push({ fonte: 'planilha', data: b.data, hora: '', quem: b.avaliado || '—', tipo: b.formulario, detalhe: det });
+  });
+  out.sort(function (a, b) { var x = a.data + ' ' + a.hora, y = b.data + ' ' + b.hora; return x < y ? -1 : x > y ? 1 : 0; });
+  return out;
 }
 function ehRepetido(a) { var i = indiceLeads().info.get(a.id); return !!i && i.ordem > 1; }
 function ocorrenciasLead(leadNorm, excluirId) {
@@ -1529,10 +1734,10 @@ function definirOperadorForm(id) {
 function mostrarErroForm(msg) { refs.fErro.textContent = msg; refs.fErro.hidden = false; }
 function esconderErroForm() { refs.fErro.hidden = true; }
 function atualizarDicaLead() {
-  var n = normLead(refs.fLead.value), oc = n ? ocorrenciasLead(n, null) : [];
+  var n = normLead(refs.fLead.value), oc = n ? ocorrenciasTotais(n) : [];
   if (!oc.length) { refs.fDica.hidden = true; return; }
   var u = oc[oc.length - 1];
-  refs.fDica.textContent = '⚠ Este lead já foi auditado ' + oc.length + ' ' + plural(oc.length, 'vez', 'vezes') + '. Última: ' + dataBR(u.data) + ' às ' + u.hora + ' por ' + nomeOperadorAtual(u) + ' (' + TIPOS[u.tipo].rotulo + ').';
+  refs.fDica.textContent = '⚠ LEAD JÁ AUDITADO (' + oc.length + ' ' + plural(oc.length, 'vez', 'vezes') + '). Última: ' + u.tipo + ' em ' + dataBR(u.data) + (u.hora ? ' às ' + u.hora : '') + ' — ' + (u.fonte === 'planilha' ? 'avaliado: ' : 'operador: ') + u.quem + '.';
   refs.fDica.hidden = false;
 }
 function ultimoRegistro() {
@@ -1551,6 +1756,7 @@ function atualizarForm() {
   var c = contagemDia(dataISO(new Date())), m = calcMetas(c);
   TIPOS_ORDEM.forEach(function (t) { refs.fTiposInfo[t].textContent = m.tipos[t].real + '/' + m.tipos[t].meta + ' hoje'; });
   if (!tipoSelecionado() && estado.ultimoTipo && refs.fTipos[estado.ultimoTipo]) refs.fTipos[estado.ultimoTipo].checked = true;
+  atualizarDicaLead();
   refs.btnDesfazer.disabled = !ultimoRegistro();
   refs.btnRepetir.disabled = !ultimoRegistro();
 }
@@ -1792,6 +1998,7 @@ function renderConfig() {
   $('#c-alm-ini').value = c.horarios.almocoInicio; $('#c-alm-fim').value = c.horarios.almocoFim;
   $('#c-seg').checked = c.mostrarSegundos; $('#c-som').checked = c.sons; $('#c-conf').checked = c.confirmarExclusao;
   $('#c-erro').hidden = true;
+  renderBase();
   var salvo = Number(Armazenamento.ler(CH.salvo)), bkp = Number(Armazenamento.ler(CH.backup));
   var info = [
     ['Auditorias registradas', String(estado.auditorias.length)],
@@ -1801,6 +2008,26 @@ function renderConfig() {
     ['Armazenamento', Armazenamento.ok ? 'localStorage do navegador' : 'Indisponível (somente memória)']
   ];
   $('#c-info').replaceChildren.apply($('#c-info'), info.map(function (i) { return el('div', null, el('dt', null, i[0]), el('dd', null, i[1])); }));
+}
+
+function renderBase() {
+  var datas = estado.baseLeads.map(function (b) { return b.data; }).sort();
+  var distintos = new Set(estado.baseLeads.map(function (b) { return b.codigoNorm; })).size;
+  var info = [
+    ['Auditorias na base', String(estado.baseLeads.length)], ['Leads distintos', String(distintos)],
+    ['Período', datas.length ? dataBR(datas[0]) + ' a ' + dataBR(datas[datas.length - 1]) : '—']
+  ];
+  $('#b-info').replaceChildren.apply($('#b-info'), info.map(function (i) { return el('div', null, el('dt', null, i[0]), el('dd', null, i[1])); }));
+  var n = normLead($('#b-busca').value), cont = $('#b-resultado');
+  cont.replaceChildren();
+  if (!n) return;
+  var oc = ocorrenciasTotais(n);
+  if (!oc.length) { cont.appendChild(el('div', { class: 'vazio' }, 'Nenhuma auditoria encontrada para este lead.')); return; }
+  cont.appendChild(el('p', { class: 'aviso-lead vermelho', style: 'margin-bottom:8px' }, 'Lead já auditado ' + oc.length + ' ' + plural(oc.length, 'vez', 'vezes') + '.'));
+  cont.appendChild(el('ul', { class: 'ocorrencias' }, oc.slice().reverse().map(function (a) {
+    return el('li', null, tag(a.fonte === 'planilha' ? 'PLANILHA' : 'SISTEMA', a.fonte === 'planilha' ? 'azul' : 'cinza'), ' ',
+      el('b', null, dataBR(a.data) + (a.hora ? ' ' + a.hora : '')), ' · ' + a.quem + ' · ' + a.tipo + (a.detalhe ? ' · ' + a.detalhe : ''));
+  })));
 }
 
 /* ---------- Navegação e render geral ---------- */
@@ -1838,23 +2065,25 @@ function mostrarAba(nome, opt) {
 /* =====================================================
    7. AÇÕES: registros e operadores
    ===================================================== */
-function corpoLeadRepetido(lead, ocorrencias) {
-  var u = ocorrencias[ocorrencias.length - 1];
-  var recentes = ocorrencias.slice().reverse().slice(0, 6);
+function corpoLeadRepetido(lead, oc) {
+  var u = oc[oc.length - 1];
+  var doSistema = oc.filter(function (o) { return o.fonte === 'sistema'; }).length, daPlanilha = oc.length - doSistema;
+  var recentes = oc.slice().reverse().slice(0, 6);
   return [
-    el('p', null, 'O lead ', el('b', null, lead), ' já consta no histórico de auditorias.'),
+    el('p', null, 'O lead ', el('b', null, lead), ' já consta nas auditorias registradas (sistema ou planilha do mês).'),
     el('dl', { class: 'kv', style: 'margin:0' },
       el('div', null, el('dt', null, 'Lead informado'), el('dd', null, lead)),
-      el('div', null, el('dt', null, 'Auditorias anteriores'), el('dd', null, String(ocorrencias.length))),
-      el('div', null, el('dt', null, 'Última auditoria'), el('dd', null, dataBR(u.data) + ' às ' + u.hora)),
-      el('div', null, el('dt', null, 'Operador'), el('dd', null, nomeOperadorAtual(u))),
-      el('div', null, el('dt', null, 'Tipo'), el('dd', null, TIPOS[u.tipo].rotulo)),
-      el('div', null, el('dt', null, 'Observação'), el('dd', null, u.obs || '—'))),
+      el('div', null, el('dt', null, 'Auditorias anteriores'), el('dd', null, oc.length + (daPlanilha ? ' (' + doSistema + ' no sistema, ' + daPlanilha + ' na planilha)' : ''))),
+      el('div', null, el('dt', null, 'Última auditoria'), el('dd', null, dataBR(u.data) + (u.hora ? ' às ' + u.hora : ''))),
+      el('div', null, el('dt', null, u.fonte === 'planilha' ? 'Avaliado' : 'Operador'), el('dd', null, u.quem)),
+      el('div', null, el('dt', null, 'Tipo / formulário'), el('dd', null, u.tipo)),
+      el('div', null, el('dt', null, 'Observação / detalhes'), el('dd', null, u.detalhe || '—'))),
     el('div', null, el('div', { class: 'rotulo', style: 'margin-bottom:6px' }, 'OCORRÊNCIAS ANTERIORES'),
       el('ul', { class: 'ocorrencias' }, recentes.map(function (a) {
-        return el('li', null, el('b', null, dataBR(a.data) + ' ' + a.hora), ' · ' + nomeOperadorAtual(a) + ' · ' + TIPOS[a.tipo].rotulo + (a.obs ? ' · ' + a.obs : ''));
+        return el('li', null, tag(a.fonte === 'planilha' ? 'PLANILHA' : 'SISTEMA', a.fonte === 'planilha' ? 'azul' : 'cinza'), ' ',
+          el('b', null, dataBR(a.data) + (a.hora ? ' ' + a.hora : '')), ' · ' + a.quem + ' · ' + a.tipo + (a.detalhe ? ' · ' + a.detalhe : ''));
       })),
-      ocorrencias.length > recentes.length ? el('p', { class: 'dica', style: 'margin-top:6px' }, '… e mais ' + (ocorrencias.length - recentes.length) + ' ocorrência(s) anterior(es).') : null)
+      oc.length > recentes.length ? el('p', { class: 'dica', style: 'margin-top:6px' }, '… e mais ' + (oc.length - recentes.length) + ' ocorrência(s) anterior(es).') : null)
   ];
 }
 async function registrarDoForm() {
@@ -1874,7 +2103,7 @@ async function registrarDoForm() {
   var leadNorm = normLead(lead);
   estado.registrando = true;
   try {
-    var anteriores = ocorrenciasLead(leadNorm, null);
+    var anteriores = ocorrenciasTotais(leadNorm);
     if (anteriores.length) {
       tocar('alerta');
       var r = await abrirModal({
@@ -2103,7 +2332,7 @@ function lerArquivo(arquivo, codificacao) {
   });
 }
 function parseDataCSV(s) {
-  s = String(s || '').trim();
+  s = String(s || '').trim().split(' ')[0];
   var m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s);
   var iso = m ? m[3] + '-' + pad(+m[2]) + '-' + pad(+m[1]) : s.slice(0, 10);
   return dataValida(iso) ? iso : null;
@@ -2183,7 +2412,7 @@ function montarBackup() {
   estado.operadores.forEach(function (o) { if (o.metaMensal !== null) individuais[o.id] = o.metaMensal; });
   return {
     app: 'finx_monitoria', versao: VERSAO, geradoEm: new Date().toISOString(),
-    auditorias: estado.auditorias, operadores: estado.operadores,
+    auditorias: estado.auditorias, operadores: estado.operadores, baseLeads: estado.baseLeads,
     metas: estado.config.metas, horarios: estado.config.horarios,
     metasMensais: { padrao: estado.config.metaMensalPadrao, individuais: individuais },
     configuracoes: estado.config
@@ -2209,7 +2438,8 @@ function validarBackup(obj) {
     var ind = obj.metasMensais.individuais;
     if (ind && typeof ind === 'object') listas.operadores.forEach(function (o) { var v = inteiroEntre(ind[o.id], 0, 999); if (v !== null && o.metaMensal === null) o.metaMensal = v; });
   }
-  return { listas: listas, config: cfg, geradoEm: typeof obj.geradoEm === 'string' ? obj.geradoEm : '' };
+  var baseLeads = Array.isArray(obj.baseLeads) ? sanitizarBase(obj.baseLeads).itens : undefined;
+  return { listas: listas, config: cfg, baseLeads: baseLeads, geradoEm: typeof obj.geradoEm === 'string' ? obj.geradoEm : '' };
 }
 async function restaurarBackup(arquivo) {
   if (!arquivo) return;
@@ -2226,6 +2456,7 @@ async function restaurarBackup(arquivo) {
       el('ul', { class: 'frases' },
         el('li', null, L.auditorias.length + ' auditorias' + (L.descartadosA ? ' (' + L.descartadosA + ' inválidas ignoradas)' : '')),
         el('li', null, L.operadores.length + ' operadores' + (L.descartadosO ? ' (' + L.descartadosO + ' inválidos ignorados)' : '')),
+        v.baseLeads ? el('li', null, v.baseLeads.length + ' auditorias na base de leads já auditados') : null,
         el('li', null, 'Metas diárias: Rotina ' + v.config.metas.rotina + ', Documentação ' + v.config.metas.documentacao + ', Perdidos ' + v.config.metas.perdido),
         el('li', null, 'Expediente: ' + v.config.horarios.inicio + ' às ' + v.config.horarios.fim + ' (almoço ' + v.config.horarios.almocoInicio + '–' + v.config.horarios.almocoFim + ')'),
         el('li', null, 'Meta mensal padrão por operador: ' + v.config.metaMensalPadrao)),
@@ -2233,11 +2464,60 @@ async function restaurarBackup(arquivo) {
   });
   if (!ok) return;
   estado.auditorias = L.auditorias; estado.operadores = L.operadores; estado.config = v.config;
+  if (v.baseLeads) estado.baseLeads = v.baseLeads;
   relinkarOrfaos();
-  salvarOperadores(); salvarAuditorias(); salvarConfig();
+  salvarOperadores(); salvarAuditorias(); salvarConfig(); salvarBase();
   estado.ultimoOperadorId = ''; salvarEstadoUI();
   aplicarConfigNaUI(); renderTudo();
   toast('Backup restaurado com sucesso.');
+}
+
+async function importarBase(texto) {
+  var res;
+  try { res = analisarBase(texto); } catch (e) { res = { erro: 'O conteúdo não pôde ser interpretado.' }; }
+  if (res.erro) { await avisoModal('Planilha inválida', res.erro); return; }
+  if (!res.itens.length) { await avisoModal('Nada para importar', 'Nenhuma linha válida encontrada (' + res.invalidos + ' inválidas).'); return; }
+  var c = contarMescla(res.itens);
+  var ok = await confirmar({ titulo: 'Atualizar a base de leads?', rotuloOk: 'Importar',
+    corpo: [el('ul', { class: 'frases' },
+      el('li', null, el('b', null, String(c.novos)), ' ' + plural(c.novos, 'auditoria nova', 'auditorias novas') + '.'),
+      el('li', null, c.atualizados + ' já existentes (serão atualizadas).'),
+      el('li', null, res.invalidos + ' linhas inválidas (ignoradas).')),
+      el('p', { class: 'dica' }, 'A base atual é mantida; só são acrescentadas ou atualizadas as linhas da planilha.')] });
+  if (!ok) return;
+  mesclarBase(res.itens); salvarBase(); renderTudo();
+  toast(c.novos + ' ' + plural(c.novos, 'auditoria adicionada', 'auditorias adicionadas') + ' à base de leads.');
+}
+async function colarBase() {
+  var ta = el('textarea', { id: 'b-texto', rows: '9', spellcheck: 'false', style: 'font-family:Consolas,monospace;font-size:.82rem;min-height:190px', placeholder: 'ID\tAvaliado\tAvaliador\tFormulario\tConformidade\tEsteira\tTipoAtendimento\tCodigoLead\t...' });
+  var msg = el('div', { class: 'erro-form', role: 'alert', hidden: true });
+  var r = await abrirModal({
+    titulo: 'Colar planilha de leads auditados',
+    corpo: [el('p', null, 'Copie as linhas da planilha (incluindo o cabeçalho) e cole abaixo.'), campoModal('Linhas da planilha', ta, 'b-texto'), msg],
+    botoes: [{ rotulo: 'Cancelar', valor: false, classe: 'btn-linha' },
+      { rotulo: 'Analisar', valor: true, classe: 'btn-primario', validar: function () {
+        if (!ta.value.trim()) { msg.textContent = 'Cole as linhas da planilha antes de continuar.'; msg.hidden = false; return false; }
+        return true;
+      } }]
+  });
+  if (r === true) await importarBase(ta.value);
+}
+async function importarArquivoBase(arquivo) {
+  if (!arquivo) return;
+  if (arquivo.size > 25 * 1024 * 1024) { await avisoModal('Arquivo muito grande', 'O arquivo excede 25 MB.'); return; }
+  var texto;
+  try {
+    texto = await lerArquivo(arquivo, 'UTF-8');
+    if (texto.indexOf('\uFFFD') !== -1) texto = await lerArquivo(arquivo, 'windows-1252');
+  } catch (e) { await avisoModal('Erro ao ler o arquivo', 'Não foi possível ler o arquivo selecionado.'); return; }
+  await importarBase(texto);
+}
+async function limparBase() {
+  if (!estado.baseLeads.length) { toast('A base de leads já está vazia.', { tipo: 'aviso' }); return; }
+  var ok = await confirmar({ titulo: 'Limpar a base de leads?', perigo: true, rotuloOk: 'Limpar base',
+    corpo: ['Serão removidas ' + estado.baseLeads.length + ' auditorias da base. Os registros feitos neste sistema não são afetados. Esta ação não poderá ser desfeita.'] });
+  if (!ok) return;
+  estado.baseLeads = []; salvarBase(); renderTudo(); toast('Base de leads limpa.');
 }
 
 /* =====================================================
@@ -2282,7 +2562,7 @@ async function apagarTudo() {
   var msg = el('div', { class: 'erro-form', role: 'alert', hidden: true });
   var r = await abrirModal({
     titulo: 'Apagar todos os dados?', classe: 'perigo',
-    corpo: [el('p', null, 'Serão apagadas ', el('b', null, estado.auditorias.length + ' auditorias'), '. Operadores e configurações voltarão ao padrão inicial.'),
+    corpo: [el('p', null, 'Serão apagadas ', el('b', null, estado.auditorias.length + ' auditorias'), '. Operadores e configurações voltarão ao padrão inicial e a base de leads auditados será esvaziada.'),
       el('p', null, el('b', null, 'Esta ação não poderá ser desfeita.')), el('p', { class: 'dica' }, 'Recomendamos fazer um backup JSON antes de continuar.'),
       campoModal('Para confirmar, digite APAGAR', campo, 'x-conf'), msg],
     botoes: [
@@ -2294,9 +2574,9 @@ async function apagarTudo() {
     ]
   });
   if (r !== true) return;
-  estado.auditorias = []; estado.operadores = operadoresPadrao(); estado.config = copiar(CONFIG_PADRAO);
+  estado.auditorias = []; estado.operadores = operadoresPadrao(); estado.config = copiar(CONFIG_PADRAO); estado.baseLeads = [];
   estado.ultimoOperadorId = ''; estado.ultimoTipo = '';
-  salvarAuditorias(); salvarOperadores(); salvarConfig(); salvarEstadoUI();
+  salvarAuditorias(); salvarOperadores(); salvarConfig(); salvarBase(); salvarEstadoUI();
   Armazenamento.remover(CH.backup);
   aplicarConfigNaUI(); renderTudo(); toast('Todos os dados foram apagados.');
 }
@@ -2378,6 +2658,11 @@ function ligarEventos() {
   $('#d-bkp').addEventListener('click', fazerBackup);
   $('#d-rest').addEventListener('click', function () { $('#file-json').click(); });
   $('#file-json').addEventListener('change', function (e) { var f = e.target.files[0]; e.target.value = ''; restaurarBackup(f); });
+  $('#b-colar').addEventListener('click', colarBase);
+  $('#b-arq').addEventListener('click', function () { $('#file-base').click(); });
+  $('#file-base').addEventListener('change', function (e) { var f = e.target.files[0]; e.target.value = ''; importarArquivoBase(f); });
+  $('#b-limpar').addEventListener('click', limparBase);
+  $('#b-busca').addEventListener('input', renderBase);
   $('#d-apagar-hoje').addEventListener('click', apagarHoje);
   $('#d-apagar-tudo').addEventListener('click', apagarTudo);
 
