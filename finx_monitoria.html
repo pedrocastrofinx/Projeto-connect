@@ -3362,7 +3362,7 @@ async function importarArquivoKanban(arquivo) {
     if (m[0] === 0x50 && m[1] === 0x4B) linhas = await lerXlsx(arquivo);
     else {
       var texto = await lerArquivo(arquivo, 'UTF-8');
-      if (texto.indexOf('�') !== -1) texto = await lerArquivo(arquivo, 'windows-1252');
+      if (texto.indexOf('\uFFFD') !== -1) texto = await lerArquivo(arquivo, 'windows-1252');
       linhas = linhasDeTexto(texto);
     }
   } catch (e) {
