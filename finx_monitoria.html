@@ -145,6 +145,8 @@ input[type=text],input[type=search],input[type=number],input[type=date],input[ty
 input:focus,select:focus,textarea:focus{border-color:var(--azul)}
 input[type=checkbox],input[type=radio]{width:18px;height:18px;accent-color:var(--azul)}
 .linha-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-items:end}
+.dropzone{border:2px dashed var(--azul-med);border-radius:16px;padding:28px 18px;text-align:center;background:var(--azul-cl);cursor:pointer;transition:background .15s,border-color .15s;color:var(--azul-esc)}
+.dropzone:hover,.dropzone.sobre{border-color:var(--azul);background:#D8E6FF}
 .input-com-botao{display:flex;gap:8px;align-items:stretch}
 .input-com-botao .btn{white-space:nowrap}
 .link-mini{margin-left:4px;text-decoration:none;font-weight:800;color:var(--azul);border:1px solid var(--azul-med);border-radius:8px;padding:0 6px;display:inline-block}
@@ -571,6 +573,15 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
         </div>
       </form>
 
+      <div class="secao-titulo"><h2>Atualizar os dados</h2><span>Kanban e auditorias do site</span></div>
+      <div class="card" style="display:grid;gap:12px">
+        <div id="dz" class="dropzone" tabindex="0" role="button" aria-label="Arraste os arquivos aqui ou clique para escolher">
+          <b>Arraste aqui</b> os arquivos exportados do site (Relatórios → Auditorias, Kanban) ou <u>clique para escolher</u>.<br>
+          <small>Aceita Excel (.xlsx) e CSV, vários de uma vez. O painel reconhece sozinho o que é cada arquivo.</small>
+        </div>
+        <ul id="dz-log" class="frases" style="margin:0" aria-live="polite"></ul>
+      </div>
+
       <div class="secao-titulo"><h2>Base de leads já auditados</h2><span>Planilha de auditorias do mês</span></div>
       <div class="card" style="display:grid;gap:14px">
         <p class="dica">Os leads desta base avisam na hora do registro que já passaram por auditoria (Rotina ou outro formulário). Cole as linhas copiadas da planilha, com o cabeçalho <b>ID, Avaliado, Avaliador, Formulario, Conformidade, Esteira, TipoAtendimento, CodigoLead, DataAuditoria</b>, ou importe um CSV. Telefones não são guardados.</p>
@@ -578,7 +589,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
         <div class="acoes">
           <button type="button" class="btn btn-primario" id="b-site">↻ Atualizar do site</button>
           <button type="button" class="btn btn-sec" id="b-colar">📋 Colar da planilha</button>
-          <button type="button" class="btn btn-sec" id="b-arq">⭱ Importar arquivo CSV</button>
+          <button type="button" class="btn btn-sec" id="b-arq">⭱ Importar arquivo (Excel/CSV)</button>
           <button type="button" class="btn btn-perigo-linha" id="b-limpar">Limpar base</button>
         </div>
         <div class="campo"><label for="b-busca">Consultar um lead (base e registros do sistema)</label><input type="search" id="b-busca" autocomplete="off" placeholder="Digite o número do lead"></div>
@@ -621,7 +632,8 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 <input type="file" id="file-csv" accept=".csv,text/csv" hidden>
 <input type="file" id="file-json" accept=".json,application/json" hidden>
-<input type="file" id="file-base" accept=".csv,.tsv,.txt,text/csv,text/plain" hidden>
+<input type="file" id="file-base" accept=".xlsx,.csv,.tsv,.txt,text/csv,text/plain" hidden>
+<input type="file" id="file-multi" accept=".xlsx,.csv,.tsv,.txt,text/csv,text/plain" multiple hidden>
 <input type="file" id="file-kanban" accept=".xlsx,.csv,.tsv,.txt,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
 
 <script>
@@ -1077,9 +1089,11 @@ function mesclarSite(itens, executar) {
   if (executar) estado.baseLeads = mantidos.concat(itens);
   return { total: itens.length, substituidos: substituidos, antigos: antigos };
 }
-function analisarBase(texto) {
+var CAB_AUD_CODIGO = ['codigolead', 'codigodolead', 'codigo', 'lead', 'nlead'];
+var CAB_AUD_DATA = ['dataauditoria', 'datadaauditoria', 'datarealizacao', 'datadarealizacao', 'data'];
+function analisarBase(texto, linhasProntas) {
   texto = String(texto || '').replace(/^\uFEFF/, '');
-  var ini = texto.trim().charAt(0);
+  var ini = linhasProntas ? '' : texto.trim().charAt(0);
   if (ini === '{' || ini === '[') {
     var obj;
     try { obj = JSON.parse(texto); } catch (e) { return { erro: 'O JSON colado está incompleto ou inválido. Copie a resposta inteira (Ctrl + A, Ctrl + C) e cole de novo.' }; }
@@ -1088,9 +1102,7 @@ function analisarBase(texto) {
     if (lista.length && !('codigo_lead' in lista[0]) && !('avaliado_id' in lista[0])) return { erro: 'Esse JSON não parece ser a lista de auditorias (monitorias) do site.' };
     return converterMonitorias(lista, lerFormulariosSalvos(), primeiroDiaMes(dataISO(new Date())));
   }
-  var primeira = texto.split(/\r?\n/).filter(function (l) { return l.trim() !== ''; })[0] || '';
-  var sep = primeira.indexOf('\t') !== -1 ? '\t' : primeira.indexOf(';') !== -1 ? ';' : ',';
-  var linhas = parseCSV(texto, sep);
+  var linhas = linhasProntas || linhasDeTexto(texto);
   if (linhas.length < 2) return { erro: 'Não encontrei linhas de dados. Cole também a linha de cabeçalho (ID, Avaliado, Avaliador, Formulario, Conformidade, Esteira, TipoAtendimento, CodigoLead, DataAuditoria).' };
   if (linhas.length > 100001) return { erro: 'Linhas demais (máximo de 100.000).' };
   var cab = linhas[0].map(function (c) { return normBusca(c).replace(/[^a-z0-9]/g, ''); });
@@ -1098,7 +1110,7 @@ function analisarBase(texto) {
   var col = {
     id: achar(['id']), avaliado: achar(['avaliado']), avaliador: achar(['avaliador']), formulario: achar(['formulario']),
     conformidade: achar(['conformidade']), esteira: achar(['esteira']), atendimento: achar(['tipoatendimento', 'atendimento']),
-    codigo: achar(['codigolead', 'codigo', 'lead', 'nlead']), data: achar(['dataauditoria', 'data']),
+    codigo: achar(CAB_AUD_CODIGO), data: achar(CAB_AUD_DATA),
     uuid: achar(['uuid', 'oportunidadeid', 'idoportunidade', 'oportunidade', 'opportunityid', 'linkdryve', 'link', 'url'])
   };
   if (col.codigo < 0 || col.data < 0) return { erro: 'Cabeçalho não reconhecido. São obrigatórias as colunas CodigoLead e DataAuditoria.' };
@@ -1109,7 +1121,7 @@ function analisarBase(texto) {
     var b = sanitizarBaseItem({
       id: cel(l, 'id'), avaliado: cel(l, 'avaliado'), avaliador: cel(l, 'avaliador'), formulario: cel(l, 'formulario'),
       conformidade: cel(l, 'conformidade'), esteira: cel(l, 'esteira'), atendimento: cel(l, 'atendimento'),
-      codigo: cel(l, 'codigo'), data: parseDataCSV(cel(l, 'data')), uuid: cel(l, 'uuid')
+      codigo: cel(l, 'codigo'), data: parseDataKanban(cel(l, 'data')), uuid: cel(l, 'uuid')
     });
     if (b) itens.push(b); else invalidos++;
   }
@@ -1517,6 +1529,13 @@ function calcRitmo(agora, hr, m) {
   r.estado = 'ativo';
   r.porHora = m.faltaTotal / (r.minRest / 60);
   r.minPorAud = Math.max(1, Math.round(r.minRest / m.faltaTotal));
+  /* Reta final: com poucos minutos úteis (ou ritmo acima de 30/h) a conta por hora fica absurda (ex.: 620/h), então mostramos a situação em vez do ritmo */
+  if (r.minRest < 20 || r.porHora > 30) {
+    r.estado = 'final';
+    r.cabe = m.faltaTotal <= Math.max(1, Math.floor(r.minRest / 6));
+    r.nivel = r.cabe ? 'atencao' : 'critico';
+    return r;
+  }
   var base = jornada > 0 ? m.metaTotal / (jornada / 60) : 0;
   var razao = base > 0 ? r.porHora / base : 1;
   r.nivel = razao <= 1.15 ? 'ok' : razao <= 1.6 ? 'atencao' : 'critico';
@@ -2064,6 +2083,11 @@ function construirHero(ctx) {
   } else if (r.estado === 'encerrado') {
     selo = 'Expediente encerrado'; principal = 'Expediente encerrado';
     unid = 'Faltaram ' + r.falta + ' ' + plural(r.falta, 'auditoria', 'auditorias') + ' para a meta de hoje.';
+  } else if (r.estado === 'final') {
+    selo = 'Reta final'; principal = String(r.falta);
+    unid = plural(r.falta, 'auditoria faltando', 'auditorias faltando') + ' · ' + fmtDur(r.minRest) + ' úteis';
+    linhas.push('Faltam ' + r.falta + ' ' + plural(r.falta, 'auditoria', 'auditorias') + ' e ' + fmtDur(r.minRest) + ' úteis até as ' + cfgH.fim + '.');
+    linhas.push(r.cabe ? 'Ainda dá tempo: foque nas que faltam.' : 'Não dá para fechar a meta de hoje no tempo que resta: o que sobrar fica para amanhã.');
   } else {
     principal = fmt1(r.porHora);
     unid = plural(Math.round(r.porHora * 10) / 10, 'auditoria', 'auditorias') + ' por hora';
@@ -2150,6 +2174,8 @@ function construirRitmoReal(ctx) {
     }
   } else if (r.estado === 'concluida') {
     msgs.push('Meta concluída: o ritmo necessário não se aplica mais.'); nivelTag = tag('META CONCLUÍDA', 'verde');
+  } else if (r.estado === 'final') {
+    msgs.push('Reta final do expediente: restam poucos minutos, então o ritmo por hora deixa de valer.');
   } else {
     msgs.push('Expediente encerrado: o ritmo necessário não se aplica mais.');
   }
@@ -3509,9 +3535,9 @@ function acaoPlano(e) {
   else if (b.dataset.acao === 'copiar' && it) copiarTexto(it.lead.codigo).then(function (ok) { toast(ok ? 'Lead ' + it.lead.codigo + ' copiado.' : 'Não foi possível copiar.', { tipo: ok ? 'ok' : 'erro' }); });
 }
 
-async function importarBase(texto) {
+async function importarBase(texto, linhas) {
   var res;
-  try { res = analisarBase(texto); } catch (e) { res = { erro: 'O conteúdo não pôde ser interpretado.' }; }
+  try { res = analisarBase(texto, linhas); } catch (e) { res = { erro: 'O conteúdo não pôde ser interpretado.' }; }
   if (res.erro) { await avisoModal('Planilha inválida', res.erro); return; }
   if (!res.itens.length) { await avisoModal('Nada para importar', 'Nenhuma auditoria válida encontrada (' + res.invalidos + ' inválidas' + (res.ignorados ? ', ' + res.ignorados + ' fora do mês ou sem lead/finalização' : '') + ').'); return; }
   if (res.origemSite) {
@@ -3601,15 +3627,44 @@ async function colarBase() {
   });
   if (r === true) await importarBase(ta.value);
 }
+/* Lê qualquer arquivo de planilha (.xlsx ou texto/CSV) e devolve as linhas; lança erro com mensagem amigável */
+async function lerLinhasArquivo(arquivo) {
+  if (arquivo.size > 40 * 1024 * 1024) throw new Error('O arquivo excede 40 MB.');
+  var m = new Uint8Array(await arquivo.slice(0, 4).arrayBuffer());
+  if (m[0] === 0xD0 && m[1] === 0xCF && m[2] === 0x11 && m[3] === 0xE0) throw new Error('Formato antigo (.xls): abra no Excel e salve como .xlsx ou CSV.');
+  if (m[0] === 0x50 && m[1] === 0x4B) {
+    try { return await lerXlsx(arquivo); } catch (e) { throw new Error('Não consegui ler o .xlsx. Abra no Excel e salve como CSV.'); }
+  }
+  var texto = await lerArquivo(arquivo, 'UTF-8');
+  if (texto.indexOf('\uFFFD') !== -1) texto = await lerArquivo(arquivo, 'windows-1252');
+  return linhasDeTexto(texto);
+}
 async function importarArquivoBase(arquivo) {
   if (!arquivo) return;
-  if (arquivo.size > 25 * 1024 * 1024) { await avisoModal('Arquivo muito grande', 'O arquivo excede 25 MB.'); return; }
-  var texto;
-  try {
-    texto = await lerArquivo(arquivo, 'UTF-8');
-    if (texto.indexOf('\uFFFD') !== -1) texto = await lerArquivo(arquivo, 'windows-1252');
-  } catch (e) { await avisoModal('Erro ao ler o arquivo', 'Não foi possível ler o arquivo selecionado.'); return; }
-  await importarBase(texto);
+  var linhas;
+  try { linhas = await lerLinhasArquivo(arquivo); } catch (e) { await avisoModal('Erro ao ler o arquivo', e.message); return; }
+  await importarBase('', linhas);
+}
+/* Reconhece o tipo do arquivo pelas colunas do cabeçalho */
+function tipoDasLinhas(linhas) {
+  var cab = (linhas[0] || []).map(colunaKey), tem = function (lista) { return lista.some(function (n) { return cab.indexOf(n) !== -1; }); };
+  if (tem(['referencecode']) || (tem(['etapadoboard']) && tem(['closer']))) return 'kanban';
+  if (tem(CAB_AUD_CODIGO) && tem(CAB_AUD_DATA)) return 'auditorias';
+  return null;
+}
+/* Área "arraste os arquivos": reconhece o que é cada arquivo e manda para a importação certa */
+async function processarArquivos(arquivos) {
+  var log = $('#dz-log');
+  log.replaceChildren();
+  function linha(txt, cor) { log.appendChild(el('li', { style: cor ? 'color:' + cor : '' }, txt)); }
+  for (var k = 0; k < arquivos.length; k++) {
+    var f = arquivos[k], linhas;
+    try { linhas = await lerLinhasArquivo(f); } catch (e) { linha('✗ ' + f.name + ' — ' + e.message, 'var(--vermelho-esc)'); continue; }
+    var tipo = tipoDasLinhas(linhas);
+    if (tipo === 'kanban') { linha('↻ ' + f.name + ' — kanban de leads'); await importarKanbanLinhas(linhas, f.name); }
+    else if (tipo === 'auditorias') { linha('↻ ' + f.name + ' — auditorias do mês'); await importarBase('', linhas); }
+    else linha('? ' + f.name + ' — formato não reconhecido (colunas: ' + (linhas[0] || []).slice(0, 8).join(', ') + '). Envie o kanban (reference_code, Etapa do Board…) ou as auditorias (CodigoLead, DataAuditoria…).', 'var(--amarelo-esc)');
+  }
 }
 async function limparBase() {
   if (!estado.baseLeads.length) { toast('A base de leads já está vazia.', { tipo: 'aviso' }); return; }
@@ -3765,6 +3820,16 @@ function ligarEventos() {
   $('#d-bkp').addEventListener('click', fazerBackup);
   $('#d-rest').addEventListener('click', function () { $('#file-json').click(); });
   $('#file-json').addEventListener('change', function (e) { var f = e.target.files[0]; e.target.value = ''; restaurarBackup(f); });
+  var dz = $('#dz'), multi = $('#file-multi');
+  dz.addEventListener('click', function () { multi.click(); });
+  dz.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); multi.click(); } });
+  multi.addEventListener('change', function (e) { var fs = Array.from(e.target.files); e.target.value = ''; if (fs.length) processarArquivos(fs); });
+  ['dragenter', 'dragover'].forEach(function (n) { dz.addEventListener(n, function (e) { e.preventDefault(); dz.classList.add('sobre'); }); });
+  dz.addEventListener('dragleave', function () { dz.classList.remove('sobre'); });
+  dz.addEventListener('drop', function (e) { e.preventDefault(); dz.classList.remove('sobre'); var fs = Array.from(e.dataTransfer.files); if (fs.length) processarArquivos(fs); });
+  /* soltar um arquivo fora da área não deve abrir o arquivo no navegador e perder a tela */
+  window.addEventListener('dragover', function (e) { e.preventDefault(); });
+  window.addEventListener('drop', function (e) { e.preventDefault(); });
   $('#b-site').addEventListener('click', function () { atualizarDoSite(false); });
   $('#b-colar').addEventListener('click', colarBase);
   $('#b-arq').addEventListener('click', function () { $('#file-base').click(); });
