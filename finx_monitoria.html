@@ -256,6 +256,28 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
 .voltar-topo{position:fixed;right:18px;bottom:78px;width:46px;height:46px;border-radius:50%;border:0;background:var(--azul);color:#fff;font-size:1.3rem;box-shadow:0 8px 20px rgba(0,87,255,.4);z-index:70}
 .rodape{max-width:1440px;margin:10px auto 24px;padding:0 20px;color:var(--muted);font-size:.82rem;display:flex;gap:6px 20px;flex-wrap:wrap;justify-content:space-between}
 
+/* ---------- Plano semanal ---------- */
+.btn.on{background:var(--azul);color:#fff;border-color:var(--azul)}
+.pl-dias{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pl-dias .btn small{font-weight:600;opacity:.85}
+.pl-tabela{min-width:900px}
+.pl-tabela td{vertical-align:middle}
+.pl-tabela .btn{white-space:nowrap}
+.pl-motivos{display:flex;gap:4px;flex-wrap:wrap}
+.pl-cod{display:flex;gap:6px;align-items:center;font-weight:800;font-variant-numeric:tabular-nums}
+.pl-cod button{border:0;background:transparent;color:var(--azul);padding:2px 5px;border-radius:6px;font-size:.95rem}
+.pl-cod button:hover{background:var(--azul-cl)}
+.pl-metas{min-width:620px}
+#pl-kanban .kv dd{overflow-wrap:anywhere}
+.pl-metas td,.pl-metas th{text-align:center}
+.pl-metas td:first-child,.pl-metas th:first-child{text-align:left}
+.cel-meta{display:grid;gap:3px;min-width:96px}
+.cel-meta b{font-variant-numeric:tabular-nums}
+.cel-meta .dica{line-height:1.2}
+.pl-ajustes{border:1px solid var(--borda);border-radius:var(--raio);background:#fff;box-shadow:var(--sombra);padding:14px 18px}
+.pl-ajustes>summary{cursor:pointer;font-weight:700;color:var(--azul-esc)}
+.pl-ajustes[open]>summary{margin-bottom:12px}
+
 /* ---------- Responsivo ---------- */
 @media (max-width:1100px){
   .grid-metas{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -324,6 +346,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
   <nav class="menu" id="menu" aria-label="Navegação principal">
     <button type="button" class="nav-btn" data-aba="geral"><span class="nav-ico" aria-hidden="true">◫</span><span class="nav-txt">Visão geral</span></button>
     <button type="button" class="nav-btn" data-aba="registrar"><span class="nav-ico" aria-hidden="true">✚</span><span class="nav-txt">Registrar</span></button>
+    <button type="button" class="nav-btn" data-aba="plano"><span class="nav-ico" aria-hidden="true">☑</span><span class="nav-txt">Plano</span></button>
     <button type="button" class="nav-btn" data-aba="equipe"><span class="nav-ico" aria-hidden="true">☻</span><span class="nav-txt">Equipe</span></button>
     <button type="button" class="nav-btn" data-aba="historico"><span class="nav-ico" aria-hidden="true">☰</span><span class="nav-txt">Histórico</span></button>
     <button type="button" class="nav-btn" data-aba="relatorios"><span class="nav-ico" aria-hidden="true">▤</span><span class="nav-txt">Relatórios</span></button>
@@ -365,6 +388,13 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
       </div>
       <div class="secao-titulo"><h2>Registros de hoje</h2><span id="reg-hoje-sub"></span></div>
       <div id="reg-hoje"></div>
+    </section>
+
+    <!-- ===================== PLANO SEMANAL ===================== -->
+    <section class="aba" id="aba-plano" data-aba="plano" aria-label="Plano semanal de auditorias" hidden>
+      <div class="secao-titulo"><h2>Plano semanal de auditorias</h2><span id="pl-sub"></span></div>
+      <div id="pl-kanban"></div>
+      <div id="pl-corpo"></div>
     </section>
 
     <!-- ===================== EQUIPE ===================== -->
@@ -573,6 +603,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
 <input type="file" id="file-csv" accept=".csv,text/csv" hidden>
 <input type="file" id="file-json" accept=".json,application/json" hidden>
 <input type="file" id="file-base" accept=".csv,.tsv,.txt,text/csv,text/plain" hidden>
+<input type="file" id="file-kanban" accept=".xlsx,.csv,.tsv,.txt,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
 
 <script>
 /* =========================================================
@@ -599,7 +630,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
 var VERSAO = 1;
 var CH = {
   aud: 'finx_auditorias', op: 'finx_operadores', cfg: 'finx_configuracoes', ver: 'finx_versao',
-  salvo: 'finx_salvo_em', estado: 'finx_estado', backup: 'finx_ultimo_backup', base: 'finx_base_leads'
+  salvo: 'finx_salvo_em', estado: 'finx_estado', backup: 'finx_ultimo_backup', base: 'finx_base_leads', kanban: 'finx_kanban'
 };
 var TIPOS = {
   rotina: { rotulo: 'Rotina', titulo: 'Rotina' },
@@ -607,7 +638,7 @@ var TIPOS = {
   perdido: { rotulo: 'Perdido', titulo: 'Perdidos' }
 };
 var TIPOS_ORDEM = ['rotina', 'documentacao', 'perdido'];
-var ABAS = ['geral', 'registrar', 'equipe', 'historico', 'relatorios', 'config'];
+var ABAS = ['geral', 'registrar', 'plano', 'equipe', 'historico', 'relatorios', 'config'];
 var MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 var DIAS_SEMANA = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
 var NOMES_PADRAO = [
@@ -620,10 +651,15 @@ var NOMES_PADRAO = [
 var ENTRADAS_PADRAO = ['2026-09-28', '2026-09-28', '2026-09-28', '2026-09-28', '2026-09-21', '2026-09-21', '2026-09-21',
   '2026-09-14', '2026-09-08', '2026-09-08', '2026-08-31', '2026-08-24', '2026-08-24', '2026-08-17'];
 var NOVATO_DIAS = 30;
+/* Plano semanal: o kanban é a lista de leads; cada lead recebe no máximo uma auditoria */
+var KANBAN_RETENCAO_DIAS = 120;  /* perdidos mais antigos que isso não são guardados */
+var ACOES_ETAPA = ['auto', 'rotina', 'documentacao', 'perdido', 'ignorar'];
+var PENALIDADE_CLOSER = 3;       /* desconto por lead já escolhido do mesmo closer (espalha o plano entre a equipe) */
 var CONFIG_PADRAO = {
   metas: { rotina: 30, documentacao: 8, perdido: 6 },
   horarios: { inicio: '09:00', fim: '18:00', almocoInicio: '12:00', almocoFim: '13:00' },
   metaMensalPadrao: 1,
+  plano: { janelaPerdido: 30, etapas: {} },
   mostrarSegundos: true,
   sons: true,
   confirmarExclusao: true
@@ -738,13 +774,14 @@ var Armazenamento = {
    3. ESTADO E SANITIZAÇÃO
    ===================================================== */
 var estado = {
-  auditorias: [], operadores: [], baseLeads: [], config: null,
+  auditorias: [], operadores: [], baseLeads: [], kanban: { importadoEm: 0, arquivo: '', leads: [] }, config: null,
   rev: 0, registrando: false, diaRender: '', minutoRender: -1,
   ultimoOperadorId: '', ultimoTipo: '', avisoBackupFechado: false,
   ui: {
     aba: 'geral',
     equipe: { busca: '', filtro: 'todos', ordem: 'nome', dir: 'asc' },
     hist: { q: '', ini: '', fim: '', op: '', tipo: '', lead: '', soRep: false, ordem: 'tempo', dir: 'desc', pag: 1, tam: 25 },
+    plano: { dia: '', tipo: '', closer: '', ajustes: false },
     relData: '', relMes: 0, relAno: 0
   }
 };
@@ -784,6 +821,13 @@ function mesclarConfig(c) {
   Object.keys(h2).forEach(function (k) { if (typeof h[k] === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(h[k])) h2[k] = h[k]; });
   if (horariosCoerentes(h2)) p.horarios = h2;
   var mm = inteiroEntre(c.metaMensalPadrao, 0, 999); if (mm !== null) p.metaMensalPadrao = mm;
+  var pl = c.plano && typeof c.plano === 'object' ? c.plano : {};
+  var jp = inteiroEntre(pl.janelaPerdido, 1, KANBAN_RETENCAO_DIAS); if (jp !== null) p.plano.janelaPerdido = jp;
+  if (pl.etapas && typeof pl.etapas === 'object' && !Array.isArray(pl.etapas)) {
+    Object.keys(pl.etapas).slice(0, 60).forEach(function (k) {
+      if (ACOES_ETAPA.indexOf(pl.etapas[k]) > 0 && k.length <= 60) p.plano.etapas[k] = pl.etapas[k];
+    });
+  }
   ['mostrarSegundos', 'sons', 'confirmarExclusao'].forEach(function (k) { if (typeof c[k] === 'boolean') p[k] = c[k]; });
   if (p.metas.rotina + p.metas.documentacao + p.metas.perdido <= 0) p.metas = copiar(CONFIG_PADRAO.metas);
   return p;
@@ -1007,6 +1051,158 @@ function mesclarBase(itens) {
   estado.baseLeads = Array.from(mapa.values());
 }
 
+/* ---- Kanban: lista de leads do plano semanal ----
+   Cada lead pode receber no máximo uma auditoria. Telefone, CPF e nome do lead não são guardados. */
+var LOCACAO_APROVADA = ['APPROVED', 'APPROVED_CONDITIONAL', 'APPROVED_REPROCESSED', 'PRE_APPROVED', 'CONVERTED'];
+var MOTIVOS_CONTROLAVEIS = ['sem retorno', 'cotando', 'desistiu', 'preco', 'sem interesse', 'nao fecha online', 'fechou direto', 'preferiu comprar', 'nao quer seguir', 'nao tem o valor'];
+var MOTIVOS_FORA_CONTROLE = ['renda insuficiente', 'motorista de app', 'cnh', 'reprovad', 'nao atende as condicoes', 'score', 'modelo indisponivel', 'quilometragem', 'grandes frotas', 'dados incorretos', 'contrato cancelado'];
+function colunaKey(c) { return normBusca(c).replace(/[^a-z0-9]/g, ''); }
+function contemAlgum(lista, txt) { return lista.some(function (x) { return txt.indexOf(x) !== -1; }); }
+function tempNormalizada(s) {
+  var t = normBusca(s);
+  return t.indexOf('quente') !== -1 ? 'Quente' : t.indexOf('morno') !== -1 ? 'Morno' : t.indexOf('frio') !== -1 ? 'Frio' : '';
+}
+function sanitizarLead(x) {
+  if (!x || typeof x !== 'object') return null;
+  var codigo = limparTexto(x.codigo).slice(0, 60), norm = normLead(codigo), etapa = limparTexto(x.etapa).slice(0, 60);
+  if (!norm || !etapa) return null;
+  var d = function (v) { return dataValida(v) ? v : null; };
+  return {
+    codigo: codigo, codigoNorm: norm, etapa: etapa, status: limparTexto(x.status).toUpperCase().slice(0, 20),
+    closer: limparTexto(x.closer).slice(0, 80), sup: limparTexto(x.sup).slice(0, 80), origem: limparTexto(x.origem).slice(0, 40),
+    temp: tempNormalizada(x.temp), motivo: limparTexto(x.motivo).slice(0, 60), locacao: limparTexto(x.locacao).toUpperCase().slice(0, 30),
+    dLead: d(x.dLead), dPerdido: d(x.dPerdido), dAprov: d(x.dAprov), dPedido: d(x.dPedido),
+    disc: inteiroEntre(x.disc, 0, 9999) || 0
+  };
+}
+function sanitizarKanban(k) {
+  var mapa = new Map(), lista = k && Array.isArray(k.leads) ? k.leads : [];
+  lista.forEach(function (x) { var l = sanitizarLead(x); if (l) mapa.set(l.codigoNorm, l); });
+  return { importadoEm: k && Number.isFinite(k.importadoEm) ? k.importadoEm : 0, arquivo: limparTexto(k && k.arquivo).slice(0, 120), leads: Array.from(mapa.values()) };
+}
+/* Datas do kanban: dd/mm/aaaa (com ou sem hora), aaaa-mm-dd ou número de série do Excel */
+function parseDataKanban(v) {
+  var s = String(v === null || v === undefined ? '' : v).trim();
+  if (/^\d{4,6}(\.\d+)?$/.test(s) && +s > 20000 && +s < 80000) return new Date(Date.UTC(1899, 11, 30) + Math.floor(+s) * 86400000).toISOString().slice(0, 10);
+  return parseDataCSV(s);
+}
+function analisarKanban(linhas) {
+  if (!linhas || linhas.length < 2) return { erro: 'Não encontrei linhas de dados. Inclua também a linha de cabeçalho do kanban.' };
+  if (linhas.length > 100001) return { erro: 'Linhas demais (máximo de 100.000).' };
+  var cab = linhas[0].map(colunaKey);
+  function achar(nomes) { for (var i = 0; i < nomes.length; i++) { var k = cab.indexOf(nomes[i]); if (k >= 0) return k; } return -1; }
+  var col = {
+    codigo: achar(['referencecode', 'codigolead', 'codigodolead', 'codigo', 'nlead']), etapa: achar(['etapadoboard', 'etapa']),
+    status: achar(['statusgeral', 'status']), closer: achar(['closer']), sup: achar(['supervisor']), origem: achar(['origem']),
+    temp: achar(['temperatura']), motivo: achar(['motivodaperda', 'motivo']), locacao: achar(['statuslocacao']),
+    dLead: achar(['datadolead']), dPerdido: achar(['dataperdido']), dAprov: achar(['datadeaprovacao']), dPedido: achar(['datadopedido']),
+    disc: achar(['discagens'])
+  };
+  var faltando = [['codigo', 'reference_code (código do lead)'], ['etapa', 'Etapa do Board'], ['closer', 'Closer']].filter(function (p) { return col[p[0]] < 0; });
+  if (faltando.length) return { erro: 'Cabeçalho do kanban não reconhecido. Colunas obrigatórias ausentes: ' + faltando.map(function (p) { return p[1]; }).join(', ') + '.' };
+  function cel(l, k) { return col[k] >= 0 && l[col[k]] !== undefined ? l[col[k]] : ''; }
+  var mapa = new Map(), invalidos = 0;
+  for (var i = 1; i < linhas.length; i++) {
+    var l = linhas[i], etapa = limparTexto(cel(l, 'etapa')), status = limparTexto(cel(l, 'status'));
+    if (!status) status = normBusca(etapa).indexOf('perdid') !== -1 ? 'LOST' : 'ONGOING';
+    var lead = sanitizarLead({
+      codigo: cel(l, 'codigo'), etapa: etapa, status: status, closer: cel(l, 'closer'), sup: cel(l, 'sup'), origem: cel(l, 'origem'),
+      temp: cel(l, 'temp'), motivo: cel(l, 'motivo'), locacao: cel(l, 'locacao'), disc: cel(l, 'disc'),
+      dLead: parseDataKanban(cel(l, 'dLead')), dPerdido: parseDataKanban(cel(l, 'dPerdido')),
+      dAprov: parseDataKanban(cel(l, 'dAprov')), dPedido: parseDataKanban(cel(l, 'dPedido'))
+    });
+    if (lead) mapa.set(lead.codigoNorm, lead); else invalidos++;
+  }
+  return { itens: Array.from(mapa.values()), invalidos: invalidos };
+}
+/* Perdidos muito antigos nunca entram no plano: não ocupam espaço no navegador */
+function reterRelevantes(lista, hoje) {
+  var mantidos = lista.filter(function (l) {
+    return l.status !== 'LOST' || (l.dPerdido && diasEntre(l.dPerdido, hoje) <= KANBAN_RETENCAO_DIAS);
+  });
+  return { mantidos: mantidos, descartados: lista.length - mantidos.length };
+}
+
+/* ---- Leitura de .xlsx (zip + XML), sem bibliotecas ---- */
+function xmlDesescapar(s) {
+  return s.replace(/&(#x[0-9a-fA-F]+|#\d+|amp|lt|gt|quot|apos);/g, function (m, g) {
+    if (g === 'amp') return '&'; if (g === 'lt') return '<'; if (g === 'gt') return '>'; if (g === 'quot') return '"'; if (g === 'apos') return "'";
+    var n = g.charAt(1) === 'x' ? parseInt(g.slice(2), 16) : parseInt(g.slice(1), 10);
+    try { return String.fromCodePoint(n); } catch (e) { return m; }
+  });
+}
+function listarZip(buf) {
+  var u8 = new Uint8Array(buf), dv = new DataView(buf), n = u8.length, eocd = -1;
+  for (var i = n - 22; i >= Math.max(0, n - 65557); i--) { if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; } }
+  if (eocd < 0) throw new Error('zip');
+  var total = dv.getUint16(eocd + 10, true), pos = dv.getUint32(eocd + 16, true), out = {};
+  for (var k = 0; k < total; k++) {
+    if (dv.getUint32(pos, true) !== 0x02014b50) throw new Error('zip');
+    var nl = dv.getUint16(pos + 28, true), ex = dv.getUint16(pos + 30, true), cm = dv.getUint16(pos + 32, true);
+    out[new TextDecoder().decode(u8.subarray(pos + 46, pos + 46 + nl))] = { metodo: dv.getUint16(pos + 10, true), comp: dv.getUint32(pos + 20, true), off: dv.getUint32(pos + 42, true) };
+    pos += 46 + nl + ex + cm;
+  }
+  return out;
+}
+async function extrairZip(buf, ent) {
+  var dv = new DataView(buf);
+  if (dv.getUint32(ent.off, true) !== 0x04034b50) throw new Error('zip');
+  var ini = ent.off + 30 + dv.getUint16(ent.off + 26, true) + dv.getUint16(ent.off + 28, true);
+  var dados = new Uint8Array(buf, ini, ent.comp);
+  if (ent.metodo === 0) return dados;
+  if (ent.metodo !== 8 || typeof DecompressionStream === 'undefined') throw new Error('compressao');
+  var fluxo = new Blob([dados]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+  return new Uint8Array(await new Response(fluxo).arrayBuffer());
+}
+function indiceColuna(letras) { var n = 0; for (var i = 0; i < letras.length; i++) n = n * 26 + letras.charCodeAt(i) - 64; return n - 1; }
+async function lerXlsx(arquivo) {
+  var buf = await arquivo.arrayBuffer(), ent = listarZip(buf), dec = new TextDecoder('utf-8');
+  async function texto(nome) { return ent[nome] ? dec.decode(await extrairZip(buf, ent[nome])) : null; }
+  var caminho = 'xl/worksheets/sheet1.xml', wb = await texto('xl/workbook.xml'), rels = await texto('xl/_rels/workbook.xml.rels');
+  var atr = function (tag, nome) { var m = new RegExp('\\b' + nome + '="([^"]*)"').exec(tag); return m ? m[1] : null; };
+  if (wb && rels) {
+    var sh = /<sheet\b[^>]*>/.exec(wb), rid = sh ? atr(sh[0], 'r:id') : null;
+    (rels.match(/<Relationship\b[^>]*>/g) || []).forEach(function (r) {
+      if (rid && atr(r, 'Id') === rid && atr(r, 'Target')) { var t = atr(r, 'Target'); caminho = t.charAt(0) === '/' ? t.slice(1) : 'xl/' + t; }
+    });
+  }
+  var compart = [], ss = await texto('xl/sharedStrings.xml');
+  if (ss) {
+    var reSi = /<si\b[^>]*?(?:\/>|>([\s\S]*?)<\/si>)/g, m;
+    while ((m = reSi.exec(ss))) {
+      var corpo = (m[1] || '').replace(/<rPh\b[\s\S]*?<\/rPh>/g, ''), txt = '', reT = /<t\b[^>]*?(?:\/>|>([\s\S]*?)<\/t>)/g, t;
+      while ((t = reT.exec(corpo))) txt += t[1] || '';
+      compart.push(xmlDesescapar(txt));
+    }
+  }
+  var xml = await texto(caminho);
+  if (!xml) throw new Error('planilha');
+  var linhas = [], reC = /<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g, c;
+  while ((c = reC.exec(xml))) {
+    var ref = /\br="([A-Z]+)(\d+)"/.exec(c[1]);
+    if (!ref) continue;
+    var lin = +ref[2] - 1, tp = /\bt="([^"]*)"/.exec(c[1]), corpoC = c[2] || '', v = '';
+    if (lin > 100000) throw new Error('linhas');
+    if (tp && tp[1] === 'inlineStr') {
+      var reI = /<t\b[^>]*?(?:\/>|>([\s\S]*?)<\/t>)/g, ti;
+      while ((ti = reI.exec(corpoC))) v += xmlDesescapar(ti[1] || '');
+    } else {
+      var mv = /<v>([\s\S]*?)<\/v>/.exec(corpoC);
+      if (mv) v = tp && tp[1] === 's' ? (compart[+mv[1]] || '') : xmlDesescapar(mv[1]);
+    }
+    if (v === '') continue;
+    (linhas[lin] || (linhas[lin] = []))[indiceColuna(ref[1])] = v;
+  }
+  return linhas.filter(Boolean).map(function (l) { return Array.from(l, function (x) { return x === undefined ? '' : x; }); });
+}
+/* Texto colado do Excel (tabulação) ou CSV (; ou ,) com cabeçalho */
+function linhasDeTexto(texto) {
+  texto = String(texto || '').replace(/^﻿/, '');
+  var primeira = texto.split(/\r?\n/).filter(function (l) { return l.trim() !== ''; })[0] || '';
+  var sep = primeira.indexOf('\t') !== -1 ? '\t' : primeira.indexOf(';') !== -1 ? ';' : ',';
+  return parseCSV(texto, sep);
+}
+
 function carregarJSON(chave, validar) {
   var bruto = Armazenamento.ler(chave);
   if (bruto === null) return { novo: true };
@@ -1043,6 +1239,10 @@ function carregarTudo() {
   if (rb.valor) estado.baseLeads = sanitizarBase(rb.valor).itens;
   else if (rb.novo) { estado.baseLeads = sanitizarBase(analisarBase(BASE_SEMENTE).itens).itens; salvarBase(); }
 
+  var rk = carregarJSON(CH.kanban, function (v) { return v && typeof v === 'object' && Array.isArray(v.leads); });
+  if (rk.corrompido) problemas.push('kanban');
+  if (rk.valor) estado.kanban = sanitizarKanban(rk.valor);
+
   var re = carregarJSON(CH.estado, function (v) { return v && typeof v === 'object'; });
   if (re.valor) {
     estado.ultimoOperadorId = typeof re.valor.ultimoOperadorId === 'string' ? re.valor.ultimoOperadorId : '';
@@ -1068,6 +1268,7 @@ function salvarChave(chave, valor) {
 function salvarAuditorias() { estado.rev++; return salvarChave(CH.aud, estado.auditorias); }
 function salvarOperadores() { estado.rev++; return salvarChave(CH.op, estado.operadores); }
 function salvarBase() { estado.rev++; return salvarChave(CH.base, estado.baseLeads); }
+function salvarKanban() { return salvarChave(CH.kanban, estado.kanban); }
 function salvarConfig() { return salvarChave(CH.cfg, estado.config); }
 function salvarEstadoUI() {
   Armazenamento.gravar(CH.estado, JSON.stringify({ ultimoOperadorId: estado.ultimoOperadorId, ultimoTipo: estado.ultimoTipo }));
@@ -1413,6 +1614,187 @@ function calcNivelamento(agora, eq) {
 }
 
 /* =====================================================
+   4b. PLANO SEMANAL (kanban → fila de leads por prioridade)
+   -----------------------------------------------------
+   Metas do mês, da semana e do dia saem das metas diárias × dias úteis.
+   O que falta é espalhado pelos dias úteis que restam até sexta; cada dia
+   recebe os leads de maior prioridade (uma auditoria por lead, sem limite
+   de leads por closer — só um desconto leve para não concentrar em um closer).
+   ===================================================== */
+function somaLista(a) { return a.reduce(function (t, x) { return t + x; }, 0); }
+function listaUteis(ini, fim) {
+  var out = [], d = parseData(ini), f = parseData(fim);
+  while (d <= f) { if (ehDiaUtil(d)) out.push(dataISO(d)); d.setDate(d.getDate() + 1); }
+  return out;
+}
+function haDias(n) { return n <= 0 ? 'hoje' : n === 1 ? 'ontem' : 'há ' + n + ' dias'; }
+function tipoPadraoDoLead(l) {
+  var e = normBusca(l.etapa);
+  if (l.status === 'GAIN') return null;
+  if (l.status === 'LOST' || e.indexOf('perdid') !== -1) return 'perdido';
+  if (e.indexOf('document') !== -1 || e.indexOf('pagamento') !== -1) return 'documentacao';
+  return 'rotina';
+}
+/* Qual formulário de auditoria cabe a este lead (a etapa pode ser remapeada nos ajustes do plano) */
+function tipoDoLead(l) {
+  var a = estado.config.plano.etapas[normBusca(l.etapa)];
+  if (a === 'ignorar') return null;
+  if (a === 'rotina' || a === 'documentacao' || a === 'perdido') return a;
+  return tipoPadraoDoLead(l);
+}
+/* Contagem de auditorias já feitas (sistema + planilha do mês, sem duplicar lead/dia) */
+function contagemPeriodo(ini, fim) {
+  var porDia = {}, total = { rotina: 0, documentacao: 0, perdido: 0 }, vistos = new Set();
+  function somar(data, tipo) {
+    var d = porDia[data] || (porDia[data] = { rotina: 0, documentacao: 0, perdido: 0 });
+    d[tipo]++; total[tipo]++;
+  }
+  estado.auditorias.forEach(function (a) { if (a.data >= ini && a.data <= fim) { vistos.add(a.leadNorm + '|' + a.data); somar(a.data, a.tipo); } });
+  estado.baseLeads.forEach(function (b) {
+    if (b.data >= ini && b.data <= fim && !vistos.has(b.codigoNorm + '|' + b.data)) somar(b.data, tipoDaPlanilha(b.formulario));
+  });
+  return { porDia: porDia, total: total };
+}
+/* Prioridade de um lead dentro do seu tipo de auditoria (maior = auditar primeiro) */
+function pontuarLead(l, t, s, hoje) {
+  var p = 0, m = [];
+  function mais(v, txt) { p += v; if (txt) m.push({ w: Math.abs(v), t: txt }); }
+  var idade = l.dLead ? Math.max(0, diasEntre(l.dLead, hoje)) : 0;
+  var aprovado = LOCACAO_APROVADA.indexOf(l.locacao) !== -1, e = normBusca(l.etapa);
+  if (t === 'rotina') {
+    p = 20;
+    if (e.indexOf('negoci') !== -1) mais(12, 'Em negociação'); else if (e.indexOf('tentativa') !== -1) mais(6, null); else mais(3, null);
+    if (l.temp === 'Quente') mais(10, 'Quente'); else if (l.temp === 'Morno') mais(6, 'Morno');
+    if (aprovado) mais(8, 'Crédito aprovado'); else if (l.locacao === 'REFUSED') mais(-10, null);
+    if (idade >= 3) mais(Math.min(12, Math.floor(idade / 2)), idade >= 7 ? 'Aberto há ' + idade + ' dias' : null);
+    if (l.disc === 0 && idade >= 1) mais(10, 'Sem discagens'); else if (l.disc <= 2 && idade >= 3) mais(4, 'Poucas discagens');
+  } else if (t === 'documentacao') {
+    p = 30;
+    var ref = l.dAprov || l.dPedido || l.dLead, dias = ref ? Math.max(0, diasEntre(ref, hoje)) : 0;
+    if (dias > 0) mais(Math.min(25, dias * 3), dias >= 2 ? 'Aguardando há ' + dias + ' dias' : null);
+    if (l.temp === 'Quente') mais(6, 'Quente'); else if (l.temp === 'Morno') mais(3, null);
+    if (aprovado) mais(4, 'Crédito aprovado');
+    if (e.indexOf('pagamento') !== -1) mais(5, 'Aguardando pagamento');
+    if (l.disc === 0) mais(6, 'Sem discagens');
+  } else {
+    p = 20;
+    var dp = l.dPerdido ? Math.max(0, diasEntre(l.dPerdido, hoje)) : 99, mt = normBusca(l.motivo);
+    mais(Math.max(0, 15 - dp), dp <= 2 ? 'Perdido ' + haDias(dp) : null);
+    if (!mt) mais(10, 'Perdido sem motivo');
+    else if (contemAlgum(MOTIVOS_FORA_CONTROLE, mt)) mais(-8, null);
+    else if (contemAlgum(MOTIVOS_CONTROLAVEIS, mt)) mais(8, null);
+    if (aprovado || l.dAprov) mais(10, 'Aprovado e perdido');
+    if (mt.indexOf('sem retorno') !== -1 && l.disc <= 1) mais(10, 'Sem retorno com ' + l.disc + (l.disc === 1 ? ' discagem' : ' discagens'));
+    if (l.temp === 'Quente') mais(8, 'Quente'); else if (l.temp === 'Morno') mais(4, 'Morno');
+  }
+  if (s.mes === 0) mais(12, 'Closer sem auditoria no mês');
+  else if (s.mes < s.meta) mais(6, 'Closer abaixo da meta do mês');
+  if (ehNovato(s.op, hoje)) mais(5, 'Novato');
+  m.sort(function (a, b) { return b.w - a.w; });
+  return { pontos: p, motivos: m.map(function (x) { return x.t; }) };
+}
+var PRIORIDADES = { alta: { rot: 'ALTA', cor: 'vermelho' }, media: { rot: 'MÉDIA', cor: 'amarelo' }, normal: { rot: 'NORMAL', cor: 'cinza' } };
+
+function calcPlanoSemanal(agora) {
+  var cfg = estado.config, hr = horariosMin(), hoje = dataISO(agora), aberto = minutosDoDia(agora) < hr.fim;
+  var segunda = inicioSemana(hoje), sexta = somarDias(segunda, 4), proxima = false;
+  var dias = listaUteis(hoje, sexta).filter(function (d) { return d > hoje || aberto; });
+  if (!dias.length) { segunda = somarDias(segunda, 7); sexta = somarDias(segunda, 4); dias = listaUteis(segunda, sexta); proxima = true; }
+  var mesRef = dias[0].slice(0, 7), mesIni = mesRef + '-01', mesFim = ultimoDiaMes(mesIni);
+  var uteisMes = listaUteis(mesIni, mesFim).length, restoMes = listaUteis(dias[0], mesFim);
+  var cMes = contagemPeriodo(mesIni, mesFim), cSem = contagemPeriodo(segunda, sexta);
+  var cHoje = contagemPeriodo(hoje, hoje).total, hojeUtil = ehDiaUtil(parseData(hoje));
+  var plano = { hoje: hoje, dias: dias, proxima: proxima, segunda: segunda, sexta: sexta, mesRef: mesRef, uteisMes: uteisMes, uteisRestMes: restoMes.length,
+    periodos: {}, ritmo: { porTipo: {}, total: { necessario: 0, meta: 0 } }, quotas: {}, extra: {}, itens: [], porDia: {}, pool: {}, faltaLeads: {},
+    foraEquipe: [], excluidos: { auditados: 0, foraJanela: 0, limpeza: 0, inativos: 0 }, temKanban: estado.kanban.leads.length > 0 };
+
+  function periodo(rotulo, nDias, cont) {
+    var o = { rotulo: rotulo, porTipo: {}, total: { meta: 0, feito: 0, falta: 0 } };
+    TIPOS_ORDEM.forEach(function (t) {
+      var meta = cfg.metas[t] * nDias, feito = cont[t];
+      o.porTipo[t] = { meta: meta, feito: feito, falta: Math.max(0, meta - feito) };
+      o.total.meta += meta; o.total.feito += feito; o.total.falta += o.porTipo[t].falta;
+    });
+    return o;
+  }
+  plano.periodos.hoje = hojeUtil ? periodo('Hoje', 1, cHoje) : null;
+  plano.periodos.semana = periodo(proxima ? 'Semana que vem' : 'Semana', 5, cSem.total);
+  plano.periodos.mes = periodo('Mês', uteisMes, cMes.total);
+
+  /* Quanto auditar por dia e por tipo: a meta do dia + a recuperação necessária para fechar a semana e o mês */
+  TIPOS_ORDEM.forEach(function (t) {
+    var md = cfg.metas[t], minHoje = Math.max(0, md - cHoje[t]);
+    var mins = dias.map(function (d) { return d === hoje ? minHoje : md; });
+    var extraSem = Math.ceil(Math.max(0, plano.periodos.semana.porTipo[t].falta - somaLista(mins)) / dias.length);
+    var minMes = restoMes.map(function (d) { return d === hoje ? minHoje : md; });
+    var extraMes = restoMes.length ? Math.ceil(Math.max(0, plano.periodos.mes.porTipo[t].falta - somaLista(minMes)) / restoMes.length) : 0;
+    plano.extra[t] = Math.max(extraSem, extraMes);
+    plano.quotas[t] = dias.map(function (d, i) { return mins[i] + (d.slice(0, 7) === mesRef ? plano.extra[t] : extraSem); });
+    var nec = restoMes.length ? Math.ceil(plano.periodos.mes.porTipo[t].falta / restoMes.length) : plano.periodos.mes.porTipo[t].falta;
+    plano.ritmo.porTipo[t] = { necessario: nec, meta: md };
+    plano.ritmo.total.necessario += nec; plano.ritmo.total.meta += md;
+  });
+
+  /* Leads elegíveis: um por lead, ainda não auditados, de closers ativos da equipe */
+  var eq = calcEquipe(hoje), porNome = new Map(), auditados = new Set(), fora = new Map();
+  eq.lista.forEach(function (s) { porNome.set(normBusca(s.op.nome), s); });
+  estado.auditorias.forEach(function (a) { auditados.add(a.leadNorm); });
+  estado.baseLeads.forEach(function (b) { auditados.add(b.codigoNorm); });
+  var pool = { rotina: [], documentacao: [], perdido: [] }, janela = cfg.plano.janelaPerdido;
+  estado.kanban.leads.forEach(function (l) {
+    var t = tipoDoLead(l);
+    if (!t) return;
+    if (t === 'perdido') {
+      if (!l.dPerdido || diasEntre(l.dPerdido, hoje) > janela) { plano.excluidos.foraJanela++; return; }
+      if (normBusca(l.motivo).indexOf('limpeza') !== -1) { plano.excluidos.limpeza++; return; }
+    }
+    var cn = normBusca(l.closer), s = porNome.get(cn);
+    if (!s) { var f = fora.get(cn); if (!f) { f = { nome: l.closer || '(sem closer)', n: 0 }; fora.set(cn, f); } f.n++; return; }
+    if (!s.op.ativo) { plano.excluidos.inativos++; return; }
+    if (auditados.has(l.codigoNorm)) { plano.excluidos.auditados++; return; }
+    var pt = pontuarLead(l, t, s, hoje);
+    pool[t].push({ lead: l, tipo: t, op: s.op, closerKey: cn, pontos: pt.pontos, motivos: pt.motivos, dia: '', nivel: 'normal' });
+  });
+  plano.foraEquipe = Array.from(fora.values()).sort(function (a, b) { return b.n - a.n; });
+
+  /* Escolha gulosa por prioridade; cada lead já escolhido do mesmo closer reduz um pouco a nota dos próximos */
+  TIPOS_ORDEM.forEach(function (t) {
+    var lista = pool[t].slice().sort(function (a, b) {
+      return b.pontos - a.pontos || (a.lead.codigoNorm.length !== b.lead.codigoNorm.length ? b.lead.codigoNorm.length - a.lead.codigoNorm.length : (a.lead.codigoNorm < b.lead.codigoNorm ? 1 : -1));
+    });
+    var quota = somaLista(plano.quotas[t]), cont = new Map(), picks = [];
+    plano.pool[t] = lista.length;
+    while (picks.length < quota && lista.length) {
+      var melhor = 0, val = -Infinity;
+      for (var i = 0; i < lista.length; i++) {
+        var v = lista[i].pontos - PENALIDADE_CLOSER * (cont.get(lista[i].closerKey) || 0);
+        if (v > val) { val = v; melhor = i; }
+      }
+      var it = lista.splice(melhor, 1)[0];
+      cont.set(it.closerKey, (cont.get(it.closerKey) || 0) + 1);
+      picks.push(it);
+    }
+    /* Nível pela posição dentro do tipo: 25% mais altos = ALTA, 35% seguintes = MÉDIA */
+    picks.slice().sort(function (a, b) { return b.pontos - a.pontos; }).forEach(function (it, i) {
+      it.nivel = i < picks.length * 0.25 ? 'alta' : i < picks.length * 0.6 ? 'media' : 'normal';
+    });
+    plano.faltaLeads[t] = quota - picks.length;
+    var k = 0;
+    dias.forEach(function (d, i) { for (var j = 0; j < plano.quotas[t][i] && k < picks.length; j++) picks[k++].dia = d; });
+    picks.forEach(function (it) { plano.itens.push(it); });
+  });
+  dias.forEach(function (d) {
+    var o = { total: 0 };
+    TIPOS_ORDEM.forEach(function (t) { o[t] = plano.itens.filter(function (it) { return it.dia === d && it.tipo === t; }).length; o.total += o[t]; });
+    plano.porDia[d] = o;
+  });
+  plano.itens.sort(function (a, b) {
+    return a.dia < b.dia ? -1 : a.dia > b.dia ? 1 : TIPOS_ORDEM.indexOf(a.tipo) - TIPOS_ORDEM.indexOf(b.tipo) || b.pontos - a.pontos;
+  });
+  return plano;
+}
+
+/* =====================================================
    5. INTERFACE BASE: toasts, modais, sons, utilidades
    ===================================================== */
 var ctxAudio = null;
@@ -1711,8 +2093,11 @@ function construirPlano(ctx) {
       ? 'Trabalhe pelo menos ' + p.porDia + ' ' + plural(p.porDia, 'novo operador', 'novos operadores') + ' por dia útil para concluir a cobertura.'
       : 'Audite hoje os operadores restantes para concluir a cobertura do mês.');
   } else if (ctx.eq.ativos.length) frases.push('Todos os operadores ativos já foram auditados neste mês.');
-  var nv = calcNivelamento(ctx.agora, ctx.eq);
-  if (nv.agenda.length && nv.agenda[0].data === ctx.hojeStr) frases.push('Hoje, audite: ' + nv.agenda[0].itens.map(function (x) { return x.s.op.nome + (x.n > 1 ? ' ×' + x.n : ''); }).join(', ') + '. (Plano completo na aba Equipe.)');
+  var nv = calcNivelamento(ctx.agora, ctx.eq), pw = estado.kanban.leads.length ? calcPlanoSemanal(ctx.agora) : null;
+  if (pw) {
+    var pd = pw.porDia[pw.dias[0]];
+    frases.push((pw.dias[0] === ctx.hojeStr ? 'Plano de hoje: ' : 'Próximo dia do plano (' + rotuloDia(pw.dias[0], ctx.hojeStr) + '): ') + pd.total + ' ' + plural(pd.total, 'lead priorizado', 'leads priorizados') + ' (' + TIPOS_ORDEM.map(function (t) { return TIPOS[t].titulo + ' ' + pd[t]; }).join(' · ') + '), por prioridade e não por closer.');
+  } else if (nv.agenda.length && nv.agenda[0].data === ctx.hojeStr) frases.push('Hoje, audite: ' + nv.agenda[0].itens.map(function (x) { return x.s.op.nome + (x.n > 1 ? ' ×' + x.n : ''); }).join(', ') + '. (Plano completo na aba Equipe.)');
   if (p.prioritarios.length) frases.push('Para equilibrar a equipe, priorize ' + (p.prioritarios.length === 1 ? 'o operador' : 'os ' + p.prioritarios.length + ' operadores') + ' com menor quantidade: ' + p.prioritarios.map(function (s) { return s.op.nome; }).join(', ') + '.');
   return el('article', { class: 'card' },
     el('div', { class: 'card-cab' }, el('h3', null, 'Plano até o final do mês')),
@@ -1721,7 +2106,8 @@ function construirPlano(ctx) {
       el('div', null, el('dt', null, 'Último dia do mês'), el('dd', null, dataBR(p.ultimoDia))),
       el('div', null, el('dt', null, 'Dias corridos restantes'), el('dd', null, String(p.corridos))),
       el('div', null, el('dt', null, 'Dias úteis restantes'), el('dd', null, String(p.uteis))),
-      el('div', null, el('dt', null, 'Auditorias p/ equilibrar'), el('dd', null, String(p.equilibrar)))));
+      el('div', null, el('dt', null, 'Auditorias p/ equilibrar'), el('dd', null, String(p.equilibrar)))),
+    el('div', { class: 'acoes', style: 'margin-top:12px' }, el('button', { type: 'button', class: 'btn btn-sec btn-peq', onclick: function () { mostrarAba('plano'); } }, pw ? 'Abrir plano semanal →' : 'Montar plano semanal →')));
 }
 
 function renderAvisoBackup() {
@@ -1839,7 +2225,9 @@ function atualizarForm() {
 
 function renderRegistrar() {
   var agora = new Date(), ctx = contextoDia(agora);
+  var prox = construirProximosPlano();
   $('#reg-prioridade').replaceChildren(construirPrioridade(ctx));
+  if (prox) $('#reg-prioridade').appendChild(prox);
   var regs = ctx.c.registros.slice().reverse();
   $('#reg-hoje-sub').textContent = regs.length + ' ' + plural(regs.length, 'registro', 'registros') + ' · ' + dataBR(ctx.hojeStr);
   var cont = $('#reg-hoje');
@@ -1850,6 +2238,234 @@ function renderRegistrar() {
     el('tbody', null, corpo));
   cont.replaceChildren(el('div', { class: 'tabela-wrap', style: 'max-height:50vh' }, tabela));
   if (regs.length > 15) cont.appendChild(el('p', { class: 'dica', style: 'margin-top:8px' }, 'Exibindo os 15 mais recentes. Veja todos na aba Histórico.'));
+}
+
+/* ---------- Plano semanal ---------- */
+var planoAtual = null;
+function rotuloDia(iso, hoje) {
+  var d = parseData(iso);
+  return (iso === hoje ? 'Hoje' : maiusc(DIAS_SEMANA[d.getDay()].slice(0, 3))) + ' ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1);
+}
+function celulaMeta(x) {
+  var pct = x.meta > 0 ? x.feito / x.meta * 100 : 100;
+  return el('div', { class: 'cel-meta' },
+    el('div', null, el('b', null, String(x.feito)), ' / ' + x.meta),
+    barra(pct, 'fina'),
+    el('span', { class: 'dica' }, x.falta > 0 ? 'faltam ' + x.falta : 'meta batida'));
+}
+function construirMetasPlano(pl) {
+  var linhas = [];
+  function linha(p, sub) {
+    if (!p) return;
+    linhas.push(el('tr', null, el('td', null, el('b', null, p.rotulo), el('div', { class: 'dica' }, sub)),
+      TIPOS_ORDEM.map(function (t) { return el('td', null, celulaMeta(p.porTipo[t])); }), el('td', null, celulaMeta(p.total))));
+  }
+  linha(pl.periodos.hoje, dataBR(pl.hoje));
+  linha(pl.periodos.semana, dataBR(pl.segunda).slice(0, 5) + ' a ' + dataBR(pl.sexta).slice(0, 5) + ' · 5 dias úteis');
+  linha(pl.periodos.mes, maiusc(MESES[+pl.mesRef.slice(5) - 1]) + ' · ' + pl.uteisMes + ' dias úteis');
+  var atras = false;
+  var ritmo = el('tr', null, el('td', null, el('b', null, 'Ritmo p/ fechar o mês'), el('div', { class: 'dica' }, pl.uteisRestMes + ' ' + plural(pl.uteisRestMes, 'dia útil', 'dias úteis') + ' restantes')),
+    TIPOS_ORDEM.map(function (t) {
+      var r = pl.ritmo.porTipo[t], acima = r.necessario > r.meta; atras = atras || acima;
+      return el('td', null, el('b', { style: acima ? 'color:var(--vermelho)' : '' }, r.necessario + '/dia'), el('div', { class: 'dica' }, 'meta ' + r.meta + '/dia'));
+    }),
+    el('td', null, el('b', { style: pl.ritmo.total.necessario > pl.ritmo.total.meta ? 'color:var(--vermelho)' : '' }, pl.ritmo.total.necessario + '/dia'), el('div', { class: 'dica' }, 'meta ' + pl.ritmo.total.meta + '/dia')));
+  linhas.push(ritmo);
+  return el('div', null,
+    el('div', { class: 'tabela-wrap', style: 'max-height:none' },
+      el('table', { class: 'pl-metas' },
+        el('thead', null, el('tr', null, ['Período'].concat(TIPOS_ORDEM.map(function (t) { return TIPOS[t].titulo; })).concat(['Total']).map(function (t) { return el('th', { scope: 'col' }, el('span', null, t)); }))),
+        el('tbody', null, linhas))),
+    el('p', { class: 'dica', style: 'margin-top:8px' }, 'Meta do mês e da semana = meta diária × dias úteis. “Feito” soma o sistema e a planilha de auditorias do mês (sem duplicar o mesmo lead no mesmo dia).'));
+}
+function construirCardKanban(pl) {
+  var k = estado.kanban, tem = k.leads.length > 0, hoje = pl.hoje;
+  var botoes = el('div', { class: 'acoes' },
+    el('button', { type: 'button', class: 'btn ' + (tem ? 'btn-sec' : 'btn-primario'), onclick: function () { $('#file-kanban').click(); } }, tem ? '⭱ Atualizar kanban (.xlsx / .csv)' : '⭱ Importar kanban (.xlsx / .csv)'),
+    el('button', { type: 'button', class: 'btn btn-sec', onclick: colarKanban }, '📋 Colar do Excel'),
+    tem ? el('button', { type: 'button', class: 'btn btn-perigo-linha', onclick: limparKanban }, 'Limpar kanban') : null);
+  if (!tem) {
+    return el('article', { class: 'card', style: 'display:grid;gap:12px' },
+      el('div', { class: 'card-cab', style: 'margin:0' }, el('h3', null, 'Kanban de leads')),
+      el('p', null, 'O plano semanal é montado a partir do kanban: ', el('b', null, 'cada lead pode ter uma auditoria'), ' (Rotina, Documentação ou Perdido, conforme a etapa em que ele está) e os leads são ordenados por prioridade — não por closer.'),
+      el('p', { class: 'dica' }, 'Importe a exportação do board (colunas reference_code, Etapa do Board, Status Geral, Closer, Temperatura, Motivo da Perda, Status Locação, Datas e Discagens). Nome, telefone e CPF dos leads não são guardados.'),
+      botoes);
+  }
+  var dImp = k.importadoEm ? dataISO(new Date(k.importadoEm)) : '', velho = dImp && dImp < hoje;
+  return el('article', { class: 'card', style: 'display:grid;gap:12px' },
+    el('div', { class: 'card-cab', style: 'margin:0' }, el('h3', null, 'Kanban de leads'), velho ? tag('DESATUALIZADO', 'amarelo', 'Importado antes de hoje') : tag('ATUALIZADO', 'verde')),
+    velho ? el('div', { class: 'banner amarelo', style: 'margin:0' }, el('span', null, 'O kanban foi importado em ' + dataBR(dImp) + '. Importe a exportação de hoje para refletir mudanças de etapa e novos leads.')) : null,
+    el('dl', { class: 'kv', style: 'margin:0' },
+      el('div', null, el('dt', null, 'Leads no kanban'), el('dd', null, String(k.leads.length))),
+      el('div', null, el('dt', null, 'Importado em'), el('dd', null, k.importadoEm ? dataHoraBR(k.importadoEm) : '—')),
+      el('div', null, el('dt', null, 'Arquivo'), el('dd', null, k.arquivo || '—')),
+      el('div', null, el('dt', null, 'Disponíveis p/ auditar'), el('dd', null, String(pl.pool.rotina + pl.pool.documentacao + pl.pool.perdido)))),
+    botoes);
+}
+function itensDoPlano(pl) {
+  var u = estado.ui.plano;
+  return pl.itens.filter(function (it) {
+    return (u.dia === 'todos' || it.dia === u.dia) && (!u.tipo || it.tipo === u.tipo) && (!u.closer || it.op.id === u.closer);
+  });
+}
+function linhaPlano(it, pl, comDia) {
+  var l = it.lead, pr = PRIORIDADES[it.nivel], sub = '';
+  if (it.tipo === 'perdido') sub = (l.motivo || 'sem motivo') + (l.dPerdido ? ' · perdido em ' + dataBR(l.dPerdido).slice(0, 5) : '');
+  else sub = [l.temp, l.disc + (l.disc === 1 ? ' discagem' : ' discagens'), l.locacao && LOCACAO_APROVADA.indexOf(l.locacao) !== -1 ? 'aprovado' : ''].filter(Boolean).join(' · ');
+  return el('tr', null,
+    comDia ? el('td', { class: 'num' }, rotuloDia(it.dia, pl.hoje)) : null,
+    el('td', null, tag(pr.rot, pr.cor, it.pontos + ' pontos')),
+    el('td', null, el('div', { class: 'pl-cod' }, l.codigo, el('button', { type: 'button', 'data-acao': 'copiar', 'data-cod': l.codigoNorm, title: 'Copiar o código do lead', 'aria-label': 'Copiar o código do lead ' + l.codigo }, '⧉'))),
+    el('td', null, tag(TIPOS[it.tipo].rotulo, it.tipo === 'perdido' ? 'vermelho' : it.tipo === 'documentacao' ? 'amarelo' : 'azul')),
+    el('td', null, it.op.nome),
+    el('td', null, l.etapa, el('div', { class: 'dica' }, sub)),
+    el('td', null, el('div', { class: 'pl-motivos' }, it.motivos.slice(0, 4).map(function (m) { return tag(m, 'cinza'); }))),
+    el('td', null, el('div', { class: 'acoes', style: 'flex-wrap:nowrap;gap:6px' },
+      el('button', { type: 'button', class: 'btn btn-primario btn-peq', 'data-acao': 'feito', 'data-cod': l.codigoNorm, title: 'Registra a auditoria agora (você pode desfazer)' }, '✓ Feito'),
+      el('button', { type: 'button', class: 'btn btn-linha btn-peq', 'data-acao': 'form', 'data-cod': l.codigoNorm, title: 'Abre o formulário de registro com este lead preenchido' }, 'Formulário'))));
+}
+function construirAjustesPlano(pl) {
+  var u = estado.ui.plano, d = el('details', { class: 'pl-ajustes' });
+  if (u.ajustes) d.open = true;
+  d.addEventListener('toggle', function () { u.ajustes = d.open; });
+  var jan = el('input', { type: 'number', id: 'pl-janela', min: '1', max: String(KANBAN_RETENCAO_DIAS), step: '1', inputmode: 'numeric', value: String(estado.config.plano.janelaPerdido) });
+  var msg = el('div', { class: 'erro-form', role: 'alert', hidden: true });
+  var etapas = new Map();
+  estado.kanban.leads.forEach(function (l) {
+    var k = normBusca(l.etapa), e = etapas.get(k);
+    if (!e) { e = { chave: k, nome: l.etapa, n: 0, auto: tipoPadraoDoLead(l) }; etapas.set(k, e); }
+    e.n++;
+  });
+  var rotuloAcao = { rotina: 'Rotina', documentacao: 'Documentação', perdido: 'Perdido', ignorar: 'Fora do plano' };
+  var linhas = Array.from(etapas.values()).sort(function (a, b) { return b.n - a.n; }).map(function (e) {
+    var atual = estado.config.plano.etapas[e.chave] || 'auto';
+    var sel = el('select', { 'aria-label': 'Formulário para a etapa ' + e.nome },
+      opcao('auto', 'Automático (' + (e.auto ? rotuloAcao[e.auto] : 'Fora do plano') + ')', atual === 'auto'),
+      ['rotina', 'documentacao', 'perdido', 'ignorar'].map(function (a) { return opcao(a, rotuloAcao[a], atual === a); }));
+    sel.addEventListener('change', function () {
+      if (sel.value === 'auto') delete estado.config.plano.etapas[e.chave]; else estado.config.plano.etapas[e.chave] = sel.value;
+      salvarConfig(); renderTudo();
+    });
+    return el('tr', null, el('td', null, e.nome), el('td', { class: 'num' }, String(e.n)), el('td', null, sel));
+  });
+  function aplicarJanela() {
+    var v = inteiroEntre(jan.value.trim(), 1, KANBAN_RETENCAO_DIAS);
+    if (v === null) { msg.textContent = 'Informe um número inteiro de 1 a ' + KANBAN_RETENCAO_DIAS + ' dias.'; msg.hidden = false; return; }
+    estado.config.plano.janelaPerdido = v; salvarConfig(); renderTudo(); toast('Perdidos considerados: últimos ' + v + ' dias.');
+  }
+  d.appendChild(el('summary', null, 'Ajustes do plano (janela dos perdidos e formulário de cada etapa)'));
+  d.appendChild(el('div', { style: 'display:grid;gap:14px' },
+    el('form', { class: 'linha-form', novalidate: true, onsubmit: function (e) { e.preventDefault(); aplicarJanela(); } },
+      campoModal('Perdidos dos últimos (dias)', jan, 'pl-janela'),
+      el('div', { class: 'campo' }, el('button', { type: 'submit', class: 'btn btn-sec' }, 'Aplicar'))),
+    msg,
+    linhas.length ? el('div', { class: 'tabela-wrap', style: 'max-height:none' }, el('table', { style: 'min-width:480px' },
+      el('thead', null, el('tr', null, ['Etapa do board', 'Leads', 'Auditar como'].map(function (t) { return el('th', { scope: 'col' }, el('span', null, t)); }))),
+      el('tbody', null, linhas))) : null,
+    el('p', { class: 'dica' }, 'Padrão: etapas de ganho (assinado, boas-vindas, carro entregue…) ficam fora do plano; “Aguardando documentação/pagamento” vira Documentação; “Perdido” vira Perdido; as demais viram Rotina. Perdidos com motivo “Limpeza Board” nunca entram.')));
+  return d;
+}
+function textoPlano(pl) {
+  var L = ['PLANO DE AUDITORIAS — ' + (pl.proxima ? 'semana que vem, ' : 'semana ') + dataBR(pl.segunda) + ' a ' + dataBR(pl.sexta), ''];
+  L.push('Meta do dia: ' + TIPOS_ORDEM.map(function (t) { return TIPOS[t].titulo + ' ' + estado.config.metas[t]; }).join(' · '));
+  L.push('Ritmo para fechar o mês: ' + TIPOS_ORDEM.map(function (t) { return TIPOS[t].titulo + ' ' + pl.ritmo.porTipo[t].necessario + '/dia'; }).join(' · '));
+  pl.dias.forEach(function (d) {
+    var pd = pl.porDia[d];
+    L.push('', rotuloDia(d, pl.hoje).toUpperCase() + ' — ' + pd.total + ' auditorias (' + TIPOS_ORDEM.map(function (t) { return TIPOS[t].titulo + ' ' + pd[t]; }).join(' · ') + ')');
+    TIPOS_ORDEM.forEach(function (t) {
+      var its = pl.itens.filter(function (it) { return it.dia === d && it.tipo === t; });
+      if (!its.length) return;
+      L.push(' ' + TIPOS[t].titulo + ':');
+      its.forEach(function (it, i) { L.push('  ' + (i + 1) + '. ' + it.lead.codigo + ' · ' + it.op.nome + ' · ' + it.lead.etapa + (it.motivos.length ? ' · ' + it.motivos.slice(0, 3).join(', ') : '')); });
+    });
+  });
+  return L.join('\n');
+}
+function csvPlano(pl) {
+  var linhas = [['Dia', 'Prioridade', 'Tipo', 'Lead', 'Closer', 'Etapa', 'Temperatura', 'Motivo da perda', 'Por que priorizar'].join(';')];
+  pl.itens.forEach(function (it) {
+    linhas.push([dataBR(it.dia), PRIORIDADES[it.nivel].rot, TIPOS[it.tipo].rotulo, it.lead.codigo, it.op.nome, it.lead.etapa, it.lead.temp, it.lead.motivo, it.motivos.join(', ')].map(campoCSV).join(';'));
+  });
+  return '﻿' + linhas.join('\r\n') + '\r\n';
+}
+function substituirFilhos(pai, filhos) { var f = document.createDocumentFragment(); anexar(f, filhos); pai.replaceChildren(f); }
+function renderPlano() {
+  var agora = new Date(), pl = calcPlanoSemanal(agora), u = estado.ui.plano;
+  planoAtual = pl;
+  $('#pl-sub').textContent = (pl.proxima ? 'Semana que vem · ' : 'Até sexta · ') + dataBR(pl.segunda).slice(0, 5) + ' a ' + dataBR(pl.sexta).slice(0, 5);
+  $('#pl-kanban').replaceChildren(construirCardKanban(pl));
+  var corpo = [el('div', { class: 'secao-titulo' }, el('h2', null, 'Metas: mês, semana e dia')), construirMetasPlano(pl)];
+  var rt = pl.ritmo.total;
+  if (rt.meta > 0 && rt.necessario > rt.meta * 1.5) {
+    corpo.splice(1, 0, el('div', { class: 'banner vermelho', style: 'margin-bottom:12px' }, el('span', null, 'Para fechar o mês é preciso auditar ', el('b', null, rt.necessario + ' por dia útil'), ' (' + fmt1(rt.necessario / rt.meta) + '× a meta diária de ' + rt.meta + '). O plano mostra o que seria necessário; se a equipe não comporta esse ritmo, o mês não fecha — vale revisar a meta ou a capacidade.')));
+  }
+  if (!pl.temKanban) { substituirFilhos($('#pl-corpo'), corpo); return; }
+
+  var total = pl.itens.length, avisos = [];
+  TIPOS_ORDEM.forEach(function (t) {
+    if (pl.faltaLeads[t] > 0) avisos.push(el('div', { class: 'banner amarelo' }, el('span', null, 'Faltam ', el('b', null, String(pl.faltaLeads[t])), ' leads de ' + TIPOS[t].titulo + ' para cumprir as cotas até sexta: só há ' + pl.pool[t] + ' disponíveis (um lead = uma auditoria). Importe um kanban mais novo' + (t === 'perdido' ? ', aumente a janela dos perdidos' : '') + ' ou revise o formulário de cada etapa nos ajustes.')));
+  });
+  if (pl.foraEquipe.length) {
+    avisos.push(el('div', { class: 'banner azul' },
+      el('span', null, 'Leads de ' + pl.foraEquipe.length + ' ' + plural(pl.foraEquipe.length, 'closer fora', 'closers fora') + ' da equipe cadastrada não entram no plano. Cadastre quem você audita:'),
+      el('span', { class: 'acoes' }, pl.foraEquipe.slice(0, 6).map(function (f) {
+        return el('button', { type: 'button', class: 'btn btn-linha btn-peq', title: f.n + ' leads elegíveis', onclick: function () { adicionarOperador(f.nome, ''); } }, '＋ ' + f.nome + ' (' + f.n + ')');
+      }))));
+  }
+  var ex = pl.excluidos;
+  var frases = [
+    'Plano ' + (pl.proxima ? 'da semana que vem' : 'até sexta (' + dataBR(pl.sexta).slice(0, 5) + ')') + ': ' + total + ' ' + plural(total, 'auditoria', 'auditorias') + ' em ' + pl.dias.length + ' ' + plural(pl.dias.length, 'dia útil', 'dias úteis') + ' — ' +
+      TIPOS_ORDEM.map(function (t) { return somaLista(pl.quotas[t]) - pl.faltaLeads[t] + ' ' + TIPOS[t].titulo.toLowerCase(); }).join(' · ') + '.',
+    'Os leads estão em ordem de prioridade (temperatura, crédito aprovado, tempo parado, poucas discagens, perdido sem motivo…). Closers com poucas auditorias no mês e novatos ganham pontos, mas não há limite de leads por closer.'
+  ];
+  var extraMax = Math.max(pl.extra.rotina, pl.extra.documentacao, pl.extra.perdido);
+  if (extraMax > 0) frases.push('Você está abaixo do ritmo da semana/mês: cada dia do plano já inclui a recuperação (até +' + extraMax + ' por tipo acima da meta diária).');
+  var resumoDia = el('div', { class: 'pl-dias' },
+    pl.dias.map(function (d) {
+      var ativo = (u.dia === d) || (u.dia !== 'todos' && pl.dias.indexOf(u.dia) < 0 && d === pl.dias[0]);
+      return el('button', { type: 'button', class: 'btn btn-peq ' + (ativo ? 'on' : 'btn-sec'), onclick: function () { u.dia = d; renderPlano(); } }, rotuloDia(d, pl.hoje), ' ', el('small', null, '(' + pl.porDia[d].total + ')'));
+    }),
+    el('button', { type: 'button', class: 'btn btn-peq ' + (u.dia === 'todos' ? 'on' : 'btn-sec'), onclick: function () { u.dia = 'todos'; renderPlano(); } }, 'Semana toda ', el('small', null, '(' + total + ')')));
+  if (u.dia !== 'todos' && pl.dias.indexOf(u.dia) < 0) u.dia = pl.dias[0];
+  var closers = [];
+  pl.itens.forEach(function (it) { if (!closers.some(function (c) { return c.id === it.op.id; })) closers.push(it.op); });
+  closers.sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); });
+  var selTipo = el('select', { id: 'pl-f-tipo' }, opcao('', 'Todos os tipos', !u.tipo), TIPOS_ORDEM.map(function (t) { return opcao(t, TIPOS[t].titulo, u.tipo === t); }));
+  var selCloser = el('select', { id: 'pl-f-closer' }, opcao('', 'Todos os closers', !u.closer), closers.map(function (c) { return opcao(c.id, c.nome, u.closer === c.id); }));
+  selTipo.addEventListener('change', function () { u.tipo = selTipo.value; renderPlano(); });
+  selCloser.addEventListener('change', function () { u.closer = selCloser.value; renderPlano(); });
+  var vis = itensDoPlano(pl), comDia = u.dia === 'todos';
+  var tabela = vis.length
+    ? el('div', { class: 'tabela-wrap', tabindex: '0', 'aria-label': 'Leads do plano (role para ver mais)', style: 'max-height:70vh' }, el('table', { class: 'pl-tabela' },
+        el('thead', null, el('tr', null, [comDia ? 'Dia' : null, 'Prioridade', 'Lead', 'Auditoria', 'Closer', 'Etapa', 'Por que priorizar', 'Ação'].filter(Boolean).map(function (t) { return el('th', { scope: 'col' }, el('span', null, t)); }))),
+        el('tbody', null, vis.map(function (it) { return linhaPlano(it, pl, comDia); }))))
+    : el('div', { class: 'vazio' }, total ? 'Nenhum lead com estes filtros.' : 'Não há leads disponíveis para o plano. Todos já foram auditados ou o kanban não tem leads elegíveis.');
+  corpo.push(
+    el('div', { class: 'secao-titulo' }, el('h2', null, 'Plano até sexta'), el('span', null, total + ' ' + plural(total, 'lead', 'leads'))),
+    avisos,
+    el('article', { class: 'card' }, el('ul', { class: 'frases', style: 'margin:0' }, frases.map(function (t) { return el('li', null, t); })),
+      el('p', { class: 'dica', style: 'margin-top:10px' }, 'Já fora do plano: ' + ex.auditados + ' já auditados · ' + ex.foraJanela + ' perdidos fora da janela de ' + estado.config.plano.janelaPerdido + ' dias · ' + ex.limpeza + ' “Limpeza Board” · ' + ex.inativos + ' de closers inativos.')),
+    el('div', { class: 'card filtros-card', style: 'margin-top:14px' }, resumoDia,
+      el('div', { class: 'linha-form' }, campoModal('Tipo de auditoria', selTipo, 'pl-f-tipo'), campoModal('Closer', selCloser, 'pl-f-closer'),
+        el('div', { class: 'campo' }, el('span', { class: 'rotulo' }, 'Plano completo'), el('div', { class: 'acoes' },
+          el('button', { type: 'button', class: 'btn btn-sec btn-peq', onclick: copiarPlano }, '⧉ Copiar'),
+          el('button', { type: 'button', class: 'btn btn-sec btn-peq', onclick: exportarPlano }, '⭳ CSV'))))),
+    el('div', { class: 'hist-barra' }, el('strong', null, vis.length + ' ' + plural(vis.length, 'lead', 'leads') + (vis.length !== total ? ' de ' + total : '')), el('span', { class: 'dica' }, 'Ao concluir uma auditoria, clique em “✓ Feito”: o lead sai do plano e conta nas metas.')),
+    tabela,
+    el('div', { class: 'secao-titulo' }, el('h2', null, 'Ajustes')),
+    construirAjustesPlano(pl));
+  substituirFilhos($('#pl-corpo'), corpo);
+}
+function construirProximosPlano() {
+  if (!estado.kanban.leads.length) return null;
+  var pl = calcPlanoSemanal(new Date()), prox = pl.itens.filter(function (it) { return it.dia === pl.dias[0]; }).sort(function (a, b) { return b.pontos - a.pontos; }).slice(0, 6);
+  return el('article', { class: 'card', style: 'margin-top:14px' },
+    el('div', { class: 'card-cab' }, el('h3', null, 'Próximos leads do plano'), el('button', { type: 'button', class: 'btn btn-linha btn-peq', onclick: function () { mostrarAba('plano'); } }, 'Ver plano →')),
+    prox.length ? el('ul', { class: 'frases', style: 'margin:0' }, prox.map(function (it) {
+      return el('li', null, el('b', null, it.lead.codigo), ' ', tag(TIPOS[it.tipo].rotulo, it.tipo === 'perdido' ? 'vermelho' : it.tipo === 'documentacao' ? 'amarelo' : 'azul'), ' ',
+        el('span', { class: 'dica' }, it.op.nome + (it.motivos.length ? ' · ' + it.motivos[0] : '')), ' ',
+        el('button', { type: 'button', class: 'btn btn-sec btn-peq', onclick: function () { usarLeadNoFormulario(it); } }, 'Usar'));
+    })) : el('p', { class: 'dica' }, 'Nenhum lead pendente no plano.'));
 }
 
 /* ---------- Equipe ---------- */
@@ -2159,6 +2775,7 @@ function renderAba(nome) {
   atualizarForm();
   if (nome === 'geral') renderGeral();
   else if (nome === 'registrar') renderRegistrar();
+  else if (nome === 'plano') renderPlano();
   else if (nome === 'equipe') renderEquipe();
   else if (nome === 'historico') renderHistorico();
   else if (nome === 'relatorios') renderRelatorios();
@@ -2537,7 +3154,7 @@ function montarBackup() {
   estado.operadores.forEach(function (o) { if (o.metaMensal !== null) individuais[o.id] = o.metaMensal; });
   return {
     app: 'finx_monitoria', versao: VERSAO, geradoEm: new Date().toISOString(),
-    auditorias: estado.auditorias, operadores: estado.operadores, baseLeads: estado.baseLeads,
+    auditorias: estado.auditorias, operadores: estado.operadores, baseLeads: estado.baseLeads, kanban: estado.kanban,
     metas: estado.config.metas, horarios: estado.config.horarios,
     metasMensais: { padrao: estado.config.metaMensalPadrao, individuais: individuais },
     configuracoes: estado.config
@@ -2565,7 +3182,8 @@ function validarBackup(obj) {
     if (ind && typeof ind === 'object') listas.operadores.forEach(function (o) { var v = inteiroEntre(ind[o.id], 0, 999); if (v !== null && o.metaMensal === null) o.metaMensal = v; });
   }
   var baseLeads = Array.isArray(obj.baseLeads) ? sanitizarBase(obj.baseLeads).itens : undefined;
-  return { listas: listas, config: cfg, baseLeads: baseLeads, geradoEm: typeof obj.geradoEm === 'string' ? obj.geradoEm : '' };
+  var kanban = obj.kanban && typeof obj.kanban === 'object' && Array.isArray(obj.kanban.leads) ? sanitizarKanban(obj.kanban) : undefined;
+  return { listas: listas, config: cfg, baseLeads: baseLeads, kanban: kanban, geradoEm: typeof obj.geradoEm === 'string' ? obj.geradoEm : '' };
 }
 async function restaurarBackup(arquivo) {
   if (!arquivo) return;
@@ -2583,6 +3201,7 @@ async function restaurarBackup(arquivo) {
         el('li', null, L.auditorias.length + ' auditorias' + (L.descartadosA ? ' (' + L.descartadosA + ' inválidas ignoradas)' : '')),
         el('li', null, L.operadores.length + ' operadores' + (L.descartadosO ? ' (' + L.descartadosO + ' inválidos ignorados)' : '')),
         v.baseLeads ? el('li', null, v.baseLeads.length + ' auditorias na base de leads já auditados') : null,
+        v.kanban ? el('li', null, v.kanban.leads.length + ' leads no kanban do plano semanal') : null,
         el('li', null, 'Metas diárias: Rotina ' + v.config.metas.rotina + ', Documentação ' + v.config.metas.documentacao + ', Perdidos ' + v.config.metas.perdido),
         el('li', null, 'Expediente: ' + v.config.horarios.inicio + ' às ' + v.config.horarios.fim + ' (almoço ' + v.config.horarios.almocoInicio + '–' + v.config.horarios.almocoFim + ')'),
         el('li', null, 'Meta mensal padrão por operador: ' + v.config.metaMensalPadrao)),
@@ -2591,11 +3210,125 @@ async function restaurarBackup(arquivo) {
   if (!ok) return;
   estado.auditorias = L.auditorias; estado.operadores = L.operadores; estado.config = v.config;
   if (v.baseLeads) estado.baseLeads = v.baseLeads;
+  if (v.kanban) { estado.kanban = v.kanban; salvarKanban(); }
   relinkarOrfaos();
   salvarOperadores(); salvarAuditorias(); salvarConfig(); salvarBase();
   estado.ultimoOperadorId = ''; salvarEstadoUI();
   aplicarConfigNaUI(); renderTudo();
   toast('Backup restaurado com sucesso.');
+}
+
+/* ---------- Kanban e plano: importação e ações ---------- */
+async function importarKanbanLinhas(linhas, nomeArquivo) {
+  var res;
+  try { res = analisarKanban(linhas); } catch (e) { res = { erro: 'O conteúdo não pôde ser interpretado como kanban.' }; }
+  if (res.erro) { await avisoModal('Kanban inválido', res.erro); return; }
+  if (!res.itens.length) { await avisoModal('Nada para importar', 'Nenhum lead válido encontrado (' + res.invalidos + ' linhas inválidas).'); return; }
+  var hoje = dataISO(new Date()), ret = reterRelevantes(res.itens, hoje), janela = estado.config.plano.janelaPerdido;
+  var cont = { rotina: 0, documentacao: 0, perdido: 0, fora: 0 };
+  ret.mantidos.forEach(function (l) {
+    var t = tipoDoLead(l);
+    if (!t) cont.fora++;
+    else if (t === 'perdido') { if (l.dPerdido && diasEntre(l.dPerdido, hoje) <= janela) cont.perdido++; }
+    else cont[t]++;
+  });
+  var antes = estado.kanban.leads.length;
+  var ok = await confirmar({ titulo: 'Importar o kanban?', rotuloOk: 'Importar',
+    corpo: [el('p', null, 'Leitura de ', el('b', null, nomeArquivo || 'texto colado'), ':'),
+      el('ul', { class: 'frases' },
+        el('li', null, el('b', null, String(res.itens.length)), ' leads lidos (' + res.invalidos + ' linhas inválidas ignoradas).'),
+        el('li', null, 'Para auditar: ' + cont.rotina + ' Rotina · ' + cont.documentacao + ' Documentação · ' + cont.perdido + ' Perdidos (últimos ' + janela + ' dias).'),
+        el('li', null, cont.fora + ' em etapas fora do plano (ganhos).'),
+        ret.descartados ? el('li', null, ret.descartados + ' perdidos com mais de ' + KANBAN_RETENCAO_DIAS + ' dias não serão guardados.') : null),
+      el('p', { class: 'dica' }, antes ? 'O kanban atual (' + antes + ' leads) será substituído: o kanban é uma foto do board. Auditorias já registradas não são afetadas.' : 'Nome, telefone e CPF dos leads não são guardados.')] });
+  if (!ok) return;
+  estado.kanban = { importadoEm: Date.now(), arquivo: limparTexto(nomeArquivo).slice(0, 120), leads: ret.mantidos };
+  salvarKanban(); renderTudo();
+  toast(ret.mantidos.length + ' leads importados no kanban.');
+}
+async function importarArquivoKanban(arquivo) {
+  if (!arquivo) return;
+  if (arquivo.size > 40 * 1024 * 1024) { await avisoModal('Arquivo muito grande', 'O arquivo excede 40 MB.'); return; }
+  var linhas;
+  try {
+    var m = new Uint8Array(await arquivo.slice(0, 4).arrayBuffer());
+    if (m[0] === 0xD0 && m[1] === 0xCF && m[2] === 0x11 && m[3] === 0xE0) { await avisoModal('Formato antigo (.xls)', 'Abra o arquivo no Excel e salve como “Pasta de Trabalho do Excel (.xlsx)” ou “CSV”.'); return; }
+    if (m[0] === 0x50 && m[1] === 0x4B) linhas = await lerXlsx(arquivo);
+    else {
+      var texto = await lerArquivo(arquivo, 'UTF-8');
+      if (texto.indexOf('�') !== -1) texto = await lerArquivo(arquivo, 'windows-1252');
+      linhas = linhasDeTexto(texto);
+    }
+  } catch (e) {
+    await avisoModal('Erro ao ler o arquivo', 'Não consegui ler o arquivo. Se for .xlsx, abra no Excel e salve como CSV, ou copie as linhas e use “Colar do Excel”.'); return;
+  }
+  await importarKanbanLinhas(linhas, arquivo.name);
+}
+async function colarKanban() {
+  var ta = el('textarea', { id: 'k-texto', rows: '9', spellcheck: 'false', style: 'font-family:Consolas,monospace;font-size:.82rem;min-height:190px', placeholder: 'reference_code\tEtapa do Board\tStatus Geral\tCloser\t...' });
+  var msg = el('div', { class: 'erro-form', role: 'alert', hidden: true });
+  var r = await abrirModal({
+    titulo: 'Colar o kanban',
+    corpo: [el('p', null, 'No Excel, selecione as linhas do kanban (incluindo o cabeçalho), copie e cole abaixo.'), campoModal('Linhas do kanban', ta, 'k-texto'), msg],
+    botoes: [{ rotulo: 'Cancelar', valor: false, classe: 'btn-linha' },
+      { rotulo: 'Analisar', valor: true, classe: 'btn-primario', validar: function () {
+        if (!ta.value.trim()) { msg.textContent = 'Cole as linhas do kanban antes de continuar.'; msg.hidden = false; return false; }
+        return true;
+      } }]
+  });
+  if (r === true) await importarKanbanLinhas(linhasDeTexto(ta.value), 'texto colado');
+}
+async function limparKanban() {
+  if (!estado.kanban.leads.length) return;
+  var ok = await confirmar({ titulo: 'Limpar o kanban?', perigo: true, rotuloOk: 'Limpar kanban',
+    corpo: ['Serão removidos ' + estado.kanban.leads.length + ' leads e o plano semanal ficará vazio até a próxima importação. Auditorias registradas não são afetadas.'] });
+  if (!ok) return;
+  estado.kanban = { importadoEm: 0, arquivo: '', leads: [] }; salvarKanban(); renderTudo(); toast('Kanban limpo.');
+}
+function itemDoPlano(cod) {
+  return planoAtual ? planoAtual.itens.find(function (it) { return it.lead.codigoNorm === cod; }) : null;
+}
+/* Registra de uma vez a auditoria de um lead do plano (data/hora do clique); dá para desfazer */
+function registrarDoPlano(it) {
+  if (estado.registrando || !it) return;
+  if (!it.op.ativo) { toast('O operador ' + it.op.nome + ' está inativo.', { tipo: 'aviso' }); return; }
+  if (ocorrenciasTotais(it.lead.codigoNorm).length) { toast('O lead ' + it.lead.codigo + ' já tem auditoria registrada.', { tipo: 'aviso' }); renderTudo(); return; }
+  var agora = new Date();
+  var reg = { id: novoId('a'), data: dataISO(agora), hora: horaISO(agora), operadorId: it.op.id, operadorNome: it.op.nome,
+    lead: it.lead.codigo, leadNorm: it.lead.codigoNorm, tipo: it.tipo, obs: 'Plano semanal', criadoEm: agora.getTime() };
+  estado.auditorias.push(reg); salvarAuditorias();
+  estado.ultimoOperadorId = it.op.id; estado.ultimoTipo = it.tipo; salvarEstadoUI();
+  renderTudo(); tocar('ok');
+  toast('Auditoria registrada: ' + reg.lead + ' · ' + TIPOS[it.tipo].rotulo, { acao: { rotulo: 'Desfazer', fn: function () { removerRegistro(reg); tocar('ok'); toast('Registro desfeito: ' + reg.lead); } } });
+}
+function usarLeadNoFormulario(it) {
+  if (!it) return;
+  if (estado.ui.aba !== 'registrar') mostrarAba('registrar');
+  refs.fLead.value = it.lead.codigo;
+  if (it.op.ativo) { refs.fOperador.value = it.op.id; estado.ultimoOperadorId = it.op.id; }
+  if (refs.fTipos[it.tipo]) { refs.fTipos[it.tipo].checked = true; estado.ultimoTipo = it.tipo; }
+  salvarEstadoUI(); esconderErroForm(); atualizarDicaLead(); refs.fLead.focus();
+  toast('Formulário preenchido: ' + it.lead.codigo + ' · ' + it.op.nome);
+}
+function copiarPlano() {
+  if (!planoAtual || !planoAtual.itens.length) { toast('Não há plano para copiar.', { tipo: 'aviso' }); return; }
+  copiarTexto(textoPlano(planoAtual)).then(function (ok) {
+    if (ok) { tocar('ok'); toast('Plano copiado para a área de transferência.'); }
+    else toast('Não foi possível copiar automaticamente.', { tipo: 'erro' });
+  });
+}
+function exportarPlano() {
+  if (!planoAtual || !planoAtual.itens.length) { toast('Não há plano para exportar.', { tipo: 'aviso' }); return; }
+  baixar('finx_plano_' + planoAtual.segunda + '.csv', csvPlano(planoAtual), 'text/csv;charset=utf-8');
+  toast(planoAtual.itens.length + ' leads exportados em CSV.');
+}
+function acaoPlano(e) {
+  var b = e.target.closest('[data-acao]');
+  if (!b || !b.dataset.cod) return;
+  var it = itemDoPlano(b.dataset.cod);
+  if (b.dataset.acao === 'feito') registrarDoPlano(it);
+  else if (b.dataset.acao === 'form') usarLeadNoFormulario(it);
+  else if (b.dataset.acao === 'copiar' && it) copiarTexto(it.lead.codigo).then(function (ok) { toast(ok ? 'Lead ' + it.lead.codigo + ' copiado.' : 'Não foi possível copiar.', { tipo: ok ? 'ok' : 'erro' }); });
 }
 
 async function importarBase(texto) {
@@ -2688,7 +3421,7 @@ async function apagarTudo() {
   var msg = el('div', { class: 'erro-form', role: 'alert', hidden: true });
   var r = await abrirModal({
     titulo: 'Apagar todos os dados?', classe: 'perigo',
-    corpo: [el('p', null, 'Serão apagadas ', el('b', null, estado.auditorias.length + ' auditorias'), '. Operadores e configurações voltarão ao padrão inicial e a base de leads auditados será esvaziada.'),
+    corpo: [el('p', null, 'Serão apagadas ', el('b', null, estado.auditorias.length + ' auditorias'), '. Operadores e configurações voltarão ao padrão inicial e a base de leads auditados e o kanban do plano semanal serão esvaziados.'),
       el('p', null, el('b', null, 'Esta ação não poderá ser desfeita.')), el('p', { class: 'dica' }, 'Recomendamos fazer um backup JSON antes de continuar.'),
       campoModal('Para confirmar, digite APAGAR', campo, 'x-conf'), msg],
     botoes: [
@@ -2701,8 +3434,9 @@ async function apagarTudo() {
   });
   if (r !== true) return;
   estado.auditorias = []; estado.operadores = operadoresPadrao(); estado.config = copiar(CONFIG_PADRAO); estado.baseLeads = [];
+  estado.kanban = { importadoEm: 0, arquivo: '', leads: [] };
   estado.ultimoOperadorId = ''; estado.ultimoTipo = '';
-  salvarAuditorias(); salvarOperadores(); salvarConfig(); salvarBase(); salvarEstadoUI();
+  salvarAuditorias(); salvarOperadores(); salvarConfig(); salvarBase(); salvarKanban(); salvarEstadoUI();
   Armazenamento.remover(CH.backup);
   aplicarConfigNaUI(); renderTudo(); toast('Todos os dados foram apagados.');
 }
@@ -2759,6 +3493,10 @@ function ligarEventos() {
   }
   $('#h-corpo').addEventListener('click', acaoRegistro);
   $('#reg-hoje').addEventListener('click', acaoRegistro);
+
+  /* Plano semanal */
+  $('#pl-corpo').addEventListener('click', acaoPlano);
+  $('#file-kanban').addEventListener('change', function (e) { var f = e.target.files[0]; e.target.value = ''; importarArquivoKanban(f); });
 
   /* Relatórios */
   $('#r-data').addEventListener('change', function (e) { estado.ui.relData = e.target.value; renderRelatorios(); });
