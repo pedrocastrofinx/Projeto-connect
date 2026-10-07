@@ -260,6 +260,17 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
 .btn.on{background:var(--azul);color:#fff;border-color:var(--azul)}
 .pl-dias{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .pl-dias .btn small{font-weight:600;opacity:.85}
+.proxima{border:0;color:#fff;background:linear-gradient(120deg,var(--azul-esc),#0B3C94 55%,var(--azul));display:grid;gap:12px}
+.proxima .card-cab h3{color:rgba(255,255,255,.85)}
+.proxima-acao{font-size:1.25rem;font-weight:800;line-height:1.25}
+.proxima-cod{font-size:2.1rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.proxima-det{display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center;font-size:.95rem}
+.proxima .tag{background:rgba(255,255,255,.18);color:#fff}
+.proxima .dica{color:rgba(255,255,255,.8)}
+.proxima .btn-linha{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.4);color:#fff}
+.proxima .btn-linha:hover:not([disabled]){background:rgba(255,255,255,.26)}
+.proxima .btn-abrir{background:#fff;color:var(--azul);box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.proxima .btn-abrir:hover{background:var(--azul-cl)}
 .pl-tabela{min-width:900px}
 .pl-tabela td{vertical-align:middle}
 .pl-tabela .btn{white-space:nowrap}
@@ -393,7 +404,8 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
     <!-- ===================== PLANO SEMANAL ===================== -->
     <section class="aba" id="aba-plano" data-aba="plano" aria-label="Plano semanal de auditorias" hidden>
       <div class="secao-titulo"><h2>Plano semanal de auditorias</h2><span id="pl-sub"></span></div>
-      <div id="pl-kanban"></div>
+      <div id="pl-proxima"></div>
+      <div id="pl-kanban" style="margin-top:14px"></div>
       <div id="pl-corpo"></div>
     </section>
 
@@ -783,7 +795,7 @@ var estado = {
     aba: 'geral',
     equipe: { busca: '', filtro: 'todos', ordem: 'nome', dir: 'asc' },
     hist: { q: '', ini: '', fim: '', op: '', tipo: '', lead: '', soRep: false, ordem: 'tempo', dir: 'desc', pag: 1, tam: 25 },
-    plano: { dia: '', tipo: '', closer: '', ajustes: false },
+    plano: { dia: '', tipo: '', closer: '', ajustes: false, pulados: [] },
     relData: '', relMes: 0, relAno: 0
   }
 };
@@ -2135,6 +2147,8 @@ function renderGeral() {
   cards.push(construirCardMeta('Total do dia', ctx.m.total, '∑'));
   $('#ov-metas').replaceChildren.apply($('#ov-metas'), cards);
   $('#ov-prioridade').replaceChildren(construirPrioridade(ctx));
+  var paGeral = construirProximaAuditoria(calcPlanoSemanal(ctx.agora));
+  if (paGeral) $('#ov-prioridade').insertBefore(paGeral, $('#ov-prioridade').firstChild);
   $('#ov-real').replaceChildren(construirRitmoReal(ctx));
   $('#ov-hoje-trab').replaceChildren(construirOperadoresHoje(ctx, true));
   $('#ov-hoje-nao').replaceChildren(construirOperadoresHoje(ctx, false));
@@ -2228,8 +2242,9 @@ function atualizarForm() {
 
 function renderRegistrar() {
   var agora = new Date(), ctx = contextoDia(agora);
-  var prox = construirProximosPlano();
+  var prox = construirProximosPlano(), pa = construirProximaAuditoria(calcPlanoSemanal(agora));
   $('#reg-prioridade').replaceChildren(construirPrioridade(ctx));
+  if (pa) $('#reg-prioridade').insertBefore(pa, $('#reg-prioridade').firstChild);
   if (prox) $('#reg-prioridade').appendChild(prox);
   var regs = ctx.c.registros.slice().reverse();
   $('#reg-hoje-sub').textContent = regs.length + ' ' + plural(regs.length, 'registro', 'registros') + ' · ' + dataBR(ctx.hojeStr);
@@ -2311,6 +2326,44 @@ function urlKanbanDryve() { return DRYVE_BASE + '?page=1&size=10' + (sufixoUsuar
 function urlLeadDryve(l) { return l.uuid ? DRYVE_BASE + '/' + l.uuid + (sufixoUsuarioDryve() ? '?' + sufixoUsuarioDryve() : '') : ''; }
 function linkDryve(href, rotulo, classe, titulo) {
   return el('a', { class: 'btn ' + classe, href: href, target: '_blank', rel: 'noopener noreferrer', title: titulo }, rotulo);
+}
+/* Indica o próximo lead: o tipo com maior fração da cota do dia ainda pendente (Rotina, Documentação e Perdido vão intercalando e terminam juntos) e, nele, o de maior prioridade */
+function proximaAuditoria(pl) {
+  var pul = estado.ui.plano.pulados;
+  for (var i = 0; i < pl.dias.length; i++) {
+    var d = pl.dias[i], melhor = null, restam = {};
+    TIPOS_ORDEM.forEach(function (t) {
+      var c = pl.itens.filter(function (it) { return it.dia === d && it.tipo === t && pul.indexOf(it.lead.codigoNorm) < 0; }).sort(function (a, b) { return b.pontos - a.pontos; });
+      restam[t] = c.length;
+      var fr = pl.quotas[t][i] / Math.max(1, estado.config.metas[t] + pl.extra[t]);
+      if (c.length && (!melhor || fr > melhor.fr || (fr === melhor.fr && c[0].pontos > melhor.item.pontos))) melhor = { item: c[0], fr: fr };
+    });
+    if (melhor) return { item: melhor.item, dia: d, restam: restam, total: somaLista(TIPOS_ORDEM.map(function (t) { return restam[t]; })) };
+  }
+  return null;
+}
+var VERBO_TIPO = { rotina: 'Faça a auditoria de ROTINA deste lead', documentacao: 'Analise a DOCUMENTAÇÃO deste lead', perdido: 'Audite este lead PERDIDO' };
+function construirProximaAuditoria(pl) {
+  if (!pl.temKanban) return null;
+  var px = proximaAuditoria(pl), u = estado.ui.plano;
+  if (!px) {
+    return el('article', { class: 'card proxima' }, el('div', { class: 'card-cab', style: 'margin:0' }, el('h3', null, 'Próxima auditoria')),
+      el('div', { class: 'proxima-acao' }, u.pulados.length ? 'Você pulou todos os leads do plano.' : 'Plano concluído: nenhum lead pendente. 🎉'),
+      u.pulados.length ? el('div', { class: 'acoes' }, el('button', { type: 'button', class: 'btn btn-linha', onclick: function () { u.pulados = []; renderTudo(); } }, 'Mostrar os pulados de novo (' + u.pulados.length + ')')) : null);
+  }
+  var it = px.item, l = it.lead, sub = it.tipo === 'perdido' ? (l.motivo || 'sem motivo') : [l.etapa, l.temp, l.disc + (l.disc === 1 ? ' discagem' : ' discagens')].filter(Boolean).join(' · ');
+  return el('article', { class: 'card proxima' },
+    el('div', { class: 'card-cab', style: 'margin:0' }, el('h3', null, 'Próxima auditoria' + (px.dia === pl.hoje ? '' : ' · ' + rotuloDia(px.dia, pl.hoje))),
+      el('span', { class: 'dica' }, px.total + ' no plano de ' + (px.dia === pl.hoje ? 'hoje' : 'este dia') + ' (' + TIPOS_ORDEM.map(function (t) { return TIPOS[t].titulo + ' ' + px.restam[t]; }).join(' · ') + ')')),
+    el('div', { class: 'proxima-acao' }, VERBO_TIPO[it.tipo]),
+    el('div', { class: 'proxima-cod' }, l.codigo),
+    el('div', { class: 'proxima-det' }, el('b', null, it.op.nome), el('span', null, '· ' + sub), it.motivos.slice(0, 4).map(function (m) { return tag(m, 'cinza'); })),
+    el('div', { class: 'acoes' },
+      l.uuid ? linkDryve(urlLeadDryve(l), '↗ Abrir no Dryve', 'btn-abrir btn-grande', 'Abre este lead no Dryve Pro em outra aba')
+        : el('button', { type: 'button', class: 'btn btn-abrir btn-grande', title: 'Reimporte o kanban para abrir direto no Dryve', onclick: function () { copiarTexto(l.codigo).then(function () { toast('Código ' + l.codigo + ' copiado. Reimporte o kanban para abrir direto no Dryve.', { tipo: 'aviso', dur: 6000 }); }); } }, '⧉ Copiar código'),
+      el('button', { type: 'button', class: 'btn btn-linha btn-grande', onclick: function () { registrarDoPlano(it); }, title: 'Registra a auditoria e mostra o próximo lead' }, '✓ Feito, próximo'),
+      el('button', { type: 'button', class: 'btn btn-linha', onclick: function () { u.pulados.push(l.codigoNorm); renderTudo(); }, title: 'Deixa este lead para depois' }, 'Pular')),
+    u.pulados.length ? el('div', { class: 'dica' }, u.pulados.length + ' ' + plural(u.pulados.length, 'lead pulado', 'leads pulados') + ' · ', el('button', { type: 'button', class: 'btn btn-linha btn-peq', onclick: function () { u.pulados = []; renderTudo(); } }, 'Mostrar de novo')) : null);
 }
 function itensDoPlano(pl) {
   var u = estado.ui.plano;
@@ -2408,6 +2461,7 @@ function renderPlano() {
   var agora = new Date(), pl = calcPlanoSemanal(agora), u = estado.ui.plano;
   planoAtual = pl;
   $('#pl-sub').textContent = (pl.proxima ? 'Semana que vem · ' : 'Até sexta · ') + dataBR(pl.segunda).slice(0, 5) + ' a ' + dataBR(pl.sexta).slice(0, 5);
+  substituirFilhos($('#pl-proxima'), construirProximaAuditoria(pl));
   $('#pl-kanban').replaceChildren(construirCardKanban(pl));
   var corpo = [el('div', { class: 'secao-titulo' }, el('h2', null, 'Metas: mês, semana e dia')), construirMetasPlano(pl)];
   var rt = pl.ritmo.total;
