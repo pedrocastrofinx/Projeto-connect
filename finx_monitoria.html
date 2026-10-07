@@ -654,12 +654,14 @@ var NOVATO_DIAS = 30;
 /* Plano semanal: o kanban é a lista de leads; cada lead recebe no máximo uma auditoria */
 var KANBAN_RETENCAO_DIAS = 120;  /* perdidos mais antigos que isso não são guardados */
 var ACOES_ETAPA = ['auto', 'rotina', 'documentacao', 'perdido', 'ignorar'];
+var DRYVE_BASE = 'https://app.dryve.pro/dashboard/opportunities';
+var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 var PENALIDADE_CLOSER = 3;       /* desconto por lead já escolhido do mesmo closer (espalha o plano entre a equipe) */
 var CONFIG_PADRAO = {
   metas: { rotina: 30, documentacao: 8, perdido: 6 },
   horarios: { inicio: '09:00', fim: '18:00', almocoInicio: '12:00', almocoFim: '13:00' },
   metaMensalPadrao: 1,
-  plano: { janelaPerdido: 30, etapas: {} },
+  plano: { janelaPerdido: 30, etapas: {}, dryveUsers: '9ce01eb9-513f-4411-abd2-cc0483b987eb' },
   mostrarSegundos: true,
   sons: true,
   confirmarExclusao: true
@@ -823,6 +825,7 @@ function mesclarConfig(c) {
   var mm = inteiroEntre(c.metaMensalPadrao, 0, 999); if (mm !== null) p.metaMensalPadrao = mm;
   var pl = c.plano && typeof c.plano === 'object' ? c.plano : {};
   var jp = inteiroEntre(pl.janelaPerdido, 1, KANBAN_RETENCAO_DIAS); if (jp !== null) p.plano.janelaPerdido = jp;
+  if (typeof pl.dryveUsers === 'string' && (pl.dryveUsers.trim() === '' || UUID_RE.test(pl.dryveUsers.trim()))) p.plano.dryveUsers = pl.dryveUsers.trim().toLowerCase();
   if (pl.etapas && typeof pl.etapas === 'object' && !Array.isArray(pl.etapas)) {
     Object.keys(pl.etapas).slice(0, 60).forEach(function (k) {
       if (ACOES_ETAPA.indexOf(pl.etapas[k]) > 0 && k.length <= 60) p.plano.etapas[k] = pl.etapas[k];
@@ -1068,7 +1071,7 @@ function sanitizarLead(x) {
   if (!norm || !etapa) return null;
   var d = function (v) { return dataValida(v) ? v : null; };
   return {
-    codigo: codigo, codigoNorm: norm, etapa: etapa, status: limparTexto(x.status).toUpperCase().slice(0, 20),
+    codigo: codigo, codigoNorm: norm, uuid: UUID_RE.test(limparTexto(x.uuid)) ? limparTexto(x.uuid).toLowerCase() : '', etapa: etapa, status: limparTexto(x.status).toUpperCase().slice(0, 20),
     closer: limparTexto(x.closer).slice(0, 80), sup: limparTexto(x.sup).slice(0, 80), origem: limparTexto(x.origem).slice(0, 40),
     temp: tempNormalizada(x.temp), motivo: limparTexto(x.motivo).slice(0, 60), locacao: limparTexto(x.locacao).toUpperCase().slice(0, 30),
     dLead: d(x.dLead), dPerdido: d(x.dPerdido), dAprov: d(x.dAprov), dPedido: d(x.dPedido),
@@ -1096,7 +1099,7 @@ function analisarKanban(linhas) {
     status: achar(['statusgeral', 'status']), closer: achar(['closer']), sup: achar(['supervisor']), origem: achar(['origem']),
     temp: achar(['temperatura']), motivo: achar(['motivodaperda', 'motivo']), locacao: achar(['statuslocacao']),
     dLead: achar(['datadolead']), dPerdido: achar(['dataperdido']), dAprov: achar(['datadeaprovacao']), dPedido: achar(['datadopedido']),
-    disc: achar(['discagens'])
+    disc: achar(['discagens']), uuid: achar(['id'])
   };
   var faltando = [['codigo', 'reference_code (código do lead)'], ['etapa', 'Etapa do Board'], ['closer', 'Closer']].filter(function (p) { return col[p[0]] < 0; });
   if (faltando.length) return { erro: 'Cabeçalho do kanban não reconhecido. Colunas obrigatórias ausentes: ' + faltando.map(function (p) { return p[1]; }).join(', ') + '.' };
@@ -1106,7 +1109,7 @@ function analisarKanban(linhas) {
     var l = linhas[i], etapa = limparTexto(cel(l, 'etapa')), status = limparTexto(cel(l, 'status'));
     if (!status) status = normBusca(etapa).indexOf('perdid') !== -1 ? 'LOST' : 'ONGOING';
     var lead = sanitizarLead({
-      codigo: cel(l, 'codigo'), etapa: etapa, status: status, closer: cel(l, 'closer'), sup: cel(l, 'sup'), origem: cel(l, 'origem'),
+      codigo: cel(l, 'codigo'), uuid: cel(l, 'uuid'), etapa: etapa, status: status, closer: cel(l, 'closer'), sup: cel(l, 'sup'), origem: cel(l, 'origem'),
       temp: cel(l, 'temp'), motivo: cel(l, 'motivo'), locacao: cel(l, 'locacao'), disc: cel(l, 'disc'),
       dLead: parseDataKanban(cel(l, 'dLead')), dPerdido: parseDataKanban(cel(l, 'dPerdido')),
       dAprov: parseDataKanban(cel(l, 'dAprov')), dPedido: parseDataKanban(cel(l, 'dPedido'))
@@ -2283,6 +2286,7 @@ function construirCardKanban(pl) {
   var botoes = el('div', { class: 'acoes' },
     el('button', { type: 'button', class: 'btn ' + (tem ? 'btn-sec' : 'btn-primario'), onclick: function () { $('#file-kanban').click(); } }, tem ? '⭱ Atualizar kanban (.xlsx / .csv)' : '⭱ Importar kanban (.xlsx / .csv)'),
     el('button', { type: 'button', class: 'btn btn-sec', onclick: colarKanban }, '📋 Colar do Excel'),
+    linkDryve(urlKanbanDryve(), '↗ Abrir kanban no Dryve', 'btn-linha', 'Abre a lista de oportunidades no Dryve Pro em outra aba'),
     tem ? el('button', { type: 'button', class: 'btn btn-perigo-linha', onclick: limparKanban }, 'Limpar kanban') : null);
   if (!tem) {
     return el('article', { class: 'card', style: 'display:grid;gap:12px' },
@@ -2301,6 +2305,12 @@ function construirCardKanban(pl) {
       el('div', null, el('dt', null, 'Arquivo'), el('dd', null, k.arquivo || '—')),
       el('div', null, el('dt', null, 'Disponíveis p/ auditar'), el('dd', null, String(pl.pool.rotina + pl.pool.documentacao + pl.pool.perdido)))),
     botoes);
+}
+function sufixoUsuarioDryve() { var u = estado.config.plano.dryveUsers; return u ? 'users=' + encodeURIComponent(u) : ''; }
+function urlKanbanDryve() { return DRYVE_BASE + '?page=1&size=10' + (sufixoUsuarioDryve() ? '&' + sufixoUsuarioDryve() : ''); }
+function urlLeadDryve(l) { return l.uuid ? DRYVE_BASE + '/' + l.uuid + (sufixoUsuarioDryve() ? '?' + sufixoUsuarioDryve() : '') : ''; }
+function linkDryve(href, rotulo, classe, titulo) {
+  return el('a', { class: 'btn ' + classe, href: href, target: '_blank', rel: 'noopener noreferrer', title: titulo }, rotulo);
 }
 function itensDoPlano(pl) {
   var u = estado.ui.plano;
@@ -2322,7 +2332,8 @@ function linhaPlano(it, pl, comDia) {
     el('td', null, el('div', { class: 'pl-motivos' }, it.motivos.slice(0, 4).map(function (m) { return tag(m, 'cinza'); }))),
     el('td', null, el('div', { class: 'acoes', style: 'flex-wrap:nowrap;gap:6px' },
       el('button', { type: 'button', class: 'btn btn-primario btn-peq', 'data-acao': 'feito', 'data-cod': l.codigoNorm, title: 'Registra a auditoria agora (você pode desfazer)' }, '✓ Feito'),
-      el('button', { type: 'button', class: 'btn btn-linha btn-peq', 'data-acao': 'form', 'data-cod': l.codigoNorm, title: 'Abre o formulário de registro com este lead preenchido' }, 'Formulário'))));
+      el('button', { type: 'button', class: 'btn btn-linha btn-peq', 'data-acao': 'form', 'data-cod': l.codigoNorm, title: 'Abre o formulário de registro com este lead preenchido' }, 'Formulário'),
+      l.uuid ? linkDryve(urlLeadDryve(l), '↗ Dryve', 'btn-linha btn-peq', 'Abre este lead no Dryve Pro em outra aba') : null)));
 }
 function construirAjustesPlano(pl) {
   var u = estado.ui.plano, d = el('details', { class: 'pl-ajustes' });
@@ -2330,6 +2341,7 @@ function construirAjustesPlano(pl) {
   d.addEventListener('toggle', function () { u.ajustes = d.open; });
   var jan = el('input', { type: 'number', id: 'pl-janela', min: '1', max: String(KANBAN_RETENCAO_DIAS), step: '1', inputmode: 'numeric', value: String(estado.config.plano.janelaPerdido) });
   var msg = el('div', { class: 'erro-form', role: 'alert', hidden: true });
+  var usr = el('input', { type: 'text', id: 'pl-users', maxlength: '36', placeholder: 'Opcional', autocomplete: 'off', spellcheck: 'false', value: estado.config.plano.dryveUsers });
   var etapas = new Map();
   estado.kanban.leads.forEach(function (l) {
     var k = normBusca(l.etapa), e = etapas.get(k);
@@ -2351,12 +2363,15 @@ function construirAjustesPlano(pl) {
   function aplicarJanela() {
     var v = inteiroEntre(jan.value.trim(), 1, KANBAN_RETENCAO_DIAS);
     if (v === null) { msg.textContent = 'Informe um número inteiro de 1 a ' + KANBAN_RETENCAO_DIAS + ' dias.'; msg.hidden = false; return; }
-    estado.config.plano.janelaPerdido = v; salvarConfig(); renderTudo(); toast('Perdidos considerados: últimos ' + v + ' dias.');
+    var us = usr.value.trim().toLowerCase();
+    if (us && !UUID_RE.test(us)) { msg.textContent = 'O código do usuário no Dryve deve ter o formato 9ce01eb9-513f-4411-abd2-cc0483b987eb (ou ficar vazio).'; msg.hidden = false; return; }
+    estado.config.plano.janelaPerdido = v; estado.config.plano.dryveUsers = us; salvarConfig(); renderTudo(); toast('Ajustes do plano salvos.');
   }
   d.appendChild(el('summary', null, 'Ajustes do plano (janela dos perdidos e formulário de cada etapa)'));
   d.appendChild(el('div', { style: 'display:grid;gap:14px' },
     el('form', { class: 'linha-form', novalidate: true, onsubmit: function (e) { e.preventDefault(); aplicarJanela(); } },
       campoModal('Perdidos dos últimos (dias)', jan, 'pl-janela'),
+      campoModal('Usuário no link do Dryve (users=)', usr, 'pl-users'),
       el('div', { class: 'campo' }, el('button', { type: 'submit', class: 'btn btn-sec' }, 'Aplicar'))),
     msg,
     linhas.length ? el('div', { class: 'tabela-wrap', style: 'max-height:none' }, el('table', { style: 'min-width:480px' },
@@ -2382,9 +2397,9 @@ function textoPlano(pl) {
   return L.join('\n');
 }
 function csvPlano(pl) {
-  var linhas = [['Dia', 'Prioridade', 'Tipo', 'Lead', 'Closer', 'Etapa', 'Temperatura', 'Motivo da perda', 'Por que priorizar'].join(';')];
+  var linhas = [['Dia', 'Prioridade', 'Tipo', 'Lead', 'Closer', 'Etapa', 'Temperatura', 'Motivo da perda', 'Por que priorizar', 'Link Dryve'].join(';')];
   pl.itens.forEach(function (it) {
-    linhas.push([dataBR(it.dia), PRIORIDADES[it.nivel].rot, TIPOS[it.tipo].rotulo, it.lead.codigo, it.op.nome, it.lead.etapa, it.lead.temp, it.lead.motivo, it.motivos.join(', ')].map(campoCSV).join(';'));
+    linhas.push([dataBR(it.dia), PRIORIDADES[it.nivel].rot, TIPOS[it.tipo].rotulo, it.lead.codigo, it.op.nome, it.lead.etapa, it.lead.temp, it.lead.motivo, it.motivos.join(', '), urlLeadDryve(it.lead)].map(campoCSV).join(';'));
   });
   return '﻿' + linhas.join('\r\n') + '\r\n';
 }
@@ -2457,7 +2472,8 @@ function construirProximosPlano() {
     prox.length ? el('ul', { class: 'frases', style: 'margin:0' }, prox.map(function (it) {
       return el('li', null, el('b', null, it.lead.codigo), ' ', tag(TIPOS[it.tipo].rotulo, it.tipo === 'perdido' ? 'vermelho' : it.tipo === 'documentacao' ? 'amarelo' : 'azul'), ' ',
         el('span', { class: 'dica' }, it.op.nome + (it.motivos.length ? ' · ' + it.motivos[0] : '')), ' ',
-        el('button', { type: 'button', class: 'btn btn-sec btn-peq', onclick: function () { usarLeadNoFormulario(it); } }, 'Usar'));
+        el('button', { type: 'button', class: 'btn btn-sec btn-peq', onclick: function () { usarLeadNoFormulario(it); } }, 'Usar'), ' ',
+        it.lead.uuid ? linkDryve(urlLeadDryve(it.lead), '↗ Dryve', 'btn-linha btn-peq', 'Abre este lead no Dryve Pro') : null);
     })) : el('p', { class: 'dica' }, 'Nenhum lead pendente no plano.'));
 }
 
