@@ -2922,6 +2922,7 @@ function renderConfig() {
 }
 
 function renderBase() {
+  $('#b-site').hidden = !siteDisponivel();
   var datas = estado.baseLeads.map(function (b) { return b.data; }).sort();
   var distintos = new Set(estado.baseLeads.map(function (b) { return b.codigoNorm; })).size;
   var info = [
@@ -3544,6 +3545,10 @@ async function buscarApi(url) {
   if (!r.ok) { var e = new Error('HTTP ' + r.status); e.status = r.status; throw e; }
   try { return await r.json(); } catch (x) { var e2 = new Error('resposta sem JSON'); e2.semJson = true; throw e2; }
 }
+/* O botão "Atualizar do site" só faz sentido com o painel hospedado no site (pages.dev) ou com uma API absoluta configurada */
+function siteDisponivel() {
+  return /^https?:$/.test(location.protocol) && (/pages\.dev$/.test(location.hostname) || /^https?:/i.test(estado.config.apiSite));
+}
 function urlMonitoriasSite() { return estado.config.apiSite.replace(/\/+$/, '') + '/monitorias?order=data_realizacao.desc&limit=5000&offset=0'; }
 async function atualizarDoSite(silencioso) {
   var btn = $('#b-site');
@@ -3813,7 +3818,7 @@ function iniciar() {
   renderTudo();
   setInterval(tick, 1000);
   /* Hospedado no site (pages.dev) ou com API absoluta configurada: atualiza sozinho ao abrir e a cada 15 minutos */
-  if (/^https?:$/.test(location.protocol) && (/pages\.dev$/.test(location.hostname) || /^https?:/i.test(estado.config.apiSite))) {
+  if (siteDisponivel()) {
     if (Date.now() - (Number(Armazenamento.ler(CH.sync)) || 0) > 10 * 60000) atualizarDoSite(true);
     setInterval(function () { atualizarDoSite(true); }, 15 * 60000);
   }
