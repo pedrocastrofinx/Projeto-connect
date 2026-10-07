@@ -1,0 +1,2433 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FINX · Painel de Auditorias e Metas</title>
+<style>
+/* =========================================================
+   FINX · Painel de Auditorias e Metas
+   Identidade visual: azul corporativo, verde só para metas concluídas
+   ========================================================= */
+:root{
+  --azul:#0057FF; --azul-esc:#092A5E; --azul-cl:#EAF1FF; --azul-med:#BFD3FF;
+  --branco:#FFFFFF; --bg:#F4F7FC;
+  --verde:#12A150; --verde-cl:#E3F6EB; --verde-esc:#0B6B36;
+  --amarelo:#F2A900; --amarelo-cl:#FFF4D6; --amarelo-esc:#7A5200;
+  --vermelho:#D92D20; --vermelho-cl:#FDE9E7; --vermelho-esc:#9E1B12;
+  --texto:#0E1A33; --muted:#566887; --borda:#D9E3F5;
+  --sombra:0 1px 2px rgba(9,42,94,.06),0 8px 24px rgba(9,42,94,.07);
+  --raio:16px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+[hidden]{display:none !important}
+body{margin:0;background:var(--bg);color:var(--texto);font-family:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%}
+body.sem-rolagem{overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid #6C9BFF;outline-offset:2px}
+h1,h2,h3,h4,p{margin:0}
+.pular{position:absolute;left:-999px;top:8px;background:#fff;color:var(--azul);padding:8px 12px;border-radius:8px;z-index:999}
+.pular:focus{left:8px}
+
+/* ---------- Cabeçalho ---------- */
+.topo{background:linear-gradient(120deg,var(--azul-esc),#0B3C94 55%,var(--azul));color:#fff;position:sticky;top:0;z-index:60;box-shadow:0 2px 14px rgba(9,42,94,.28)}
+.topo-in{max-width:1440px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.marca{display:flex;align-items:center;gap:12px;margin-right:auto}
+.logo{width:42px;height:42px;border-radius:12px;background:#fff;color:var(--azul);display:grid;place-items:center;font-weight:900;font-size:1.5rem;letter-spacing:-1px;box-shadow:inset 0 -4px 0 var(--azul-med)}
+.marca-nome{font-weight:800;font-size:1.35rem;letter-spacing:.18em;line-height:1.05}
+.marca-sub{font-size:.8rem;opacity:.85}
+.relogio-bloco{text-align:right}
+.rel-hora{font-size:1.65rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+.rel-data{font-size:.82rem;opacity:.88;text-transform:capitalize}
+.topo-chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip-topo{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);padding:4px 11px;border-radius:99px;font-size:.78rem;font-weight:600;white-space:nowrap}
+
+/* ---------- Layout e navegação ---------- */
+.layout{max-width:1440px;margin:0 auto;padding:20px;display:grid;grid-template-columns:210px minmax(0,1fr);gap:24px;align-items:start}
+.menu{position:sticky;top:96px;background:#fff;border:1px solid var(--borda);border-radius:var(--raio);padding:10px;display:flex;flex-direction:column;gap:4px;box-shadow:var(--sombra)}
+.nav-btn{display:flex;align-items:center;gap:11px;width:100%;padding:11px 13px;border:0;background:transparent;border-radius:11px;color:var(--azul-esc);font-weight:600;text-align:left;transition:background .15s,color .15s}
+.nav-btn:hover{background:var(--azul-cl)}
+.nav-btn.ativo{background:var(--azul);color:#fff;box-shadow:0 4px 12px rgba(0,87,255,.3)}
+.nav-ico{font-size:1.1rem;width:22px;text-align:center}
+main{min-width:0}
+.aba{animation:entrar .28s ease both}
+@keyframes entrar{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.secao-titulo{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:26px 0 12px}
+.secao-titulo:first-child{margin-top:0}
+.secao-titulo h2{font-size:1.1rem;color:var(--azul-esc);letter-spacing:.01em}
+.secao-titulo span{font-size:.85rem;color:var(--muted)}
+
+/* ---------- Grades ---------- */
+.grid-metas{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px}
+.grid-2.primeiro{margin-top:0}
+.grid-resumo{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.grid-ops{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px}
+
+/* ---------- Cards ---------- */
+.card{background:#fff;border:1px solid var(--borda);border-radius:var(--raio);padding:18px;box-shadow:var(--sombra)}
+.card-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.card-cab h3{font-size:.8rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.dica{font-size:.8rem;color:var(--muted)}
+.vazio{padding:26px 16px;text-align:center;color:var(--muted);border:1.5px dashed var(--borda);border-radius:14px;background:#FAFCFF}
+
+/* ---------- Hero (ritmo necessário) ---------- */
+.hero{--hero-bg:linear-gradient(135deg,#0057FF,#092A5E);--hero-txt:#fff;border-radius:22px;padding:26px;color:var(--hero-txt);background:var(--hero-bg);display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:22px;box-shadow:0 12px 32px rgba(9,42,94,.22)}
+.hero.nivel-ok{--hero-bg:linear-gradient(135deg,#0057FF,#092A5E)}
+.hero.nivel-neutro{--hero-bg:linear-gradient(135deg,#2B4C86,#092A5E)}
+.hero.nivel-atencao{--hero-bg:linear-gradient(135deg,#FFD35E,#F2A900);--hero-txt:#3A2900}
+.hero.nivel-critico{--hero-bg:linear-gradient(135deg,#E5483B,#9E1B12)}
+.hero.nivel-concluida{--hero-bg:linear-gradient(135deg,#1DB45F,#0B6B36)}
+.hero-rotulo{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:.78rem;font-weight:700;letter-spacing:.12em;opacity:.95}
+.hero-selo{background:rgba(255,255,255,.22);padding:3px 10px;border-radius:99px;letter-spacing:.04em;font-size:.76rem}
+.nivel-atencao .hero-selo{background:rgba(58,41,0,.14)}
+.hero-num{font-size:clamp(2.4rem,7vw,4.1rem);font-weight:800;line-height:1.02;margin:10px 0 2px;font-variant-numeric:tabular-nums}
+.hero-unid{font-size:1rem;font-weight:600;opacity:.92}
+.hero-linhas{margin:14px 0 0;padding:0;list-style:none;display:grid;gap:6px;font-size:.95rem}
+.hero-linhas li{padding-left:18px;position:relative}
+.hero-linhas li::before{content:"›";position:absolute;left:2px;font-weight:800}
+.hero-dir{display:grid;gap:12px;align-content:start}
+.mini{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);border-radius:14px;padding:13px 15px}
+.nivel-atencao .mini{background:rgba(255,255,255,.4);border-color:rgba(58,41,0,.15)}
+.mini-rot{font-size:.74rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;opacity:.9}
+.mini-val{font-size:1.65rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.2}
+.mini-sub{font-size:.82rem;opacity:.92}
+
+/* ---------- Barras, tags ---------- */
+.barra{height:10px;border-radius:99px;background:var(--azul-cl);overflow:hidden}
+.barra>i{display:block;height:100%;width:0;background:var(--azul);border-radius:99px;transition:width .7s cubic-bezier(.2,.8,.2,1)}
+.barra.completa>i{background:var(--verde)}
+.barra.fina{height:7px}
+.tag{display:inline-block;padding:2px 9px;border-radius:99px;font-size:.7rem;font-weight:800;letter-spacing:.03em;white-space:nowrap;vertical-align:middle}
+.tag-verde{background:var(--verde-cl);color:var(--verde-esc)}
+.tag-azul{background:var(--azul-cl);color:var(--azul)}
+.tag-amarelo{background:var(--amarelo-cl);color:var(--amarelo-esc)}
+.tag-vermelho{background:var(--vermelho-cl);color:var(--vermelho-esc)}
+.tag-cinza{background:#EEF1F6;color:#4A5A78}
+.tag-solido-vermelho{background:var(--vermelho);color:#fff}
+
+/* ---------- Cards de meta ---------- */
+.meta-card{padding:16px;display:flex;flex-direction:column;gap:10px;transition:transform .18s,box-shadow .18s}
+.meta-card:hover{transform:translateY(-2px)}
+.meta-card.concluida{border-color:#9BDCB6;background:linear-gradient(180deg,#fff,#F3FBF6)}
+.meta-topo{display:flex;align-items:center;justify-content:space-between;gap:6px 8px;flex-wrap:wrap}
+.grid-metas>*,.grid-2>*,.grid-resumo>*{min-width:0}
+.meta-topo h3{font-size:.95rem;color:var(--azul-esc)}
+.meta-nums{display:flex;align-items:baseline;gap:6px}
+.meta-grande{font-size:2.3rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;color:var(--azul-esc)}
+.concluida .meta-grande{color:var(--verde-esc)}
+.meta-de{color:var(--muted);font-weight:600}
+.meta-rod{display:flex;justify-content:space-between;gap:8px;font-size:.84rem;color:var(--muted);flex-wrap:wrap}
+.meta-rod b{color:var(--texto)}
+
+/* ---------- Botões e formulários ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1.5px solid transparent;border-radius:11px;padding:10px 16px;font-weight:700;min-height:42px;transition:transform .1s,background .15s,box-shadow .15s;text-decoration:none}
+.btn:active{transform:scale(.97)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.btn-primario{background:var(--azul);color:#fff;box-shadow:0 4px 12px rgba(0,87,255,.28)}
+.btn-primario:hover:not([disabled]){background:#0048D6}
+.btn-sec{background:var(--azul-cl);color:var(--azul)}
+.btn-sec:hover:not([disabled]){background:#D8E6FF}
+.btn-linha{background:#fff;border-color:#BFCDE8;color:var(--azul-esc)}
+.btn-linha:hover:not([disabled]){background:var(--azul-cl)}
+.btn-perigo{background:var(--vermelho);color:#fff}
+.btn-perigo:hover:not([disabled]){background:#B82419}
+.btn-perigo-linha{background:#fff;border-color:#F0B5B0;color:var(--vermelho-esc)}
+.btn-perigo-linha:hover:not([disabled]){background:var(--vermelho-cl)}
+.btn-peq{padding:6px 11px;min-height:34px;font-size:.84rem;border-radius:9px}
+.btn-grande{padding:13px 22px;font-size:1.02rem}
+.campo{display:flex;flex-direction:column;gap:5px;min-width:0}
+.campo>label,.rotulo{font-size:.8rem;font-weight:700;color:var(--muted)}
+input[type=text],input[type=search],input[type=number],input[type=date],input[type=time],select,textarea{width:100%;border:1.5px solid #BFCDE8;border-radius:11px;padding:10px 12px;background:#fff;min-height:44px}
+input:focus,select:focus,textarea:focus{border-color:var(--azul)}
+input[type=checkbox],input[type=radio]{width:18px;height:18px;accent-color:var(--azul)}
+.linha-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-items:end}
+.acoes{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.form-reg{display:grid;gap:14px}
+.chips-tipo{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.chip-tipo{position:relative;display:block}
+.chip-tipo input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}
+.chip-tipo span{display:flex;flex-direction:column;align-items:center;gap:1px;border:1.5px solid #BFCDE8;border-radius:12px;padding:9px 6px;font-weight:700;text-align:center;background:#fff;transition:all .15s;color:var(--azul-esc)}
+.chip-tipo small{font-weight:600;color:var(--muted);font-size:.74rem}
+.chip-tipo input:checked+span{background:var(--azul);border-color:var(--azul);color:#fff;box-shadow:0 4px 12px rgba(0,87,255,.28)}
+.chip-tipo input:checked+span small{color:#DCE8FF}
+.chip-tipo input:focus-visible+span{outline:3px solid #6C9BFF;outline-offset:2px}
+.erro-form{background:var(--vermelho-cl);color:var(--vermelho-esc);border:1px solid #F3B8B2;border-radius:10px;padding:9px 12px;font-weight:600;font-size:.9rem}
+.aviso-lead{background:var(--amarelo-cl);color:var(--amarelo-esc);border:1px solid #F3D78A;border-radius:10px;padding:9px 12px;font-size:.88rem;font-weight:600}
+.aviso-lead.vermelho{background:var(--vermelho-cl);color:var(--vermelho-esc);border-color:#F3B8B2}
+
+/* ---------- Avisos (banners) ---------- */
+.banner{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-radius:14px;padding:12px 16px;margin-bottom:16px;font-size:.92rem;border:1px solid}
+.banner.azul{background:var(--azul-cl);border-color:var(--azul-med);color:var(--azul-esc)}
+.banner.amarelo{background:var(--amarelo-cl);border-color:#F3D78A;color:var(--amarelo-esc)}
+.banner.vermelho{background:var(--vermelho-cl);border-color:#F3B8B2;color:var(--vermelho-esc)}
+
+/* ---------- Listas de dados ---------- */
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 16px;margin-top:12px}
+.kv div{background:#F7FAFF;border:1px solid #E5ECF9;border-radius:11px;padding:8px 11px}
+.kv dt{font-size:.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.kv dd{margin:2px 0 0;font-weight:700;font-variant-numeric:tabular-nums}
+.big{font-size:2rem;font-weight:800;line-height:1.1;color:var(--azul-esc);font-variant-numeric:tabular-nums}
+.big small{font-size:.95rem;color:var(--muted);font-weight:600}
+.lista-nomes{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip-nome{font-size:.78rem;font-weight:600;padding:3px 10px;border-radius:99px;background:var(--azul-cl);color:var(--azul-esc)}
+.chip-nome.pendente{background:var(--amarelo-cl);color:var(--amarelo-esc)}
+.frases{margin:10px 0 0;padding:0;list-style:none;display:grid;gap:6px;font-size:.92rem}
+.frases li{padding-left:16px;position:relative}
+.frases li::before{content:"•";position:absolute;left:3px;color:var(--azul);font-weight:900}
+.prioridade{border-left:6px solid var(--azul)}
+.prio-cat{font-size:1.5rem;font-weight:800;color:var(--azul-esc)}
+.prio-op{margin-top:14px;padding-top:14px;border-top:1px dashed var(--borda)}
+.stat{padding:14px 16px}
+.stat .rot{font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.stat .val{font-size:1.5rem;font-weight:800;color:var(--azul-esc);font-variant-numeric:tabular-nums;line-height:1.25;overflow-wrap:anywhere}
+.stat .sub{font-size:.8rem;color:var(--muted)}
+.stat.alerta .val{color:var(--vermelho)}
+
+/* ---------- Equipe ---------- */
+.filtros-card{margin:14px 0;display:grid;gap:14px}
+.op-card{background:#fff;border:1px solid var(--borda);border-top:5px solid var(--azul-med);border-radius:var(--raio);padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:var(--sombra);transition:transform .18s}
+.op-card:hover{transform:translateY(-2px)}
+.op-card.st-verde{border-top-color:var(--verde)}
+.op-card.st-azul{border-top-color:var(--azul)}
+.op-card.st-amarelo{border-top-color:var(--amarelo)}
+.op-card.st-vermelho{border-top-color:var(--vermelho)}
+.op-card.st-cinza{border-top-color:#9AA7BF;opacity:.82}
+.op-topo{display:flex;gap:11px;align-items:center}
+.avatar{flex:none;width:42px;height:42px;border-radius:50%;background:var(--azul-cl);color:var(--azul);display:grid;place-items:center;font-weight:800}
+.op-nome{min-width:0;display:flex;flex-direction:column;gap:3px}
+.op-nome strong{overflow-wrap:anywhere;line-height:1.2}
+.op-nums{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.op-nums div{background:#F7FAFF;border-radius:10px;padding:7px 9px;text-align:center}
+.op-nums b{display:block;font-size:1.25rem;font-variant-numeric:tabular-nums;color:var(--azul-esc)}
+.op-nums span{font-size:.7rem;color:var(--muted);font-weight:700;text-transform:uppercase}
+.op-det{font-size:.84rem;color:var(--muted);display:grid;gap:3px}
+.op-det b{color:var(--texto)}
+.op-acoes{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}
+.legenda{display:flex;gap:14px;flex-wrap:wrap;margin-top:16px;font-size:.82rem;color:var(--muted)}
+.leg{display:inline-flex;gap:6px;align-items:center}
+.leg i{width:11px;height:11px;border-radius:3px;display:inline-block}
+
+/* ---------- Histórico ---------- */
+.hist-barra{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:14px 0 10px}
+.tabela-wrap{background:#fff;border:1px solid var(--borda);border-radius:var(--raio);max-height:66vh;overflow:auto;box-shadow:var(--sombra)}
+table{width:100%;border-collapse:collapse;min-width:820px}
+th{position:sticky;top:0;z-index:2;background:var(--azul-esc);color:#fff;text-align:left;padding:0;font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+th .ord,th>span{display:block;padding:11px 12px}
+th .ord{width:100%;background:transparent;border:0;color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit;text-align:left}
+th .ord:hover{background:rgba(255,255,255,.12)}
+td{padding:9px 12px;border-bottom:1px solid #EDF2FB;vertical-align:top;font-size:.9rem}
+tbody tr:hover td{background:#F5F8FF}
+tr.rep td{background:#FFF8F7}
+td.lead{font-weight:700;overflow-wrap:anywhere}
+td.obs{max-width:260px;overflow-wrap:anywhere;color:#364866}
+td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
+.pag{display:flex;gap:8px;align-items:center;justify-content:center;margin-top:12px;flex-wrap:wrap}
+
+/* ---------- Relatórios ---------- */
+.relatorio{white-space:pre-wrap;word-break:break-word;background:#F7FAFF;border:1px solid var(--borda);border-radius:12px;padding:14px;font-family:Consolas,"Courier New",monospace;font-size:.9rem;margin:12px 0}
+
+/* ---------- Configurações ---------- */
+.cfg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.interruptor{display:flex;gap:10px;align-items:center;background:#F7FAFF;border:1px solid #E1E9F8;border-radius:12px;padding:11px 13px;font-weight:600}
+.interruptor input{flex:none}
+
+/* ---------- Modal ---------- */
+.modal-fundo{position:fixed;inset:0;background:rgba(9,42,94,.58);display:flex;align-items:center;justify-content:center;padding:14px;z-index:200;animation:fade .15s both}
+.modal{background:#fff;border-radius:20px;width:100%;max-width:580px;max-height:92vh;overflow:auto;box-shadow:0 24px 70px rgba(0,0,0,.35);animation:entrar .2s both}
+.modal-topo{padding:16px 22px;background:var(--azul-cl);color:var(--azul-esc);font-weight:800;font-size:1.08rem}
+.modal.alerta .modal-topo{background:var(--vermelho);color:#fff;font-size:1.2rem;letter-spacing:.03em}
+.modal.perigo .modal-topo{background:var(--vermelho-cl);color:var(--vermelho-esc)}
+.modal-corpo{padding:18px 22px;display:grid;gap:12px}
+.modal-rodape{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;padding:14px 22px;border-top:1px solid var(--borda);background:#FAFCFF}
+.ocorrencias{list-style:none;margin:0;padding:0;display:grid;gap:6px;max-height:200px;overflow:auto}
+.ocorrencias li{background:#F7FAFF;border:1px solid #E1E9F8;border-radius:10px;padding:7px 10px;font-size:.86rem}
+
+/* ---------- Toasts e botão topo ---------- */
+.toasts{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:300;max-width:min(420px,calc(100vw - 36px))}
+.toast{background:var(--azul-esc);color:#fff;border-radius:12px;padding:11px 15px;box-shadow:0 10px 30px rgba(0,0,0,.25);display:flex;gap:12px;align-items:center;justify-content:space-between;font-size:.92rem;animation:entrar .25s both}
+.toast.ok{border-left:5px solid #4ADE80}
+.toast.erro{background:#8E1A11;border-left:5px solid #FF8A80}
+.toast.aviso{background:#5A3F00;border-left:5px solid #FFD35E}
+.toast button{background:rgba(255,255,255,.2);border:0;color:#fff;border-radius:8px;padding:5px 10px;font-weight:700}
+.voltar-topo{position:fixed;right:18px;bottom:78px;width:46px;height:46px;border-radius:50%;border:0;background:var(--azul);color:#fff;font-size:1.3rem;box-shadow:0 8px 20px rgba(0,87,255,.4);z-index:70}
+.rodape{max-width:1440px;margin:10px auto 24px;padding:0 20px;color:var(--muted);font-size:.82rem;display:flex;gap:6px 20px;flex-wrap:wrap;justify-content:space-between}
+
+/* ---------- Responsivo ---------- */
+@media (max-width:1100px){
+  .grid-metas{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:900px){
+  .layout{grid-template-columns:1fr;padding:14px 14px 90px;gap:0}
+  .menu{position:fixed;left:0;right:0;bottom:0;top:auto;border-radius:16px 16px 0 0;flex-direction:row;padding:6px 6px calc(6px + env(safe-area-inset-bottom));gap:2px;z-index:80;border-bottom:0;box-shadow:0 -6px 24px rgba(9,42,94,.15)}
+  .nav-btn{flex-direction:column;gap:1px;padding:7px 2px;font-size:.66rem;text-align:center;justify-content:center;border-radius:10px;min-width:0}
+  .nav-btn .nav-txt{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .topo{position:static}
+  .topo-in{padding:10px 14px;gap:10px}
+  .relogio-bloco{text-align:left;order:2}
+  .rel-hora{font-size:1.35rem}
+  .topo-chips{order:3;width:100%}
+  .grid-2{grid-template-columns:1fr}
+  .hero{grid-template-columns:1fr;padding:20px}
+  .toasts{bottom:84px;right:12px}
+  .voltar-topo{bottom:140px;right:12px}
+  .rodape{padding:0 14px 90px}
+}
+@media (max-width:560px){
+  body{font-size:14.5px}
+  .grid-metas{grid-template-columns:1fr 1fr;gap:10px}
+  .meta-grande{font-size:1.9rem}
+  .meta-topo h3{font-size:.86rem}
+  .meta-card{padding:13px}
+  .marca-sub{font-size:.72rem}
+  input[type=text],input[type=search],input[type=number],input[type=date],input[type=time],select,textarea{font-size:16px}
+  .grid-ops{grid-template-columns:1fr}
+  .modal-rodape .btn{flex:1 1 100%}
+  .btn-grande{width:100%}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none !important;transition:none !important;scroll-behavior:auto !important}
+}
+@media print{
+  .menu,.topo,.voltar-topo,.toasts{display:none !important}
+}
+</style>
+</head>
+<body>
+<a class="pular" href="#principal">Ir para o conteúdo</a>
+
+<header class="topo">
+  <div class="topo-in">
+    <div class="marca">
+      <span class="logo" aria-hidden="true">X</span>
+      <div>
+        <div class="marca-nome">FINX</div>
+        <div class="marca-sub">Painel de Auditorias e Metas</div>
+      </div>
+    </div>
+    <div class="relogio-bloco">
+      <div class="rel-hora" id="rel-hora" role="timer" aria-label="Hora atual">--:--:--</div>
+      <div class="rel-data" id="rel-data"></div>
+    </div>
+    <div class="topo-chips">
+      <span class="chip-topo" id="chip-mes" title="Mês atual"></span>
+      <span class="chip-topo" id="chip-uteis" title="Dias úteis (segunda a sexta) restantes até o final do mês"></span>
+      <span class="chip-topo" id="chip-salvo" title="Os dados ficam salvos no localStorage deste navegador"></span>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="menu" id="menu" aria-label="Navegação principal">
+    <button type="button" class="nav-btn" data-aba="geral"><span class="nav-ico" aria-hidden="true">◫</span><span class="nav-txt">Visão geral</span></button>
+    <button type="button" class="nav-btn" data-aba="registrar"><span class="nav-ico" aria-hidden="true">✚</span><span class="nav-txt">Registrar</span></button>
+    <button type="button" class="nav-btn" data-aba="equipe"><span class="nav-ico" aria-hidden="true">☻</span><span class="nav-txt">Equipe</span></button>
+    <button type="button" class="nav-btn" data-aba="historico"><span class="nav-ico" aria-hidden="true">☰</span><span class="nav-txt">Histórico</span></button>
+    <button type="button" class="nav-btn" data-aba="relatorios"><span class="nav-ico" aria-hidden="true">▤</span><span class="nav-txt">Relatórios</span></button>
+    <button type="button" class="nav-btn" data-aba="config"><span class="nav-ico" aria-hidden="true">⚙</span><span class="nav-txt">Ajustes</span></button>
+  </nav>
+
+  <main id="principal" tabindex="-1">
+    <div id="avisos"></div>
+
+    <!-- ===================== VISÃO GERAL ===================== -->
+    <section class="aba" id="aba-geral" data-aba="geral" aria-label="Visão geral" hidden>
+      <div id="ov-backup"></div>
+      <div id="ov-hero"></div>
+      <div class="secao-titulo"><h2>Metas do dia</h2><span id="ov-metas-sub"></span></div>
+      <div class="grid-metas" id="ov-metas"></div>
+      <div class="grid-2">
+        <div id="slot-geral"></div>
+        <div id="ov-prioridade"></div>
+      </div>
+      <div class="secao-titulo"><h2>Ritmo real e equipe de hoje</h2></div>
+      <div id="ov-real"></div>
+      <div class="grid-2">
+        <div id="ov-hoje-trab"></div>
+        <div id="ov-hoje-nao"></div>
+      </div>
+      <div class="secao-titulo"><h2>Equipe e prazo do mês</h2></div>
+      <div class="grid-2 primeiro">
+        <div id="ov-cobertura"></div>
+        <div id="ov-plano"></div>
+      </div>
+    </section>
+
+    <!-- ===================== REGISTRAR ===================== -->
+    <section class="aba" id="aba-registrar" data-aba="registrar" aria-label="Registrar auditoria" hidden>
+      <div class="secao-titulo"><h2>Registrar auditoria</h2><span>Atalho: Ctrl + Enter</span></div>
+      <div class="grid-2 primeiro">
+        <div id="slot-registrar"></div>
+        <div id="reg-prioridade"></div>
+      </div>
+      <div class="secao-titulo"><h2>Registros de hoje</h2><span id="reg-hoje-sub"></span></div>
+      <div id="reg-hoje"></div>
+    </section>
+
+    <!-- ===================== EQUIPE ===================== -->
+    <section class="aba" id="aba-equipe" data-aba="equipe" aria-label="Cobertura da equipe" hidden>
+      <div class="secao-titulo"><h2>Cobertura da equipe</h2><span id="eq-mes"></span></div>
+      <div class="grid-resumo" id="eq-resumo"></div>
+      <div class="card filtros-card">
+        <div class="linha-form">
+          <div class="campo"><label for="eq-busca">Buscar operador</label><input type="search" id="eq-busca" placeholder="Digite um nome" autocomplete="off"></div>
+          <div class="campo"><label for="eq-filtro">Exibir</label>
+            <select id="eq-filtro">
+              <option value="todos">Todos</option>
+              <option value="sem">Sem auditoria no mês</option>
+              <option value="menor">Menor cobertura</option>
+              <option value="maior">Maior cobertura</option>
+              <option value="hoje">Auditados hoje</option>
+              <option value="nao-hoje">Não auditados hoje</option>
+              <option value="ativos">Ativos</option>
+              <option value="inativos">Inativos</option>
+            </select>
+          </div>
+          <div class="campo"><label for="eq-ordem">Ordenar por</label>
+            <select id="eq-ordem">
+              <option value="nome">Nome</option>
+              <option value="mes">Auditorias no mês</option>
+              <option value="hoje">Auditorias hoje</option>
+              <option value="ultima">Última auditoria</option>
+              <option value="dias">Dias sem auditoria</option>
+            </select>
+          </div>
+          <div class="campo"><span class="rotulo">Sentido</span><button type="button" class="btn btn-linha" id="eq-dir">↑ Crescente</button></div>
+        </div>
+        <form class="linha-form" id="eq-add" novalidate>
+          <div class="campo"><label for="eq-novo">Novo operador</label><input type="text" id="eq-novo" maxlength="80" placeholder="Nome completo" autocomplete="off"></div>
+          <div class="campo"><button type="submit" class="btn btn-primario">＋ Adicionar operador</button></div>
+        </form>
+      </div>
+      <div class="dica" id="eq-contagem" style="margin-bottom:10px"></div>
+      <div class="grid-ops" id="eq-lista"></div>
+      <div class="legenda" aria-label="Legenda de status">
+        <span class="leg"><i style="background:var(--verde)"></i> Auditado recentemente (últimos 2 dias)</span>
+        <span class="leg"><i style="background:var(--azul)"></i> Acompanhado no mês (meta atingida)</span>
+        <span class="leg"><i style="background:var(--amarelo)"></i> Pouca cobertura (abaixo da meta)</span>
+        <span class="leg"><i style="background:var(--vermelho)"></i> Nenhuma auditoria no mês</span>
+      </div>
+    </section>
+
+    <!-- ===================== HISTÓRICO ===================== -->
+    <section class="aba" id="aba-historico" data-aba="historico" aria-label="Histórico de auditorias" hidden>
+      <div class="secao-titulo"><h2>Histórico de auditorias</h2><span>Busca e filtros instantâneos</span></div>
+      <div class="card filtros-card">
+        <div class="acoes">
+          <button type="button" class="btn btn-sec btn-peq" id="h-hoje">Hoje</button>
+          <button type="button" class="btn btn-sec btn-peq" id="h-semana">Esta semana</button>
+          <button type="button" class="btn btn-sec btn-peq" id="h-mes">Este mês</button>
+          <button type="button" class="btn btn-linha btn-peq" id="h-limpar">Limpar filtros</button>
+        </div>
+        <div class="linha-form">
+          <div class="campo"><label for="h-q">Busca (operador, lead ou observação)</label><input type="search" id="h-q" autocomplete="off" placeholder="Buscar…"></div>
+          <div class="campo"><label for="h-ini">Data inicial</label><input type="date" id="h-ini"></div>
+          <div class="campo"><label for="h-fim">Data final</label><input type="date" id="h-fim"></div>
+          <div class="campo"><label for="h-op">Operador</label><select id="h-op"></select></div>
+          <div class="campo"><label for="h-tipo">Tipo</label>
+            <select id="h-tipo"><option value="">Todos os tipos</option><option value="rotina">Rotina</option><option value="documentacao">Documentação</option><option value="perdido">Perdido</option></select>
+          </div>
+          <div class="campo"><label for="h-lead">Lead</label><input type="search" id="h-lead" autocomplete="off" placeholder="ID do lead"></div>
+          <div class="campo"><label class="interruptor" for="h-rep" style="margin-top:20px"><input type="checkbox" id="h-rep"> Apenas repetidos</label></div>
+        </div>
+      </div>
+      <div class="hist-barra">
+        <strong id="h-total" aria-live="polite"></strong>
+        <div class="acoes">
+          <label for="h-tam" class="dica">Por página</label>
+          <select id="h-tam" style="width:auto"><option>25</option><option>50</option><option>100</option><option>200</option></select>
+          <button type="button" class="btn btn-sec btn-peq" id="h-csv" title="Exporta os registros que estão filtrados">⭳ Exportar CSV</button>
+        </div>
+      </div>
+      <div class="tabela-wrap" tabindex="0" aria-label="Tabela de auditorias (role para ver mais)">
+        <table id="h-tabela">
+          <thead>
+            <tr>
+              <th scope="col" aria-sort="none"><button type="button" class="ord" data-ordem="tempo">Data ⇅</button></th>
+              <th scope="col"><button type="button" class="ord" data-ordem="tempo">Hora ⇅</button></th>
+              <th scope="col"><button type="button" class="ord" data-ordem="operador">Operador ⇅</button></th>
+              <th scope="col"><button type="button" class="ord" data-ordem="lead">Lead ⇅</button></th>
+              <th scope="col"><button type="button" class="ord" data-ordem="tipo">Tipo ⇅</button></th>
+              <th scope="col"><span>Observação</span></th>
+              <th scope="col"><button type="button" class="ord" data-ordem="rep">Indicador ⇅</button></th>
+              <th scope="col"><span>Ações</span></th>
+            </tr>
+          </thead>
+          <tbody id="h-corpo"></tbody>
+        </table>
+      </div>
+      <div id="h-vazio"></div>
+      <div class="pag" id="h-pag"></div>
+    </section>
+
+    <!-- ===================== RELATÓRIOS ===================== -->
+    <section class="aba" id="aba-relatorios" data-aba="relatorios" aria-label="Relatórios" hidden>
+      <div class="secao-titulo"><h2>Relatório diário</h2></div>
+      <div class="card">
+        <div class="linha-form" style="grid-template-columns:minmax(170px,260px)">
+          <div class="campo"><label for="r-data">Data do relatório</label><input type="date" id="r-data"></div>
+        </div>
+        <pre class="relatorio" id="r-diario" tabindex="0"></pre>
+        <button type="button" class="btn btn-primario" id="r-copiar-d">⧉ Copiar relatório diário</button>
+      </div>
+      <div class="secao-titulo"><h2>Relatório mensal</h2></div>
+      <div class="card">
+        <div class="linha-form" style="grid-template-columns:repeat(2,minmax(130px,200px))">
+          <div class="campo"><label for="r-mes">Mês</label><select id="r-mes"></select></div>
+          <div class="campo"><label for="r-ano">Ano</label><select id="r-ano"></select></div>
+        </div>
+        <pre class="relatorio" id="r-mensal" tabindex="0"></pre>
+        <button type="button" class="btn btn-primario" id="r-copiar-m">⧉ Copiar relatório mensal</button>
+      </div>
+    </section>
+
+    <!-- ===================== CONFIGURAÇÕES ===================== -->
+    <section class="aba" id="aba-config" data-aba="config" aria-label="Configurações" hidden>
+      <div class="secao-titulo"><h2>Configurações</h2><span>Tudo é salvo neste navegador</span></div>
+      <form class="card" id="cfg-form" novalidate style="display:grid;gap:18px">
+        <div>
+          <h3 class="rotulo" style="margin-bottom:8px">METAS DIÁRIAS</h3>
+          <div class="cfg-grid">
+            <div class="campo"><label for="c-rotina">Rotina</label><input type="number" id="c-rotina" min="0" max="9999" step="1" inputmode="numeric"></div>
+            <div class="campo"><label for="c-doc">Documentação</label><input type="number" id="c-doc" min="0" max="9999" step="1" inputmode="numeric"></div>
+            <div class="campo"><label for="c-perd">Perdidos</label><input type="number" id="c-perd" min="0" max="9999" step="1" inputmode="numeric"></div>
+            <div class="campo"><label for="c-mensal">Meta mensal padrão por operador</label><input type="number" id="c-mensal" min="0" max="999" step="1" inputmode="numeric"></div>
+          </div>
+        </div>
+        <div>
+          <h3 class="rotulo" style="margin-bottom:8px">EXPEDIENTE</h3>
+          <div class="cfg-grid">
+            <div class="campo"><label for="c-ini">Horário inicial</label><input type="time" id="c-ini"></div>
+            <div class="campo"><label for="c-fim">Horário final</label><input type="time" id="c-fim"></div>
+            <div class="campo"><label for="c-alm-ini">Início do almoço</label><input type="time" id="c-alm-ini"></div>
+            <div class="campo"><label for="c-alm-fim">Fim do almoço</label><input type="time" id="c-alm-fim"></div>
+          </div>
+        </div>
+        <div>
+          <h3 class="rotulo" style="margin-bottom:8px">PREFERÊNCIAS</h3>
+          <div class="cfg-grid">
+            <label class="interruptor" for="c-seg"><input type="checkbox" id="c-seg"> Exibir segundos no relógio</label>
+            <label class="interruptor" for="c-som"><input type="checkbox" id="c-som"> Sons ativados</label>
+            <label class="interruptor" for="c-conf"><input type="checkbox" id="c-conf"> Confirmar antes de excluir registros</label>
+          </div>
+        </div>
+        <div id="c-erro" class="erro-form" role="alert" hidden></div>
+        <div class="acoes">
+          <button type="submit" class="btn btn-primario">Salvar configurações</button>
+          <button type="button" class="btn btn-linha" id="c-padrao">Restaurar configurações padrão</button>
+        </div>
+      </form>
+
+      <div class="secao-titulo"><h2>Dados e backup</h2></div>
+      <div class="card" style="display:grid;gap:14px">
+        <div class="banner azul" style="margin:0">
+          <span>Os dados ficam salvos <b>somente neste navegador e nesta máquina</b>. Faça um <b>backup JSON</b> periodicamente e guarde o arquivo em local seguro.</span>
+        </div>
+        <dl class="kv" style="margin:0" id="c-info"></dl>
+        <div>
+          <h3 class="rotulo" style="margin-bottom:8px">EXPORTAR E IMPORTAR</h3>
+          <div class="acoes">
+            <button type="button" class="btn btn-sec" id="d-csv-exp">⭳ Exportar CSV</button>
+            <button type="button" class="btn btn-sec" id="d-csv-imp">⭱ Importar CSV</button>
+            <button type="button" class="btn btn-primario" id="d-bkp">⭳ Fazer backup JSON</button>
+            <button type="button" class="btn btn-sec" id="d-rest">⭱ Restaurar backup JSON</button>
+          </div>
+        </div>
+        <div>
+          <h3 class="rotulo" style="margin-bottom:8px">ZONA DE RISCO</h3>
+          <div class="acoes">
+            <button type="button" class="btn btn-perigo-linha" id="d-apagar-hoje">Apagar somente os registros de hoje</button>
+            <button type="button" class="btn btn-perigo" id="d-apagar-tudo">Apagar todos os dados</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<footer class="rodape">
+  <span>FINX · Painel de Auditorias e Metas — funciona offline; dados salvos no navegador desta máquina.</span>
+  <span id="rod-salvo"></span>
+</footer>
+
+<button type="button" class="voltar-topo" id="voltar-topo" aria-label="Voltar ao topo" title="Voltar ao topo" hidden>↑</button>
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+<input type="file" id="file-csv" accept=".csv,text/csv" hidden>
+<input type="file" id="file-json" accept=".json,application/json" hidden>
+
+<script>
+/* =========================================================
+   FINX · Painel de Auditorias e Metas
+   Tudo em JavaScript puro, sem dependências externas.
+   Organização:
+     1. Constantes e utilitários
+     2. Armazenamento (localStorage)
+     3. Estado e sanitização de dados
+     4. Cálculos (metas, ritmo, equipe, mês)
+     5. Interface base (elementos, toasts, modais, sons)
+     6. Renderização das abas
+     7. Ações (registro, edição, operadores)
+     8. CSV e backup JSON
+     9. Configurações e dados
+    10. Inicialização
+   ========================================================= */
+(function () {
+'use strict';
+
+/* =====================================================
+   1. CONSTANTES E UTILITÁRIOS
+   ===================================================== */
+var VERSAO = 1;
+var CH = {
+  aud: 'finx_auditorias', op: 'finx_operadores', cfg: 'finx_configuracoes', ver: 'finx_versao',
+  salvo: 'finx_salvo_em', estado: 'finx_estado', backup: 'finx_ultimo_backup'
+};
+var TIPOS = {
+  rotina: { rotulo: 'Rotina', titulo: 'Rotina' },
+  documentacao: { rotulo: 'Documentação', titulo: 'Documentação' },
+  perdido: { rotulo: 'Perdido', titulo: 'Perdidos' }
+};
+var TIPOS_ORDEM = ['rotina', 'documentacao', 'perdido'];
+var ABAS = ['geral', 'registrar', 'equipe', 'historico', 'relatorios', 'config'];
+var MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+var DIAS_SEMANA = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+var NOMES_PADRAO = [
+  'Alex Sandro Pacheoni', 'Gabriel Carneiro de Souza Tritto', 'Ingrid Calderoni Martins', 'Joice Alice da Silva Sá',
+  'Adriano Robson Gomes', 'Isadora Pereira Lopes', 'Otavio Augusto Soares Greghi', 'Andreza Aparecida Sousa Costa',
+  'Adrielli Angela Maccio Moreto', 'Raquel Lima dos Anjos', 'Larissa Domingues Silva',
+  'Kethelyn Cristina Faria de Oliveira', 'Nelio Fernando de Souza Junior', 'Isabelly Rocha de Souza'
+];
+var CONFIG_PADRAO = {
+  metas: { rotina: 30, documentacao: 8, perdido: 6 },
+  horarios: { inicio: '09:00', fim: '18:00', almocoInicio: '12:00', almocoFim: '13:00' },
+  metaMensalPadrao: 1,
+  mostrarSegundos: true,
+  sons: true,
+  confirmarExclusao: true
+};
+
+function $(sel, raiz) { return (raiz || document).querySelector(sel); }
+function $$(sel, raiz) { return Array.prototype.slice.call((raiz || document).querySelectorAll(sel)); }
+
+/* Cria elementos DOM com segurança (texto sempre via nós de texto) */
+function el(tag, attrs) {
+  var e = document.createElement(tag);
+  if (attrs) {
+    Object.keys(attrs).forEach(function (k) {
+      var v = attrs[k];
+      if (v === null || v === undefined || v === false) return;
+      if (k === 'class') e.className = v;
+      else if (k === 'dataset') Object.keys(v).forEach(function (d) { e.dataset[d] = v[d]; });
+      else if (k.indexOf('on') === 0 && typeof v === 'function') e.addEventListener(k.slice(2), v);
+      else if (v === true) e.setAttribute(k, '');
+      else e.setAttribute(k, v);
+    });
+  }
+  for (var i = 2; i < arguments.length; i++) anexar(e, arguments[i]);
+  return e;
+}
+function anexar(pai, f) {
+  if (f === null || f === undefined || f === false) return;
+  if (Array.isArray(f)) { f.forEach(function (x) { anexar(pai, x); }); return; }
+  pai.appendChild(f.nodeType ? f : document.createTextNode(String(f)));
+}
+
+function pad(n) { return String(n).padStart(2, '0'); }
+function dataISO(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+function horaISO(d) { return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()); }
+function dataBR(iso) { var p = iso.split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+function parseData(iso) { var p = iso.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); }
+function dataValida(s) { return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && dataISO(parseData(s)) === s; }
+function normalizarHora(s) {
+  var m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(String(s || '').trim());
+  if (!m) return null;
+  var h = +m[1], mi = +m[2], se = m[3] === undefined ? 0 : +m[3];
+  if (h > 23 || mi > 59 || se > 59) return null;
+  return pad(h) + ':' + pad(mi) + ':' + pad(se);
+}
+function minutosDeHora(s) { var p = s.split(':').map(Number); return p[0] * 60 + p[1] + (p[2] || 0) / 60; }
+function minutosDoDia(d) { return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60; }
+function hm(s) { var p = s.split(':').map(Number); return p[0] * 60 + p[1]; }
+function diasEntre(a, b) {
+  var x = a.split('-').map(Number), y = b.split('-').map(Number);
+  return Math.round((Date.UTC(y[0], y[1] - 1, y[2]) - Date.UTC(x[0], x[1] - 1, x[2])) / 86400000);
+}
+function somarDias(iso, n) { var d = parseData(iso); d.setDate(d.getDate() + n); return dataISO(d); }
+function inicioSemana(iso) { var d = parseData(iso); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return dataISO(d); }
+function primeiroDiaMes(iso) { return iso.slice(0, 8) + '01'; }
+function ultimoDiaMes(iso) { var p = iso.split('-').map(Number); return dataISO(new Date(p[0], p[1], 0)); }
+function ehDiaUtil(d) { var w = d.getDay(); return w >= 1 && w <= 5; }
+function maiusc(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+function plural(n, s, p) { return n === 1 ? s : p; }
+
+function semAcento(s) { return String(s).normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+function normBusca(s) { return semAcento(s).toLowerCase().trim(); }
+/* Normalização de leads: sem acento, sem maiúsculas, sem espaços e sem símbolos */
+function normLead(s) { return semAcento(s).toLowerCase().replace(/[^\p{L}\p{N}]/gu, ''); }
+function limparTexto(s) { return String(s === null || s === undefined ? '' : s).replace(/\s+/g, ' ').trim(); }
+function iniciais(nome) {
+  var p = limparTexto(nome).split(' ').filter(Boolean);
+  if (!p.length) return '?';
+  return (p[0][0] + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase();
+}
+function novoId(pref) { return pref + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+function fmt1(n) { return (Math.round(n * 10) / 10).toFixed(1).replace('.', ','); }
+function fmtPct(n) { var r = Math.round(n * 10) / 10; return (Number.isInteger(r) ? String(r) : r.toFixed(1).replace('.', ',')) + '%'; }
+function fmtDur(min) {
+  var t = Math.max(0, Math.round(min)), h = Math.floor(t / 60), m = t % 60;
+  return h > 0 ? h + 'h' + pad(m) : m + ' min';
+}
+function fmtIntervalo(min) { return min < 1 ? Math.round(min * 60) + ' s' : fmtDur(min); }
+function fmtHM(min) { var t = Math.round(min); return pad(Math.floor(t / 60) % 24) + ':' + pad(t % 60); }
+function dataHoraBR(ms) {
+  var d = new Date(ms);
+  return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + horaISO(d);
+}
+
+/* =====================================================
+   2. ARMAZENAMENTO (localStorage com fallback em memória)
+   ===================================================== */
+var Armazenamento = {
+  ok: true,
+  memoria: {},
+  testar: function () {
+    try { localStorage.setItem('finx_teste', '1'); localStorage.removeItem('finx_teste'); this.ok = true; }
+    catch (e) { this.ok = false; }
+    return this.ok;
+  },
+  ler: function (k) {
+    if (this.ok) { try { return localStorage.getItem(k); } catch (e) { this.ok = false; } }
+    return Object.prototype.hasOwnProperty.call(this.memoria, k) ? this.memoria[k] : null;
+  },
+  gravar: function (k, v) {
+    if (this.ok) { try { localStorage.setItem(k, v); return true; } catch (e) { this.ok = false; } }
+    this.memoria[k] = v;
+    return false;
+  },
+  remover: function (k) {
+    if (this.ok) { try { localStorage.removeItem(k); } catch (e) { this.ok = false; } }
+    delete this.memoria[k];
+  }
+};
+
+/* =====================================================
+   3. ESTADO E SANITIZAÇÃO
+   ===================================================== */
+var estado = {
+  auditorias: [], operadores: [], config: null,
+  rev: 0, registrando: false, diaRender: '', minutoRender: -1,
+  ultimoOperadorId: '', ultimoTipo: '', avisoBackupFechado: false,
+  ui: {
+    aba: 'geral',
+    equipe: { busca: '', filtro: 'todos', ordem: 'nome', dir: 'asc' },
+    hist: { q: '', ini: '', fim: '', op: '', tipo: '', lead: '', soRep: false, ordem: 'tempo', dir: 'desc', pag: 1, tam: 25 },
+    relData: '', relMes: 0, relAno: 0
+  }
+};
+var refs = {};
+
+function copiar(o) { return JSON.parse(JSON.stringify(o)); }
+
+function operadoresPadrao() {
+  return NOMES_PADRAO.map(function (nome, i) { return { id: 'op_' + pad(i + 1), nome: nome, ativo: true, metaMensal: null }; });
+}
+function horariosCoerentes(h) {
+  var i = hm(h.inicio), f = hm(h.fim), a = hm(h.almocoInicio), b = hm(h.almocoFim);
+  return i < f && a <= b && a >= i && b <= f;
+}
+function inteiroEntre(v, min, max) {
+  var n = typeof v === 'string' && v.trim() !== '' ? Number(v) : v;
+  return typeof n === 'number' && Number.isInteger(n) && n >= min && n <= max ? n : null;
+}
+/* Mescla uma configuração desconhecida com a padrão, descartando valores inválidos */
+function mesclarConfig(c) {
+  var p = copiar(CONFIG_PADRAO);
+  if (!c || typeof c !== 'object') return p;
+  var m = c.metas || {};
+  TIPOS_ORDEM.forEach(function (t) { var v = inteiroEntre(m[t], 0, 9999); if (v !== null) p.metas[t] = v; });
+  var h = c.horarios || {};
+  var h2 = copiar(p.horarios);
+  Object.keys(h2).forEach(function (k) { if (typeof h[k] === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(h[k])) h2[k] = h[k]; });
+  if (horariosCoerentes(h2)) p.horarios = h2;
+  var mm = inteiroEntre(c.metaMensalPadrao, 0, 999); if (mm !== null) p.metaMensalPadrao = mm;
+  ['mostrarSegundos', 'sons', 'confirmarExclusao'].forEach(function (k) { if (typeof c[k] === 'boolean') p[k] = c[k]; });
+  if (p.metas.rotina + p.metas.documentacao + p.metas.perdido <= 0) p.metas = copiar(CONFIG_PADRAO.metas);
+  return p;
+}
+function normalizarTipo(s) {
+  var t = normBusca(s);
+  if (t === 'rotina') return 'rotina';
+  if (t === 'documentacao' || t === 'doc' || t === 'docs') return 'documentacao';
+  if (t === 'perdido' || t === 'perdidos') return 'perdido';
+  return null;
+}
+function sanitizarAuditoria(x) {
+  if (!x || typeof x !== 'object') return null;
+  var data = String(x.data || ''), hora = normalizarHora(x.hora), tipo = normalizarTipo(x.tipo);
+  if (!dataValida(data) || !hora || !tipo) return null;
+  var lead = limparTexto(x.lead).slice(0, 120), leadNorm = normLead(lead);
+  var nome = limparTexto(x.operadorNome !== undefined ? x.operadorNome : x.operador).slice(0, 120);
+  if (!leadNorm || !nome) return null;
+  return {
+    id: typeof x.id === 'string' && x.id ? x.id.slice(0, 64) : novoId('a'),
+    data: data, hora: hora,
+    operadorId: typeof x.operadorId === 'string' && x.operadorId ? x.operadorId : null,
+    operadorNome: nome, lead: lead, leadNorm: leadNorm, tipo: tipo,
+    obs: limparTexto(x.obs).slice(0, 300),
+    criadoEm: Number.isFinite(x.criadoEm) ? x.criadoEm : 0
+  };
+}
+function sanitizarOperador(x) {
+  if (!x || typeof x !== 'object') return null;
+  var nome = limparTexto(x.nome).slice(0, 80);
+  if (!nome) return null;
+  return {
+    id: typeof x.id === 'string' && x.id ? x.id.slice(0, 64) : novoId('op'),
+    nome: nome, ativo: x.ativo !== false,
+    metaMensal: inteiroEntre(x.metaMensal, 0, 999)
+  };
+}
+function sanitizarListas(auds, ops) {
+  var descartadosA = 0, descartadosO = 0, ids = {}, idsOp = {};
+  var operadores = [];
+  (Array.isArray(ops) ? ops : []).forEach(function (x) {
+    var o = sanitizarOperador(x);
+    if (!o) { descartadosO++; return; }
+    if (idsOp[o.id]) o.id = novoId('op');
+    idsOp[o.id] = true; operadores.push(o);
+  });
+  var auditorias = [];
+  (Array.isArray(auds) ? auds : []).forEach(function (x) {
+    var a = sanitizarAuditoria(x);
+    if (!a) { descartadosA++; return; }
+    if (ids[a.id]) a.id = novoId('a');
+    ids[a.id] = true; auditorias.push(a);
+  });
+  return { auditorias: auditorias, operadores: operadores, descartadosA: descartadosA, descartadosO: descartadosO };
+}
+/* Reassocia registros "órfãos" ao operador de mesmo nome, quando existir */
+function relinkarOrfaos() {
+  var porId = {}, porNome = {};
+  estado.operadores.forEach(function (o) { porId[o.id] = o; porNome[normBusca(o.nome)] = o; });
+  var mudou = false;
+  estado.auditorias.forEach(function (a) {
+    if (a.operadorId && porId[a.operadorId]) return;
+    var o = porNome[normBusca(a.operadorNome)];
+    if (o) { a.operadorId = o.id; a.operadorNome = o.nome; mudou = true; }
+  });
+  return mudou;
+}
+
+function carregarJSON(chave, validar) {
+  var bruto = Armazenamento.ler(chave);
+  if (bruto === null) return { novo: true };
+  try {
+    var v = JSON.parse(bruto);
+    if (!validar(v)) throw new Error('estrutura inválida');
+    return { valor: v };
+  } catch (e) {
+    Armazenamento.gravar(chave + '_corrompido', bruto);
+    return { corrompido: true };
+  }
+}
+function carregarTudo() {
+  var problemas = [];
+  Armazenamento.testar();
+  var rc = carregarJSON(CH.cfg, function (v) { return v && typeof v === 'object' && !Array.isArray(v); });
+  estado.config = mesclarConfig(rc.valor);
+  if (rc.corrompido) problemas.push('configurações');
+
+  var ro = carregarJSON(CH.op, Array.isArray);
+  var ra = carregarJSON(CH.aud, Array.isArray);
+  if (ro.corrompido) problemas.push('operadores');
+  if (ra.corrompido) problemas.push('auditorias');
+  var s = sanitizarListas(ra.valor || [], ro.valor || []);
+  estado.operadores = ro.valor ? s.operadores : operadoresPadrao();
+  estado.auditorias = s.auditorias;
+  if (s.descartadosA || s.descartadosO) problemas.push('registros inválidos ignorados');
+  relinkarOrfaos();
+
+  var re = carregarJSON(CH.estado, function (v) { return v && typeof v === 'object'; });
+  if (re.valor) {
+    estado.ultimoOperadorId = typeof re.valor.ultimoOperadorId === 'string' ? re.valor.ultimoOperadorId : '';
+    estado.ultimoTipo = normalizarTipo(re.valor.ultimoTipo) || '';
+  }
+  /* Grava as listas padrão apenas quando a chave ainda não existia: nunca duplica operadores */
+  if (ro.novo) salvarOperadores();
+  if (ra.novo) salvarAuditorias();
+  if (rc.novo) salvarConfig();
+  Armazenamento.gravar(CH.ver, String(VERSAO));
+  return problemas;
+}
+
+function salvarChave(chave, valor) {
+  var ok = Armazenamento.gravar(chave, JSON.stringify(valor));
+  if (ok) { Armazenamento.gravar(CH.salvo, String(Date.now())); atualizarSalvo(); }
+  else if (!estado.avisouFalha) {
+    estado.avisouFalha = true;
+    toast('Não foi possível gravar no navegador (armazenamento bloqueado ou cheio). Faça um backup JSON.', { tipo: 'erro', dur: 9000 });
+  }
+  return ok;
+}
+function salvarAuditorias() { estado.rev++; return salvarChave(CH.aud, estado.auditorias); }
+function salvarOperadores() { estado.rev++; return salvarChave(CH.op, estado.operadores); }
+function salvarConfig() { return salvarChave(CH.cfg, estado.config); }
+function salvarEstadoUI() {
+  Armazenamento.gravar(CH.estado, JSON.stringify({ ultimoOperadorId: estado.ultimoOperadorId, ultimoTipo: estado.ultimoTipo }));
+}
+function atualizarSalvo() {
+  var v = Number(Armazenamento.ler(CH.salvo));
+  var txt = v ? 'Salvo em ' + dataHoraBR(v) : 'Nada salvo ainda';
+  if (!Armazenamento.ok) txt = 'Armazenamento indisponível: faça backup';
+  $('#chip-salvo').textContent = '💾 ' + txt;
+  $('#rod-salvo').textContent = 'Último salvamento: ' + (v ? dataHoraBR(v) : '—');
+}
+
+/* =====================================================
+   4. CÁLCULOS
+   ===================================================== */
+function horariosMin() {
+  var h = estado.config.horarios;
+  return { ini: hm(h.inicio), fim: hm(h.fim), aIni: hm(h.almocoInicio), aFim: hm(h.almocoFim) };
+}
+function sobreposicao(a1, a2, b1, b2) { return Math.max(0, Math.min(a2, b2) - Math.max(a1, b1)); }
+/* Minutos produtivos entre dois instantes, restritos ao expediente e descontando o almoço */
+function minutosUteis(de, ate, hr) {
+  var ini = Math.max(de, hr.ini), fim = Math.min(ate, hr.fim);
+  if (fim <= ini) return 0;
+  return (fim - ini) - sobreposicao(ini, fim, hr.aIni, hr.aFim);
+}
+/* Minutos entre dois instantes sem restringir ao expediente, apenas descontando o almoço */
+function minutosSemAlmoco(a, b, hr) {
+  if (b <= a) return 0;
+  return Math.max(0, (b - a) - sobreposicao(a, b, hr.aIni, hr.aFim));
+}
+/* Instante (minutos do dia) em que terminam "minutos" produtivos a partir de "inicio" */
+function avancarUteis(inicio, minutos, hr) {
+  var t = Math.max(inicio, hr.ini), temAlmoco = hr.aFim > hr.aIni;
+  if (temAlmoco && t >= hr.aIni && t < hr.aFim) t = hr.aFim;
+  if (temAlmoco && t < hr.aIni) {
+    var disp = hr.aIni - t;
+    if (minutos <= disp) return t + minutos;
+    minutos -= disp; t = hr.aFim;
+  }
+  return t + minutos;
+}
+function diasUteisRestantes(agora, hr) {
+  var fimMes = new Date(agora.getFullYear(), agora.getMonth() + 1, 0);
+  var d = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+  var hojeAberto = minutosDoDia(agora) < hr.fim, n = 0, primeiro = true;
+  while (d <= fimMes) {
+    if (ehDiaUtil(d) && (!primeiro || hojeAberto)) n++;
+    primeiro = false; d.setDate(d.getDate() + 1);
+  }
+  return n;
+}
+
+/* ---- Índice de leads (para detectar repetidos) ---- */
+var cacheIdx = { rev: -1, dados: null };
+function porTempoAsc(a, b) {
+  var x = a.data + ' ' + a.hora, y = b.data + ' ' + b.hora;
+  return x < y ? -1 : x > y ? 1 : a.criadoEm - b.criadoEm;
+}
+function indiceLeads() {
+  if (cacheIdx.rev === estado.rev && cacheIdx.dados) return cacheIdx.dados;
+  var grupos = new Map(), info = new Map();
+  estado.auditorias.forEach(function (a) {
+    var g = grupos.get(a.leadNorm);
+    if (!g) { g = []; grupos.set(a.leadNorm, g); }
+    g.push(a);
+  });
+  grupos.forEach(function (g) {
+    g.sort(porTempoAsc);
+    g.forEach(function (a, i) { info.set(a.id, { ordem: i + 1, total: g.length }); });
+  });
+  cacheIdx = { rev: estado.rev, dados: { grupos: grupos, info: info } };
+  return cacheIdx.dados;
+}
+function ehRepetido(a) { var i = indiceLeads().info.get(a.id); return !!i && i.ordem > 1; }
+function ocorrenciasLead(leadNorm, excluirId) {
+  var g = indiceLeads().grupos.get(leadNorm) || [];
+  return g.filter(function (a) { return a.id !== excluirId; });
+}
+
+/* ---- Metas do dia ---- */
+function contagemDia(data) {
+  var c = { rotina: 0, documentacao: 0, perdido: 0, total: 0, operadores: new Set(), repetidos: 0, registros: [] };
+  estado.auditorias.forEach(function (a) {
+    if (a.data !== data) return;
+    c[a.tipo]++; c.total++;
+    if (a.operadorId) c.operadores.add(a.operadorId);
+    if (ehRepetido(a)) c.repetidos++;
+    c.registros.push(a);
+  });
+  c.registros.sort(porTempoAsc);
+  return c;
+}
+function calcMetas(c) {
+  var metas = estado.config.metas, out = { tipos: {}, metaTotal: 0, feitoValido: 0, faltaTotal: 0, excedente: 0 };
+  TIPOS_ORDEM.forEach(function (t) {
+    var meta = metas[t], real = c[t];
+    var falta = Math.max(0, meta - real), exc = Math.max(0, real - meta);
+    out.tipos[t] = { real: real, meta: meta, falta: falta, exc: exc, pct: meta > 0 ? real / meta * 100 : 100 };
+    out.metaTotal += meta; out.faltaTotal += falta; out.excedente += exc;
+    out.feitoValido += Math.min(real, meta);
+  });
+  out.total = { real: c.total, meta: out.metaTotal, falta: out.faltaTotal, exc: out.excedente, pct: out.metaTotal > 0 ? out.feitoValido / out.metaTotal * 100 : 100 };
+  return out;
+}
+function calcRitmo(agora, hr, m) {
+  var nowMin = minutosDoDia(agora), jornada = minutosUteis(hr.ini, hr.fim, hr);
+  var r = { falta: m.faltaTotal, jornada: jornada, nowMin: nowMin };
+  r.minRest = minutosUteis(nowMin, hr.fim, hr);
+  r.faseDia = nowMin < hr.ini ? 'antes' : nowMin >= hr.fim ? 'encerrado' :
+    (hr.aFim > hr.aIni && nowMin >= hr.aIni && nowMin < hr.aFim) ? 'almoco' : 'trabalho';
+  if (m.faltaTotal === 0) { r.estado = 'concluida'; r.nivel = 'concluida'; return r; }
+  if (r.faseDia === 'encerrado' || r.minRest <= 0) { r.estado = 'encerrado'; r.nivel = 'critico'; return r; }
+  r.estado = 'ativo';
+  r.porHora = m.faltaTotal / (r.minRest / 60);
+  r.minPorAud = Math.max(1, Math.round(r.minRest / m.faltaTotal));
+  var base = jornada > 0 ? m.metaTotal / (jornada / 60) : 0;
+  var razao = base > 0 ? r.porHora / base : 1;
+  r.nivel = razao <= 1.15 ? 'ok' : razao <= 1.6 ? 'atencao' : 'critico';
+  return r;
+}
+function calcRitmoReal(dataStr, agora, regs, hr) {
+  var ehHoje = dataStr === dataISO(agora), n = regs.length;
+  var r = { n: n, suficiente: false, base: null, desdeInicio: null, entre: null, ultimaHora: null, ultimos30: null,
+    medioEntre: null, primeira: null, ultima: null, maiorIntervalo: null };
+  if (!n) return r;
+  var tempos = regs.map(function (a) { return minutosDeHora(a.hora); });
+  r.primeira = regs[0].hora; r.ultima = regs[n - 1].hora;
+  var agoraMin = ehHoje ? minutosDoDia(agora) : null;
+  if (ehHoje) {
+    r.ultimaHora = tempos.filter(function (t) { return t > agoraMin - 60 && t <= agoraMin; }).length;
+    r.ultimos30 = tempos.filter(function (t) { return t > agoraMin - 30 && t <= agoraMin; }).length;
+  }
+  if (n < 2) return r;
+  var maior = 0;
+  for (var i = 1; i < n; i++) maior = Math.max(maior, minutosSemAlmoco(tempos[i - 1], tempos[i], hr));
+  r.maiorIntervalo = maior;
+  var span = minutosSemAlmoco(tempos[0], tempos[n - 1], hr);
+  if (span >= 5) { r.medioEntre = span / (n - 1); r.entre = (n - 1) / span * 60; }
+  var fimRef = Math.max(ehHoje ? agoraMin : hr.fim, tempos[n - 1]);
+  var iniRef = Math.min(hr.ini, tempos[0]);
+  var decorrido = minutosSemAlmoco(iniRef, fimRef, hr);
+  if (decorrido >= 15) r.desdeInicio = n / (decorrido / 60);
+  r.base = r.desdeInicio !== null ? r.desdeInicio : r.entre;
+  r.suficiente = r.base !== null;
+  return r;
+}
+function horaConclusao(regs, metas) {
+  var maxHora = null;
+  for (var i = 0; i < TIPOS_ORDEM.length; i++) {
+    var t = TIPOS_ORDEM[i], meta = metas[t];
+    if (meta <= 0) continue;
+    var lista = regs.filter(function (a) { return a.tipo === t; });
+    if (lista.length < meta) return null;
+    var h = lista[meta - 1].hora;
+    if (maxHora === null || h > maxHora) maxHora = h;
+  }
+  return maxHora;
+}
+function contextoDia(agora) {
+  var hojeStr = dataISO(agora), hr = horariosMin(), c = contagemDia(hojeStr), m = calcMetas(c);
+  var ritmo = calcRitmo(agora, hr, m), real = calcRitmoReal(hojeStr, agora, c.registros, hr);
+  var ctx = { agora: agora, hojeStr: hojeStr, hr: hr, c: c, m: m, ritmo: ritmo, real: real };
+  ctx.prev = calcPrevisao(ctx);
+  ctx.eq = calcEquipe(hojeStr);
+  return ctx;
+}
+function calcPrevisao(ctx) {
+  var r = ctx.ritmo, real = ctx.real, hr = ctx.hr, m = ctx.m;
+  if (r.estado === 'concluida') {
+    var hh = horaConclusao(ctx.c.registros, estado.config.metas);
+    return { nivel: 'ok', titulo: hh ? hh.slice(0, 5) : 'Concluída', texto: hh ? 'Meta concluída às ' + hh.slice(0, 5) + '.' : 'Meta concluída.' };
+  }
+  if (r.estado === 'encerrado') return { nivel: 'critico', titulo: 'Encerrado', texto: 'Expediente encerrado.' };
+  if (real.base === null) return { nivel: 'neutro', titulo: '—', texto: 'Dados insuficientes para prever a conclusão.' };
+  var precisa = r.falta / real.base * 60, fim = avancarUteis(r.nowMin, precisa, hr);
+  if (fim <= hr.fim + 0.5) {
+    return { nivel: 'ok', titulo: fmtHM(fim), texto: 'Mantendo o ritmo atual, a previsão de conclusão é ' + fmtHM(fim) + '.' };
+  }
+  var proj = Math.min(m.metaTotal, Math.floor((m.metaTotal - r.falta) + real.base * r.minRest / 60));
+  return { nivel: 'critico', titulo: 'Não fecha hoje',
+    texto: 'No ritmo atual a meta não fecha hoje: projeção de ' + proj + ' de ' + m.metaTotal + ' auditorias até ' + estado.config.horarios.fim + '.' };
+}
+
+/* ---- Equipe ---- */
+function metaDe(op) { return op.metaMensal !== null && op.metaMensal !== undefined ? op.metaMensal : estado.config.metaMensalPadrao; }
+function calcEquipe(refData) {
+  var mes = refData.slice(0, 7), si = inicioSemana(refData), sf = somarDias(si, 6), hojeStr = refData;
+  var mapa = new Map(), lista = [], totalMes = 0;
+  estado.operadores.forEach(function (op) {
+    var s = { op: op, hoje: 0, semana: 0, mes: 0, tipos: { rotina: 0, documentacao: 0, perdido: 0 }, ultima: null, diasSem: null, part: 0, meta: metaDe(op) };
+    mapa.set(op.id, s); lista.push(s);
+  });
+  estado.auditorias.forEach(function (a) {
+    var noMes = a.data.slice(0, 7) === mes;
+    if (noMes) totalMes++;
+    var s = a.operadorId ? mapa.get(a.operadorId) : null;
+    if (!s) return;
+    if (!s.ultima || (a.data + ' ' + a.hora) > (s.ultima.data + ' ' + s.ultima.hora)) s.ultima = a;
+    if (a.data === hojeStr) s.hoje++;
+    if (a.data >= si && a.data <= sf) s.semana++;
+    if (noMes) { s.mes++; s.tipos[a.tipo]++; }
+  });
+  lista.forEach(function (s) {
+    s.diasSem = s.ultima ? Math.max(0, diasEntre(s.ultima.data, hojeStr)) : null;
+    s.part = totalMes ? s.mes / totalMes * 100 : 0;
+  });
+  var ativos = lista.filter(function (s) { return s.op.ativo; });
+  var auditados = ativos.filter(function (s) { return s.mes > 0; }).length;
+  var max = ativos.length ? Math.max.apply(null, ativos.map(function (s) { return s.mes; })) : 0;
+  var min = ativos.length ? Math.min.apply(null, ativos.map(function (s) { return s.mes; })) : 0;
+  return {
+    lista: lista, ativos: ativos, mapa: mapa, totalMes: totalMes, refData: refData,
+    resumo: {
+      ativos: ativos.length, auditados: auditados, sem: ativos.length - auditados,
+      cobertura: ativos.length ? auditados / ativos.length * 100 : 0,
+      max: max, min: min,
+      maisAud: ativos.filter(function (s) { return s.mes === max; }),
+      menosAud: ativos.filter(function (s) { return s.mes === min; }),
+      diferenca: max - min
+    }
+  };
+}
+function statusOperador(s) {
+  if (!s.op.ativo) return { classe: 'cinza', rotulo: 'INATIVO' };
+  if (s.mes === 0) return { classe: 'vermelho', rotulo: 'SEM AUDITORIA NO MÊS' };
+  if (s.diasSem !== null && s.diasSem <= 2) return { classe: 'verde', rotulo: 'AUDITADO RECENTEMENTE' };
+  if (s.mes >= s.meta) return { classe: 'azul', rotulo: 'ACOMPANHADO NO MÊS' };
+  return { classe: 'amarelo', rotulo: 'POUCA COBERTURA' };
+}
+function cmpPrioridadeOperador(a, b) {
+  if (a.mes !== b.mes) return a.mes - b.mes;
+  var ua = a.ultima ? a.ultima.data + ' ' + a.ultima.hora : '', ub = b.ultima ? b.ultima.data + ' ' + b.ultima.hora : '';
+  if (ua !== ub) return ua < ub ? -1 : 1;
+  return a.op.nome.localeCompare(b.op.nome, 'pt-BR');
+}
+function categoriaPrioritaria(m) {
+  var pior = null;
+  TIPOS_ORDEM.forEach(function (t) {
+    var x = m.tipos[t];
+    if (x.meta <= 0 || x.falta <= 0) return;
+    if (!pior || x.pct < m.tipos[pior].pct || (x.pct === m.tipos[pior].pct && x.falta > m.tipos[pior].falta)) pior = t;
+  });
+  return pior;
+}
+function calcPlano(agora, eq) {
+  var hr = horariosMin(), hojeStr = dataISO(agora), fim = ultimoDiaMes(hojeStr);
+  var uteis = diasUteisRestantes(agora, hr);
+  var sem = eq.ativos.filter(function (s) { return s.mes === 0; });
+  var equilibrar = eq.ativos.reduce(function (t, s) { return t + Math.max(0, s.meta - s.mes); }, 0);
+  var prioritarios = eq.ativos.filter(function (s) { return s.mes < s.meta; }).sort(cmpPrioridadeOperador).slice(0, 3);
+  return {
+    ultimoDia: fim, corridos: diasEntre(hojeStr, fim), uteis: uteis, sem: sem.length,
+    porDia: sem.length ? (uteis > 0 ? Math.ceil(sem.length / uteis) : sem.length) : 0,
+    equilibrar: equilibrar, prioritarios: prioritarios
+  };
+}
+
+/* =====================================================
+   5. INTERFACE BASE: toasts, modais, sons, utilidades
+   ===================================================== */
+var ctxAudio = null;
+function tocar(tipo) {
+  if (!estado.config || !estado.config.sons) return;
+  try {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    ctxAudio = ctxAudio || new AC();
+    if (ctxAudio.state === 'suspended') ctxAudio.resume();
+    var notas = tipo === 'ok' ? [[880, 0, .09]] : tipo === 'alerta' ? [[440, 0, .12], [330, .15, .16]] : [[200, 0, .22]];
+    notas.forEach(function (n) {
+      var o = ctxAudio.createOscillator(), g = ctxAudio.createGain(), t0 = ctxAudio.currentTime + n[1];
+      o.type = 'sine'; o.frequency.value = n[0];
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.12, t0 + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + n[2]);
+      o.connect(g); g.connect(ctxAudio.destination);
+      o.start(t0); o.stop(t0 + n[2] + 0.02);
+    });
+  } catch (e) { /* som é opcional */ }
+}
+
+function toast(msg, opt) {
+  opt = opt || {};
+  var cont = $('#toasts');
+  var t = el('div', { class: 'toast ' + (opt.tipo || 'ok') }, el('span', null, msg));
+  var timer;
+  function fechar() { clearTimeout(timer); if (t.parentNode) t.remove(); }
+  if (opt.acao) {
+    t.appendChild(el('button', { type: 'button', onclick: function () { fechar(); opt.acao.fn(); } }, opt.acao.rotulo));
+  }
+  cont.appendChild(t);
+  while (cont.children.length > 4) cont.firstChild.remove();
+  timer = setTimeout(fechar, opt.dur || (opt.acao ? 7000 : 3800));
+  return t;
+}
+
+var modalAtual = null;
+/* Abre um modal acessível. Resolve com o "valor" do botão acionado (ou null ao cancelar). */
+function abrirModal(op) {
+  if (modalAtual) modalAtual.fechar(null);
+  return new Promise(function (resolve) {
+    var anterior = document.activeElement, idTit = 'modal-tit-' + Date.now();
+    var fundo = el('div', { class: 'modal-fundo' });
+    var caixa = el('div', { class: 'modal ' + (op.classe || ''), role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': idTit });
+    var rodape = el('div', { class: 'modal-rodape' });
+    var focoBtn = null;
+    function fechar(v) {
+      document.removeEventListener('keydown', tecla, true);
+      fundo.remove(); document.body.classList.remove('sem-rolagem'); modalAtual = null;
+      if (anterior && anterior.focus && document.contains(anterior)) { try { anterior.focus(); } catch (e) { /* ignora */ } }
+      resolve(v);
+    }
+    function tecla(e) {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fechar(null); return; }
+      if (e.key === 'Tab') {
+        var foc = $$('button,input,select,textarea,a[href]', caixa).filter(function (x) { return !x.disabled && x.offsetParent !== null; });
+        if (!foc.length) return;
+        var primeiro = foc[0], ultimo = foc[foc.length - 1];
+        if (e.shiftKey && document.activeElement === primeiro) { e.preventDefault(); ultimo.focus(); }
+        else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primeiro.focus(); }
+      }
+    }
+    (op.botoes || []).forEach(function (b) {
+      var btn = el('button', { type: 'button', class: 'btn ' + (b.classe || 'btn-linha'), onclick: function () {
+        if (b.validar && b.validar() === false) return;
+        fechar(b.valor === undefined ? true : b.valor);
+      } }, b.rotulo);
+      if (b.foco) focoBtn = btn;
+      rodape.appendChild(btn);
+    });
+    caixa.appendChild(el('div', { class: 'modal-topo', id: idTit }, op.titulo));
+    caixa.appendChild(el('div', { class: 'modal-corpo' }, op.corpo));
+    caixa.appendChild(rodape);
+    fundo.appendChild(caixa);
+    fundo.addEventListener('mousedown', function (e) { if (e.target === fundo) fechar(null); });
+    document.addEventListener('keydown', tecla, true);
+    document.body.appendChild(fundo);
+    document.body.classList.add('sem-rolagem');
+    modalAtual = { fechar: fechar };
+    var alvo = focoBtn || $('input:not([type=hidden]),select,textarea', caixa) || $('button', rodape);
+    if (alvo) alvo.focus();
+  });
+}
+function textoCorpo(c) { return typeof c === 'string' ? el('p', null, c) : c; }
+function confirmar(o) {
+  return abrirModal({
+    titulo: o.titulo, classe: o.perigo ? 'perigo' : '', corpo: [].concat(o.corpo).map(textoCorpo),
+    botoes: [
+      { rotulo: o.rotuloCancelar || 'Cancelar', valor: false, classe: 'btn-linha', foco: !!o.perigo },
+      { rotulo: o.rotuloOk || 'Confirmar', valor: true, classe: o.perigo ? 'btn-perigo' : 'btn-primario', foco: !o.perigo }
+    ]
+  }).then(function (v) { return v === true; });
+}
+function avisoModal(titulo, corpo) {
+  return abrirModal({ titulo: titulo, corpo: [].concat(corpo).map(textoCorpo), botoes: [{ rotulo: 'Entendi', valor: true, classe: 'btn-primario', foco: true }] });
+}
+function campoModal(rotulo, controle, id) {
+  return el('div', { class: 'campo' }, el('label', { for: id }, rotulo), controle);
+}
+function opcao(valor, texto, sel) { var o = el('option', { value: valor }, texto); if (sel) o.selected = true; return o; }
+
+function copiarTexto(texto) {
+  function fallback() {
+    var ta = el('textarea', { style: 'position:fixed;opacity:0;top:0;left:0', readonly: true }); ta.value = texto;
+    document.body.appendChild(ta); ta.select();
+    var ok = false; try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    ta.remove(); return ok;
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(texto).then(function () { return true; }, function () { return fallback(); });
+  }
+  return Promise.resolve(fallback());
+}
+function baixar(nome, conteudo, tipo) {
+  var url = URL.createObjectURL(new Blob([conteudo], { type: tipo }));
+  var a = el('a', { href: url, download: nome });
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 3000);
+}
+function barra(pct, classe) {
+  var p = Math.max(0, Math.min(100, pct));
+  var b = el('div', { class: 'barra ' + (classe || '') + (pct >= 100 ? ' completa' : ''), role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(Math.round(p)) },
+    el('i', { style: 'width:' + p + '%' }));
+  return b;
+}
+function tag(texto, cor, titulo) { return el('span', { class: 'tag tag-' + cor, title: titulo }, texto); }
+function nomeOperadorAtual(a) {
+  var o = a.operadorId ? estado.operadores.find(function (x) { return x.id === a.operadorId; }) : null;
+  return o ? o.nome : a.operadorNome;
+}
+
+/* =====================================================
+   6. RENDERIZAÇÃO
+   ===================================================== */
+function renderCabecalho(agora) {
+  agora = agora || new Date();
+  var hr = horariosMin(), uteis = diasUteisRestantes(agora, hr);
+  $('#rel-data').textContent = DIAS_SEMANA[agora.getDay()] + ', ' + dataBR(dataISO(agora));
+  $('#chip-mes').textContent = '📅 ' + maiusc(MESES[agora.getMonth()]);
+  $('#chip-uteis').textContent = '⏳ ' + uteis + ' ' + plural(uteis, 'dia útil restante', 'dias úteis restantes');
+}
+function atualizarRelogio(agora) {
+  var s = estado.config.mostrarSegundos;
+  $('#rel-hora').textContent = pad(agora.getHours()) + ':' + pad(agora.getMinutes()) + (s ? ':' + pad(agora.getSeconds()) : '');
+}
+
+/* ---------- Visão geral ---------- */
+function construirHero(ctx) {
+  var r = ctx.ritmo, cfgH = estado.config.horarios, m = ctx.m;
+  var rotulos = { ok: 'Ritmo confortável', atencao: 'Atenção', critico: 'Ritmo crítico', concluida: 'Meta concluída', neutro: '' };
+  var nivel = r.nivel, selo = rotulos[nivel] || '', linhas = [], principal, unid = '';
+  if (r.estado === 'concluida') {
+    principal = 'Meta concluída'; unid = 'Todas as metas de hoje foram atingidas.';
+    if (m.excedente > 0) linhas.push('Excedente de hoje: +' + m.excedente + ' ' + plural(m.excedente, 'auditoria', 'auditorias') + '.');
+    linhas.push('Continue equilibrando a cobertura da equipe.');
+  } else if (r.estado === 'encerrado') {
+    selo = 'Expediente encerrado'; principal = 'Expediente encerrado';
+    unid = 'Faltaram ' + r.falta + ' ' + plural(r.falta, 'auditoria', 'auditorias') + ' para a meta de hoje.';
+  } else {
+    principal = fmt1(r.porHora);
+    unid = plural(Math.round(r.porHora * 10) / 10, 'auditoria', 'auditorias') + ' por hora';
+    linhas.push('Você precisa realizar ' + fmt1(r.porHora) + ' ' + plural(Math.round(r.porHora * 10) / 10, 'auditoria', 'auditorias') + ' por hora.');
+    linhas.push('Ritmo necessário: 1 auditoria a cada ' + r.minPorAud + ' ' + plural(r.minPorAud, 'minuto', 'minutos') + '.');
+    linhas.push('Faltam ' + r.falta + ' ' + plural(r.falta, 'auditoria', 'auditorias') + ' e ' + fmtDur(r.minRest) + ' úteis.');
+    if (r.faseDia === 'antes') linhas.push('O expediente começa às ' + cfgH.inicio + '; o cálculo usa toda a jornada útil.');
+    if (r.faseDia === 'almoco') linhas.push('Horário de almoço: o cálculo considera a partir das ' + cfgH.almocoFim + '.');
+    if (nivel === 'critico') linhas.push('Ritmo crítico: priorize as categorias mais atrasadas.');
+    else if (nivel === 'atencao') linhas.push('Atenção: o ritmo exigido está acima do normal para a jornada.');
+  }
+  var tempoVal, tempoSub;
+  if (r.estado === 'concluida') { tempoVal = '—'; tempoSub = 'Sem pendências hoje'; }
+  else if (r.estado === 'encerrado') { tempoVal = '0 min'; tempoSub = 'Expediente encerrado às ' + cfgH.fim; }
+  else {
+    tempoVal = fmtDur(r.minRest);
+    tempoSub = r.faseDia === 'almoco' ? 'Almoço até ' + cfgH.almocoFim : r.faseDia === 'antes' ? 'Jornada inicia às ' + cfgH.inicio : 'Úteis, sem contar o almoço';
+  }
+  return el('section', { class: 'hero nivel-' + nivel, 'aria-label': 'Ritmo necessário' },
+    el('div', { class: 'hero-esq' },
+      el('div', { class: 'hero-rotulo' }, 'RITMO NECESSÁRIO', selo ? el('span', { class: 'hero-selo' }, selo) : null),
+      el('div', { class: 'hero-num' }, principal),
+      el('div', { class: 'hero-unid' }, unid),
+      linhas.length ? el('ul', { class: 'hero-linhas' }, linhas.map(function (t) { return el('li', null, t); })) : null),
+    el('div', { class: 'hero-dir' },
+      el('div', { class: 'mini' }, el('div', { class: 'mini-rot' }, 'Tempo útil restante'), el('div', { class: 'mini-val' }, tempoVal), el('div', { class: 'mini-sub' }, tempoSub)),
+      el('div', { class: 'mini' }, el('div', { class: 'mini-rot' }, 'Previsão de conclusão'), el('div', { class: 'mini-val' }, ctx.prev.titulo), el('div', { class: 'mini-sub' }, ctx.prev.texto))));
+}
+
+function construirCardMeta(titulo, x, icone) {
+  var concluida = x.meta > 0 && x.real >= x.meta;
+  return el('article', { class: 'card meta-card' + (concluida ? ' concluida' : '') },
+    el('div', { class: 'meta-topo' }, el('h3', null, icone + ' ' + titulo), tag(fmtPct(x.pct), concluida ? 'verde' : 'azul', 'Percentual da meta')),
+    el('div', { class: 'meta-nums' }, el('span', { class: 'meta-grande' }, String(x.real)), el('span', { class: 'meta-de' }, '/ ' + x.meta)),
+    barra(x.pct, 'fina'),
+    el('div', { class: 'meta-rod' },
+      el('span', null, 'Restante: ', el('b', null, String(x.falta))),
+      x.exc > 0 ? tag('+' + x.exc + ' excedente', 'verde', 'Auditorias acima da meta') : null));
+}
+
+function botaoUsar(rotulo, fn) { return el('button', { type: 'button', class: 'btn btn-sec btn-peq', onclick: fn }, rotulo); }
+
+function construirPrioridade(ctx) {
+  var m = ctx.m, cat = categoriaPrioritaria(m);
+  var ativos = ctx.eq.ativos.slice().sort(cmpPrioridadeOperador);
+  var sug = ativos[0], corpo = [];
+  if (cat) {
+    var x = m.tipos[cat];
+    corpo.push(el('div', { class: 'prio-cat' }, TIPOS[cat].titulo));
+    corpo.push(el('p', null, 'Priorize ' + TIPOS[cat].titulo + ': ' + (x.real === 0 ? 'nenhuma auditoria feita' : 'apenas ' + fmtPct(x.pct) + ' concluído') + ' (' + x.real + ' de ' + x.meta + ').'));
+    corpo.push(el('div', { class: 'acoes', style: 'margin-top:10px' }, botaoUsar('Usar tipo ' + TIPOS[cat].rotulo, function () { definirTipoForm(cat); })));
+  } else {
+    corpo.push(el('div', { class: 'prio-cat' }, 'Metas do dia concluídas'));
+    corpo.push(el('p', null, 'Todas as categorias atingiram a meta. Use o restante do dia para equilibrar a cobertura da equipe.'));
+  }
+  var opBloco;
+  if (sug) {
+    var motivo = sug.mes === 0 ? 'ainda sem auditoria neste mês' : sug.mes + ' ' + plural(sug.mes, 'auditoria', 'auditorias') + ' no mês, última há ' + sug.diasSem + ' ' + plural(sug.diasSem, 'dia', 'dias');
+    var outros = ativos.slice(1, 3).map(function (s) { return s.op.nome + ' (' + s.mes + ')'; });
+    opBloco = el('div', { class: 'prio-op' },
+      el('div', { class: 'rotulo' }, 'OPERADOR SUGERIDO'),
+      el('p', null, el('b', null, 'Operador sugerido: ' + sug.op.nome), ', ' + motivo + '.'),
+      outros.length ? el('p', { class: 'dica', style: 'margin-top:4px' }, 'Em seguida: ' + outros.join(' · ')) : null,
+      el('div', { class: 'acoes', style: 'margin-top:10px' }, botaoUsar('Usar este operador', function () { definirOperadorForm(sug.op.id); })));
+  } else {
+    opBloco = el('div', { class: 'prio-op' }, el('p', { class: 'dica' }, 'Nenhum operador ativo cadastrado. Adicione operadores na aba Equipe.'));
+  }
+  return el('article', { class: 'card prioridade' }, el('div', { class: 'card-cab' }, el('h3', null, 'Próxima prioridade')), corpo, opBloco);
+}
+
+function construirRitmoReal(ctx) {
+  var real = ctx.real, r = ctx.ritmo, msgs = [], nivelTag = null;
+  if (!real.suficiente) {
+    msgs.push('Dados insuficientes para calcular a média real.');
+  } else if (r.estado === 'ativo') {
+    var razao = real.base / r.porHora;
+    if (razao >= 1.15) { msgs.push('Você está acima do ritmo necessário.'); nivelTag = tag('ACIMA DO RITMO', 'azul'); }
+    else if (razao >= 0.95) { msgs.push('Você está dentro do ritmo.'); nivelTag = tag('DENTRO DO RITMO', 'azul'); }
+    else {
+      var prox = r.minRest >= 60 ? Math.ceil(r.porHora) : r.falta;
+      msgs.push('Você está abaixo do ritmo necessário.');
+      msgs.push('Para recuperar a meta, faça ' + prox + ' ' + plural(prox, 'auditoria', 'auditorias') + ' na próxima hora.');
+      nivelTag = tag('ABAIXO DO RITMO', razao < 0.7 ? 'vermelho' : 'amarelo');
+    }
+  } else if (r.estado === 'concluida') {
+    msgs.push('Meta concluída: o ritmo necessário não se aplica mais.'); nivelTag = tag('META CONCLUÍDA', 'verde');
+  } else {
+    msgs.push('Expediente encerrado: o ritmo necessário não se aplica mais.');
+  }
+  var itens = [
+    ['Auditorias hoje', String(real.n)],
+    ['Última hora', real.ultimaHora === null ? '—' : String(real.ultimaHora)],
+    ['Últimos 30 min', real.ultimos30 === null ? '—' : String(real.ultimos30)],
+    ['Tempo médio entre registros', real.medioEntre === null ? '—' : fmtIntervalo(real.medioEntre)],
+    ['Primeira auditoria', real.primeira || '—'],
+    ['Última auditoria', real.ultima || '—'],
+    ['Maior intervalo sem registro', real.maiorIntervalo === null ? '—' : fmtIntervalo(real.maiorIntervalo)],
+    ['Média entre 1ª e última', real.entre === null ? '—' : fmt1(real.entre) + ' /h'],
+    ['Média desde o início', real.desdeInicio === null ? '—' : fmt1(real.desdeInicio) + ' /h']
+  ];
+  return el('article', { class: 'card' },
+    el('div', { class: 'card-cab' }, el('h3', null, 'Ritmo real de hoje'), nivelTag),
+    el('div', { style: 'display:flex;gap:24px;flex-wrap:wrap;align-items:flex-end' },
+      el('div', null, el('div', { class: 'big' }, real.base === null ? '—' : fmt1(real.base), el('small', null, ' auditorias/h')),
+        el('div', { class: 'dica' }, 'Necessário: ' + (r.estado === 'ativo' ? fmt1(r.porHora) + ' /h' : '—'))),
+      el('ul', { class: 'frases', style: 'margin:0;flex:1;min-width:240px' }, msgs.map(function (t) { return el('li', null, t); }))),
+    el('dl', { class: 'kv' }, itens.map(function (i) { return el('div', null, el('dt', null, i[0]), el('dd', null, i[1])); })));
+}
+
+function construirOperadoresHoje(ctx, trabalhou) {
+  var lista = ctx.eq.ativos.filter(function (s) { return (s.hoje > 0) === trabalhou; });
+  var total = ctx.eq.ativos.length;
+  return el('article', { class: 'card' },
+    el('div', { class: 'card-cab' }, el('h3', null, trabalhou ? 'Operadores trabalhados hoje' : 'Ainda não trabalhados hoje')),
+    el('div', { class: 'big' }, String(lista.length), el('small', null, ' de ' + total)),
+    lista.length
+      ? el('div', { class: 'lista-nomes' }, lista.map(function (s) { return el('span', { class: 'chip-nome' + (trabalhou ? '' : ' pendente'), title: trabalhou ? s.hoje + ' auditoria(s) hoje' : 'Sem auditoria hoje' }, s.op.nome); }))
+      : el('p', { class: 'dica', style: 'margin-top:8px' }, trabalhou ? 'Nenhum operador auditado hoje até agora.' : 'Todos os operadores ativos já foram auditados hoje.'));
+}
+
+function construirCoberturaMini(ctx) {
+  var r = ctx.eq.resumo;
+  return el('article', { class: 'card' },
+    el('div', { class: 'card-cab' }, el('h3', null, 'Cobertura da equipe'), tag(fmtPct(r.cobertura), r.sem === 0 && r.ativos > 0 ? 'verde' : 'azul')),
+    el('div', { class: 'big' }, String(r.auditados), el('small', null, ' de ' + r.ativos + ' operadores auditados no mês')),
+    barra(r.cobertura, 'fina'),
+    el('p', { class: 'dica', style: 'margin:8px 0 12px' }, r.sem + ' ' + plural(r.sem, 'operador sem auditoria', 'operadores sem auditoria') + ' · diferença entre maior e menor cobertura: ' + r.diferenca),
+    el('button', { type: 'button', class: 'btn btn-sec btn-peq', onclick: function () { mostrarAba('equipe'); } }, 'Ver equipe →'));
+}
+function construirPlano(ctx) {
+  var p = calcPlano(ctx.agora, ctx.eq), frases = [];
+  frases.push(p.uteis === 0 ? 'Não restam dias úteis neste mês.' : 'Faltam ' + p.uteis + ' ' + plural(p.uteis, 'dia útil', 'dias úteis') + '.');
+  if (p.sem > 0) {
+    frases.push(p.sem + ' ' + plural(p.sem, 'operador ainda não foi auditado', 'operadores ainda não foram auditados') + '.');
+    frases.push(p.uteis > 0
+      ? 'Trabalhe pelo menos ' + p.porDia + ' ' + plural(p.porDia, 'novo operador', 'novos operadores') + ' por dia útil para concluir a cobertura.'
+      : 'Audite hoje os operadores restantes para concluir a cobertura do mês.');
+  } else if (ctx.eq.ativos.length) frases.push('Todos os operadores ativos já foram auditados neste mês.');
+  if (p.prioritarios.length) frases.push('Para equilibrar a equipe, priorize ' + (p.prioritarios.length === 1 ? 'o operador' : 'os ' + p.prioritarios.length + ' operadores') + ' com menor quantidade: ' + p.prioritarios.map(function (s) { return s.op.nome; }).join(', ') + '.');
+  return el('article', { class: 'card' },
+    el('div', { class: 'card-cab' }, el('h3', null, 'Plano até o final do mês')),
+    el('ul', { class: 'frases', style: 'margin:0' }, frases.map(function (t) { return el('li', null, t); })),
+    el('dl', { class: 'kv' },
+      el('div', null, el('dt', null, 'Último dia do mês'), el('dd', null, dataBR(p.ultimoDia))),
+      el('div', null, el('dt', null, 'Dias corridos restantes'), el('dd', null, String(p.corridos))),
+      el('div', null, el('dt', null, 'Dias úteis restantes'), el('dd', null, String(p.uteis))),
+      el('div', null, el('dt', null, 'Auditorias p/ equilibrar'), el('dd', null, String(p.equilibrar)))));
+}
+
+function renderAvisoBackup() {
+  var cont = $('#ov-backup'), ult = Number(Armazenamento.ler(CH.backup)) || 0;
+  var precisa = estado.auditorias.length > 0 && !estado.avisoBackupFechado && (!ult || Date.now() - ult > 7 * 86400000);
+  cont.replaceChildren();
+  if (!precisa) return;
+  cont.appendChild(el('div', { class: 'banner amarelo' },
+    el('span', null, ult ? 'Seu último backup JSON tem mais de 7 dias.' : 'Você ainda não fez nenhum backup JSON.', ' Os dados ficam apenas neste navegador.'),
+    el('span', { class: 'acoes' },
+      el('button', { type: 'button', class: 'btn btn-primario btn-peq', onclick: fazerBackup }, 'Fazer backup agora'),
+      el('button', { type: 'button', class: 'btn btn-linha btn-peq', onclick: function () { estado.avisoBackupFechado = true; renderAvisoBackup(); } }, 'Dispensar'))));
+}
+
+function renderGeral() {
+  var ctx = contextoDia(new Date());
+  renderAvisoBackup();
+  $('#ov-hero').replaceChildren(construirHero(ctx));
+  $('#ov-metas-sub').textContent = DIAS_SEMANA[ctx.agora.getDay()] + ', ' + dataBR(ctx.hojeStr);
+  var icones = { rotina: '↻', documentacao: '🗎', perdido: '⚑' };
+  var cards = TIPOS_ORDEM.map(function (t) { return construirCardMeta(TIPOS[t].titulo, ctx.m.tipos[t], icones[t]); });
+  cards.push(construirCardMeta('Total do dia', ctx.m.total, '∑'));
+  $('#ov-metas').replaceChildren.apply($('#ov-metas'), cards);
+  $('#ov-prioridade').replaceChildren(construirPrioridade(ctx));
+  $('#ov-real').replaceChildren(construirRitmoReal(ctx));
+  $('#ov-hoje-trab').replaceChildren(construirOperadoresHoje(ctx, true));
+  $('#ov-hoje-nao').replaceChildren(construirOperadoresHoje(ctx, false));
+  $('#ov-cobertura').replaceChildren(construirCoberturaMini(ctx));
+  $('#ov-plano').replaceChildren(construirPlano(ctx));
+}
+
+/* ---------- Formulário de registro rápido ---------- */
+function criarFormRegistro() {
+  var f = el('form', { class: 'card form-reg', id: 'form-reg', novalidate: true, autocomplete: 'off', 'aria-label': 'Registro rápido de auditoria' });
+  refs.fOperador = el('select', { id: 'f-operador', 'aria-describedby': 'f-erro' });
+  refs.fLead = el('input', { type: 'text', id: 'f-lead', maxlength: '120', placeholder: 'Ex.: ID ou código do lead', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
+  refs.fObs = el('input', { type: 'text', id: 'f-obs', maxlength: '300', placeholder: 'Opcional', autocomplete: 'off' });
+  refs.fErro = el('div', { class: 'erro-form', id: 'f-erro', role: 'alert', hidden: true });
+  refs.fDica = el('div', { class: 'aviso-lead vermelho', hidden: true, 'aria-live': 'polite' });
+  refs.fTipos = {}; refs.fTiposInfo = {};
+  var chips = el('div', { class: 'chips-tipo', role: 'radiogroup', 'aria-label': 'Tipo da auditoria' });
+  TIPOS_ORDEM.forEach(function (t) {
+    var inp = el('input', { type: 'radio', name: 'f-tipo', value: t, id: 'f-tipo-' + t });
+    var small = el('small', null, '');
+    refs.fTipos[t] = inp; refs.fTiposInfo[t] = small;
+    chips.appendChild(el('label', { class: 'chip-tipo', for: 'f-tipo-' + t }, inp, el('span', null, TIPOS[t].rotulo, small)));
+  });
+  refs.btnRepetir = el('button', { type: 'button', class: 'btn btn-linha', title: 'Seleciona o operador da última auditoria registrada', onclick: repetirUltimoOperador }, '↺ Repetir último operador');
+  refs.btnDesfazer = el('button', { type: 'button', class: 'btn btn-linha', title: 'Remove o último registro feito', onclick: desfazerUltimo }, '⎌ Desfazer último registro');
+  f.appendChild(el('div', { class: 'card-cab', style: 'margin:0' }, el('h3', null, 'Registro rápido'), el('span', { class: 'dica' }, 'Data e hora são automáticas')));
+  f.appendChild(campoModal('Operador', refs.fOperador, 'f-operador'));
+  f.appendChild(campoModal('Lead ou ID do lead', refs.fLead, 'f-lead'));
+  f.appendChild(refs.fDica);
+  f.appendChild(el('div', { class: 'campo' }, el('span', { class: 'rotulo' }, 'Tipo'), chips));
+  f.appendChild(campoModal('Observação (opcional)', refs.fObs, 'f-obs'));
+  f.appendChild(refs.fErro);
+  f.appendChild(el('div', { class: 'acoes' },
+    el('button', { type: 'submit', class: 'btn btn-primario btn-grande', id: 'f-enviar' }, '✓ Registrar auditoria'),
+    refs.btnRepetir, refs.btnDesfazer));
+  f.addEventListener('submit', function (e) { e.preventDefault(); registrarDoForm(); });
+  f.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); registrarDoForm(); }
+  });
+  f.addEventListener('input', function () { esconderErroForm(); });
+  refs.fLead.addEventListener('input', atualizarDicaLead);
+  refs.fOperador.addEventListener('change', function () {
+    estado.ultimoOperadorId = refs.fOperador.value; salvarEstadoUI(); esconderErroForm();
+  });
+  TIPOS_ORDEM.forEach(function (t) {
+    refs.fTipos[t].addEventListener('change', function () { estado.ultimoTipo = t; salvarEstadoUI(); });
+  });
+  refs.formCard = f;
+  return f;
+}
+function tipoSelecionado() {
+  for (var i = 0; i < TIPOS_ORDEM.length; i++) if (refs.fTipos[TIPOS_ORDEM[i]].checked) return TIPOS_ORDEM[i];
+  return '';
+}
+function definirTipoForm(t) { if (refs.fTipos[t]) { refs.fTipos[t].checked = true; estado.ultimoTipo = t; salvarEstadoUI(); refs.fLead.focus(); } }
+function definirOperadorForm(id) {
+  var o = estado.operadores.find(function (x) { return x.id === id && x.ativo; });
+  if (!o) return;
+  refs.fOperador.value = id; estado.ultimoOperadorId = id; salvarEstadoUI(); refs.fLead.focus();
+  toast('Operador selecionado: ' + o.nome);
+}
+function mostrarErroForm(msg) { refs.fErro.textContent = msg; refs.fErro.hidden = false; }
+function esconderErroForm() { refs.fErro.hidden = true; }
+function atualizarDicaLead() {
+  var n = normLead(refs.fLead.value), oc = n ? ocorrenciasLead(n, null) : [];
+  if (!oc.length) { refs.fDica.hidden = true; return; }
+  var u = oc[oc.length - 1];
+  refs.fDica.textContent = '⚠ Este lead já foi auditado ' + oc.length + ' ' + plural(oc.length, 'vez', 'vezes') + '. Última: ' + dataBR(u.data) + ' às ' + u.hora + ' por ' + nomeOperadorAtual(u) + ' (' + TIPOS[u.tipo].rotulo + ').';
+  refs.fDica.hidden = false;
+}
+function ultimoRegistro() {
+  var ult = null;
+  estado.auditorias.forEach(function (a) { if (a.criadoEm > 0 && (!ult || a.criadoEm >= ult.criadoEm)) ult = a; });
+  return ult;
+}
+/* Atualiza as opções do select de operador, contadores dos tipos e botões */
+function atualizarForm() {
+  if (!refs.fOperador) return;
+  var atual = refs.fOperador.value || estado.ultimoOperadorId;
+  var ativos = estado.operadores.filter(function (o) { return o.ativo; }).sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); });
+  refs.fOperador.replaceChildren(opcao('', ativos.length ? 'Selecione o operador' : 'Nenhum operador ativo'));
+  ativos.forEach(function (o) { refs.fOperador.appendChild(opcao(o.id, o.nome, o.id === atual)); });
+  if (!ativos.some(function (o) { return o.id === atual; })) refs.fOperador.value = '';
+  var c = contagemDia(dataISO(new Date())), m = calcMetas(c);
+  TIPOS_ORDEM.forEach(function (t) { refs.fTiposInfo[t].textContent = m.tipos[t].real + '/' + m.tipos[t].meta + ' hoje'; });
+  if (!tipoSelecionado() && estado.ultimoTipo && refs.fTipos[estado.ultimoTipo]) refs.fTipos[estado.ultimoTipo].checked = true;
+  refs.btnDesfazer.disabled = !ultimoRegistro();
+  refs.btnRepetir.disabled = !ultimoRegistro();
+}
+
+function renderRegistrar() {
+  var agora = new Date(), ctx = contextoDia(agora);
+  $('#reg-prioridade').replaceChildren(construirPrioridade(ctx));
+  var regs = ctx.c.registros.slice().reverse();
+  $('#reg-hoje-sub').textContent = regs.length + ' ' + plural(regs.length, 'registro', 'registros') + ' · ' + dataBR(ctx.hojeStr);
+  var cont = $('#reg-hoje');
+  if (!regs.length) { cont.replaceChildren(el('div', { class: 'vazio' }, 'Nenhuma auditoria registrada hoje. Use o formulário acima para começar.')); return; }
+  var corpo = regs.slice(0, 15).map(function (a) { return linhaHistorico(a, true); });
+  var tabela = el('table', { style: 'min-width:700px' },
+    el('thead', null, el('tr', null, ['Hora', 'Operador', 'Lead', 'Tipo', 'Observação', 'Indicador', 'Ações'].map(function (t) { return el('th', { scope: 'col' }, el('span', null, t)); }))),
+    el('tbody', null, corpo));
+  cont.replaceChildren(el('div', { class: 'tabela-wrap', style: 'max-height:50vh' }, tabela));
+  if (regs.length > 15) cont.appendChild(el('p', { class: 'dica', style: 'margin-top:8px' }, 'Exibindo os 15 mais recentes. Veja todos na aba Histórico.'));
+}
+
+/* ---------- Equipe ---------- */
+function filtrarEquipe(eq) {
+  var f = estado.ui.equipe, busca = normBusca(f.busca);
+  var l = eq.lista.filter(function (s) { return !busca || normBusca(s.op.nome).indexOf(busca) !== -1; });
+  var k = Math.max(3, Math.ceil(eq.ativos.length / 3));
+  if (f.filtro === 'sem') l = l.filter(function (s) { return s.op.ativo && s.mes === 0; });
+  else if (f.filtro === 'menor') { var menos = eq.ativos.slice().sort(cmpPrioridadeOperador).slice(0, k); l = l.filter(function (s) { return menos.indexOf(s) !== -1; }); }
+  else if (f.filtro === 'maior') { var mais = eq.ativos.slice().sort(function (a, b) { return -cmpPrioridadeOperador(a, b); }).slice(0, k); l = l.filter(function (s) { return mais.indexOf(s) !== -1; }); }
+  else if (f.filtro === 'hoje') l = l.filter(function (s) { return s.op.ativo && s.hoje > 0; });
+  else if (f.filtro === 'nao-hoje') l = l.filter(function (s) { return s.op.ativo && s.hoje === 0; });
+  else if (f.filtro === 'ativos') l = l.filter(function (s) { return s.op.ativo; });
+  else if (f.filtro === 'inativos') l = l.filter(function (s) { return !s.op.ativo; });
+  var dir = f.dir === 'asc' ? 1 : -1;
+  var chave = {
+    nome: function (s) { return s.op.nome; },
+    mes: function (s) { return s.mes; },
+    hoje: function (s) { return s.hoje; },
+    ultima: function (s) { return s.ultima ? s.ultima.data + ' ' + s.ultima.hora : ''; },
+    dias: function (s) { return s.diasSem === null ? Infinity : s.diasSem; }
+  }[f.ordem];
+  l.sort(function (a, b) {
+    var x = chave(a), y = chave(b), c;
+    if (typeof x === 'string') c = x.localeCompare(y, 'pt-BR'); else c = x === y ? 0 : x < y ? -1 : 1;
+    return c * dir || a.op.nome.localeCompare(b.op.nome, 'pt-BR');
+  });
+  return l;
+}
+function statEquipe(rot, val, sub, alerta) {
+  return el('div', { class: 'card stat' + (alerta ? ' alerta' : '') }, el('div', { class: 'rot' }, rot), el('div', { class: 'val' }, val), sub ? el('div', { class: 'sub' }, sub) : null);
+}
+function nomesEmpate(lista) { return lista.length ? lista[0].op.nome + (lista.length > 1 ? ' (+' + (lista.length - 1) + ')' : '') : '—'; }
+function cardOperador(s, eq) {
+  var op = s.op, st = statusOperador(s);
+  var concentra = op.ativo && eq.totalMes >= 8 && eq.ativos.length > 1 && s.part >= 2 * (100 / eq.ativos.length);
+  var ultimaTxt = s.ultima ? dataBR(s.ultima.data) + ' ' + s.ultima.hora.slice(0, 5) + ' (' + (s.diasSem === 0 ? 'hoje' : 'há ' + s.diasSem + ' ' + plural(s.diasSem, 'dia', 'dias')) + ')' : 'Nunca auditado';
+  return el('article', { class: 'op-card st-' + st.classe, dataset: { id: op.id } },
+    el('div', { class: 'op-topo' },
+      el('span', { class: 'avatar', 'aria-hidden': 'true' }, iniciais(op.nome)),
+      el('div', { class: 'op-nome' }, el('strong', null, op.nome),
+        el('span', null, tag(st.rotulo, st.classe === 'cinza' ? 'cinza' : st.classe), ' ',
+          concentra ? tag('CONCENTRA AUDITORIAS', 'amarelo', 'Participação muito acima da média da equipe') : null))),
+    el('div', { class: 'op-nums' },
+      el('div', null, el('b', null, String(s.hoje)), el('span', null, 'Hoje')),
+      el('div', null, el('b', null, String(s.semana)), el('span', null, 'Semana')),
+      el('div', null, el('b', null, s.mes + '/' + s.meta), el('span', null, 'Mês / meta'))),
+    barra(s.meta > 0 ? s.mes / s.meta * 100 : 100, 'fina'),
+    el('div', { class: 'op-det' },
+      el('span', null, 'Última auditoria: ', el('b', null, ultimaTxt)),
+      el('span', null, 'No mês: ', el('b', null, 'Rotina ' + s.tipos.rotina + ' · Doc. ' + s.tipos.documentacao + ' · Perdidos ' + s.tipos.perdido)),
+      el('span', null, 'Participação no total mensal: ', el('b', null, fmtPct(s.part)))),
+    el('div', { class: 'op-acoes' },
+      op.ativo ? el('button', { type: 'button', class: 'btn btn-primario btn-peq', dataset: { acao: 'registrar', id: op.id } }, '✚ Registrar') : null,
+      el('button', { type: 'button', class: 'btn btn-linha btn-peq', dataset: { acao: 'editar', id: op.id }, 'aria-label': 'Editar ' + op.nome }, '✎ Editar'),
+      el('button', { type: 'button', class: 'btn btn-linha btn-peq', dataset: { acao: 'alternar', id: op.id } }, op.ativo ? 'Desativar' : 'Reativar'),
+      el('button', { type: 'button', class: 'btn btn-perigo-linha btn-peq', dataset: { acao: 'excluir', id: op.id }, 'aria-label': 'Excluir ' + op.nome }, '🗑 Excluir')));
+}
+function renderEquipe() {
+  var agora = new Date(), eq = calcEquipe(dataISO(agora)), r = eq.resumo;
+  $('#eq-mes').textContent = maiusc(MESES[agora.getMonth()]) + ' de ' + agora.getFullYear();
+  $('#eq-resumo').replaceChildren(
+    statEquipe('Operadores ativos', String(r.ativos)),
+    statEquipe('Auditados no mês', String(r.auditados), 'de ' + r.ativos + ' ativos'),
+    statEquipe('Sem auditoria no mês', String(r.sem), null, r.sem > 0),
+    statEquipe('Cobertura da equipe', fmtPct(r.cobertura)),
+    statEquipe('Mais auditado', nomesEmpate(r.maisAud), r.ativos ? r.max + ' ' + plural(r.max, 'auditoria', 'auditorias') : ''),
+    statEquipe('Menos auditado', nomesEmpate(r.menosAud), r.ativos ? r.min + ' ' + plural(r.min, 'auditoria', 'auditorias') : ''),
+    statEquipe('Diferença maior × menor', String(r.diferenca), 'auditorias no mês'));
+  var lista = filtrarEquipe(eq), cont = $('#eq-lista');
+  $('#eq-contagem').textContent = 'Exibindo ' + lista.length + ' de ' + eq.lista.length + ' ' + plural(eq.lista.length, 'operador', 'operadores') + '.';
+  if (!eq.lista.length) cont.replaceChildren(el('div', { class: 'vazio', style: 'grid-column:1/-1' }, 'Nenhum operador cadastrado. Adicione o primeiro acima.'));
+  else if (!lista.length) cont.replaceChildren(el('div', { class: 'vazio', style: 'grid-column:1/-1' }, 'Nenhum operador encontrado com os filtros atuais.'));
+  else cont.replaceChildren.apply(cont, lista.map(function (s) { return cardOperador(s, eq); }));
+}
+
+/* ---------- Histórico ---------- */
+function linhaHistorico(a, compacta) {
+  var idx = indiceLeads().info.get(a.id), rep = idx && idx.ordem > 1;
+  var acoes = el('td', { class: 'num' },
+    el('button', { type: 'button', class: 'btn btn-linha btn-peq', dataset: { acao: 'editar-reg', id: a.id }, 'aria-label': 'Editar registro de ' + a.lead, title: 'Editar' }, '✎'), ' ',
+    el('button', { type: 'button', class: 'btn btn-perigo-linha btn-peq', dataset: { acao: 'excluir-reg', id: a.id }, 'aria-label': 'Excluir registro de ' + a.lead, title: 'Excluir' }, '🗑'));
+  var cels = [];
+  if (!compacta) cels.push(el('td', { class: 'num' }, dataBR(a.data)));
+  cels.push(el('td', { class: 'num' }, a.hora));
+  cels.push(el('td', null, nomeOperadorAtual(a)));
+  cels.push(el('td', { class: 'lead' }, a.lead));
+  cels.push(el('td', null, tag(TIPOS[a.tipo].rotulo, 'azul')));
+  cels.push(el('td', { class: 'obs' }, a.obs));
+  cels.push(el('td', null, rep ? tag('LEAD REPETIDO · ' + idx.ordem + 'ª vez', 'solido-vermelho', 'Este lead já havia sido auditado ' + (idx.ordem - 1) + ' vez(es) antes') : ''));
+  cels.push(acoes);
+  return el('tr', { class: rep ? 'rep' : '' }, cels);
+}
+function textoBusca(a) { return normBusca(a.operadorNome + ' ' + a.lead + ' ' + a.obs); }
+function filtrarHistorico() {
+  var f = estado.ui.hist, idx = indiceLeads();
+  var q = normBusca(f.q), qn = normLead(f.q), ln = normLead(f.lead);
+  var l = estado.auditorias.filter(function (a) {
+    if (f.ini && a.data < f.ini) return false;
+    if (f.fim && a.data > f.fim) return false;
+    if (f.op && nomeOperadorAtual(a) !== f.op) return false;
+    if (f.tipo && a.tipo !== f.tipo) return false;
+    if (ln && a.leadNorm.indexOf(ln) === -1) return false;
+    if (f.soRep && !(idx.info.get(a.id).ordem > 1)) return false;
+    if (q && textoBusca(a).indexOf(q) === -1 && !(qn && a.leadNorm.indexOf(qn) !== -1)) return false;
+    return true;
+  });
+  var dir = f.dir === 'asc' ? 1 : -1;
+  l.sort(function (a, b) {
+    var c;
+    if (f.ordem === 'operador') c = nomeOperadorAtual(a).localeCompare(nomeOperadorAtual(b), 'pt-BR');
+    else if (f.ordem === 'lead') c = a.lead.localeCompare(b.lead, 'pt-BR', { numeric: true });
+    else if (f.ordem === 'tipo') c = a.tipo.localeCompare(b.tipo);
+    else if (f.ordem === 'rep') c = idx.info.get(a.id).ordem - idx.info.get(b.id).ordem;
+    else c = porTempoAsc(a, b);
+    return c * dir || porTempoAsc(a, b) * dir;
+  });
+  return l;
+}
+function popularFiltroOperador() {
+  var sel = $('#h-op'), nomes = {};
+  estado.operadores.forEach(function (o) { nomes[o.nome] = true; });
+  estado.auditorias.forEach(function (a) { nomes[nomeOperadorAtual(a)] = true; });
+  var lista = Object.keys(nomes).sort(function (a, b) { return a.localeCompare(b, 'pt-BR'); });
+  if (estado.ui.hist.op && lista.indexOf(estado.ui.hist.op) === -1) estado.ui.hist.op = '';
+  sel.replaceChildren(opcao('', 'Todos os operadores'));
+  lista.forEach(function (n) { sel.appendChild(opcao(n, n, n === estado.ui.hist.op)); });
+  sel.value = estado.ui.hist.op;
+}
+function renderHistorico() {
+  var f = estado.ui.hist;
+  popularFiltroOperador();
+  var lista = filtrarHistorico(), total = lista.length, paginas = Math.max(1, Math.ceil(total / f.tam));
+  if (f.pag > paginas) f.pag = paginas;
+  if (f.pag < 1) f.pag = 1;
+  var ini = (f.pag - 1) * f.tam, pagina = lista.slice(ini, ini + f.tam);
+  var temFiltro = f.q || f.ini || f.fim || f.op || f.tipo || f.lead || f.soRep;
+  $('#h-total').textContent = total + ' ' + plural(total, 'registro', 'registros') + (temFiltro ? ' (filtrado de ' + estado.auditorias.length + ')' : '');
+  $('#h-corpo').replaceChildren.apply($('#h-corpo'), pagina.map(function (a) { return linhaHistorico(a, false); }));
+  $$('#h-tabela th').forEach(function (th) {
+    var b = $('.ord', th); if (!b) return;
+    th.setAttribute('aria-sort', b.dataset.ordem === f.ordem ? (f.dir === 'asc' ? 'ascending' : 'descending') : 'none');
+  });
+  var vazio = $('#h-vazio');
+  vazio.replaceChildren();
+  if (!total) vazio.appendChild(el('div', { class: 'vazio', style: 'margin-top:12px' }, estado.auditorias.length ? 'Nenhum registro encontrado com os filtros atuais.' : 'Nenhuma auditoria registrada ainda. Registre a primeira na aba Registrar.'));
+  var pag = $('#h-pag');
+  pag.replaceChildren();
+  if (paginas > 1) {
+    pag.appendChild(el('button', { type: 'button', class: 'btn btn-linha btn-peq', disabled: f.pag <= 1, onclick: function () { f.pag--; renderHistorico(); } }, '← Anterior'));
+    pag.appendChild(el('span', { class: 'dica' }, 'Página ' + f.pag + ' de ' + paginas));
+    pag.appendChild(el('button', { type: 'button', class: 'btn btn-linha btn-peq', disabled: f.pag >= paginas, onclick: function () { f.pag++; renderHistorico(); } }, 'Próxima →'));
+  }
+}
+function sincronizarFiltrosHistorico() {
+  var f = estado.ui.hist;
+  $('#h-q').value = f.q; $('#h-ini').value = f.ini; $('#h-fim').value = f.fim; $('#h-tipo').value = f.tipo;
+  $('#h-lead').value = f.lead; $('#h-rep').checked = f.soRep; $('#h-tam').value = String(f.tam);
+}
+function aplicarPeriodo(ini, fim) {
+  estado.ui.hist.ini = ini; estado.ui.hist.fim = fim; estado.ui.hist.pag = 1;
+  sincronizarFiltrosHistorico(); renderHistorico();
+}
+
+/* ---------- Relatórios ---------- */
+function relatorioDiario(dataStr) {
+  var agora = new Date(), hr = horariosMin(), c = contagemDia(dataStr), m = calcMetas(c);
+  var real = calcRitmoReal(dataStr, agora, c.registros, hr);
+  var ativos = estado.operadores.filter(function (o) { return o.ativo; });
+  var trab = ativos.filter(function (o) { return c.operadores.has(o.id); }).length;
+  function linha(rot, x) { return rot + ': ' + x.real + '/' + x.meta + (x.exc > 0 ? ' (+' + x.exc + ' excedente)' : ''); }
+  var linhas = ['Resumo de ' + dataBR(dataStr) + ':'];
+  TIPOS_ORDEM.forEach(function (t) { linhas.push(linha(TIPOS[t].titulo, m.tipos[t])); });
+  linhas.push('Total: ' + c.total + '/' + m.metaTotal + (m.excedente > 0 ? ' (+' + m.excedente + ' excedente)' : ''));
+  linhas.push('Operadores trabalhados: ' + trab + ' de ' + ativos.length);
+  linhas.push('Leads repetidos: ' + c.repetidos);
+  linhas.push('Média: ' + (real.base !== null ? fmt1(real.base) + ' auditorias por hora' : 'dados insuficientes para calcular'));
+  linhas.push(m.faltaTotal === 0 ? 'Meta diária concluída.' : 'Meta diária não concluída: faltam ' + m.faltaTotal + ' ' + plural(m.faltaTotal, 'auditoria', 'auditorias') + '.');
+  return linhas.join('\n');
+}
+function relatorioMensal(ano, mes0) {
+  var ref = ano + '-' + pad(mes0 + 1) + '-01', eq = calcEquipe(ref), r = eq.resumo;
+  function nomeEmpate(l) { return l.length ? l[0].op.nome + (l.length > 1 ? ' (e mais ' + (l.length - 1) + ' com o mesmo valor)' : '') : '—'; }
+  return [
+    'Resumo de ' + MESES[mes0] + ' de ' + ano + ':',
+    'Total de auditorias: ' + eq.totalMes,
+    'Operadores auditados: ' + r.auditados + ' de ' + r.ativos,
+    'Operadores sem auditoria: ' + r.sem,
+    'Maior cobertura: ' + (r.ativos ? nomeEmpate(r.maisAud) + ', com ' + r.max + ' ' + plural(r.max, 'auditoria', 'auditorias') : '—'),
+    'Menor cobertura: ' + (r.ativos ? nomeEmpate(r.menosAud) + ', com ' + r.min + ' ' + plural(r.min, 'auditoria', 'auditorias') : '—'),
+    'Cobertura da equipe: ' + fmtPct(r.cobertura) + '.'
+  ].join('\n');
+}
+function popularSelectsRelatorio() {
+  var sm = $('#r-mes'), sa = $('#r-ano');
+  if (!sm.options.length) MESES.forEach(function (m, i) { sm.appendChild(opcao(String(i), maiusc(m))); });
+  var anos = {}, hoje = new Date();
+  anos[hoje.getFullYear()] = true;
+  estado.auditorias.forEach(function (a) { anos[+a.data.slice(0, 4)] = true; });
+  var lista = Object.keys(anos).map(Number).sort(function (a, b) { return b - a; });
+  sa.replaceChildren(); lista.forEach(function (y) { sa.appendChild(opcao(String(y), String(y))); });
+  sm.value = String(estado.ui.relMes);
+  if (lista.indexOf(estado.ui.relAno) === -1) estado.ui.relAno = hoje.getFullYear();
+  sa.value = String(estado.ui.relAno);
+}
+function renderRelatorios() {
+  var hoje = dataISO(new Date());
+  var rd = $('#r-data'); rd.max = hoje;
+  if (!dataValida(estado.ui.relData) || estado.ui.relData > hoje) estado.ui.relData = hoje;
+  rd.value = estado.ui.relData;
+  popularSelectsRelatorio();
+  $('#r-diario').textContent = relatorioDiario(estado.ui.relData);
+  $('#r-mensal').textContent = relatorioMensal(estado.ui.relAno, estado.ui.relMes);
+}
+
+/* ---------- Configurações ---------- */
+function renderConfig() {
+  var c = estado.config;
+  $('#c-rotina').value = c.metas.rotina; $('#c-doc').value = c.metas.documentacao; $('#c-perd').value = c.metas.perdido;
+  $('#c-mensal').value = c.metaMensalPadrao;
+  $('#c-ini').value = c.horarios.inicio; $('#c-fim').value = c.horarios.fim;
+  $('#c-alm-ini').value = c.horarios.almocoInicio; $('#c-alm-fim').value = c.horarios.almocoFim;
+  $('#c-seg').checked = c.mostrarSegundos; $('#c-som').checked = c.sons; $('#c-conf').checked = c.confirmarExclusao;
+  $('#c-erro').hidden = true;
+  var salvo = Number(Armazenamento.ler(CH.salvo)), bkp = Number(Armazenamento.ler(CH.backup));
+  var info = [
+    ['Auditorias registradas', String(estado.auditorias.length)],
+    ['Operadores cadastrados', String(estado.operadores.length)],
+    ['Último salvamento', salvo ? dataHoraBR(salvo) : '—'],
+    ['Último backup JSON', bkp ? dataHoraBR(bkp) : 'Nunca'],
+    ['Armazenamento', Armazenamento.ok ? 'localStorage do navegador' : 'Indisponível (somente memória)']
+  ];
+  $('#c-info').replaceChildren.apply($('#c-info'), info.map(function (i) { return el('div', null, el('dt', null, i[0]), el('dd', null, i[1])); }));
+}
+
+/* ---------- Navegação e render geral ---------- */
+function renderAba(nome) {
+  atualizarForm();
+  if (nome === 'geral') renderGeral();
+  else if (nome === 'registrar') renderRegistrar();
+  else if (nome === 'equipe') renderEquipe();
+  else if (nome === 'historico') renderHistorico();
+  else if (nome === 'relatorios') renderRelatorios();
+  else if (nome === 'config') renderConfig();
+}
+function renderTudo() {
+  var agora = new Date();
+  renderCabecalho(agora); atualizarRelogio(agora); atualizarSalvo();
+  renderAba(estado.ui.aba);
+}
+function mostrarAba(nome, opt) {
+  if (ABAS.indexOf(nome) === -1) nome = 'geral';
+  estado.ui.aba = nome;
+  $$('.aba').forEach(function (s) { s.hidden = s.dataset.aba !== nome; });
+  $$('.nav-btn').forEach(function (b) {
+    var ativo = b.dataset.aba === nome;
+    b.classList.toggle('ativo', ativo);
+    if (ativo) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+  });
+  var slot = nome === 'registrar' ? $('#slot-registrar') : nome === 'geral' ? $('#slot-geral') : null;
+  if (slot && refs.formCard.parentNode !== slot) slot.appendChild(refs.formCard);
+  if (nome === 'historico') sincronizarFiltrosHistorico();
+  renderAba(nome);
+  if (!opt || !opt.semRolar) window.scrollTo(0, 0);
+  if (opt && opt.focarLead && slot) refs.fLead.focus();
+}
+
+/* =====================================================
+   7. AÇÕES: registros e operadores
+   ===================================================== */
+function corpoLeadRepetido(lead, ocorrencias) {
+  var u = ocorrencias[ocorrencias.length - 1];
+  var recentes = ocorrencias.slice().reverse().slice(0, 6);
+  return [
+    el('p', null, 'O lead ', el('b', null, lead), ' já consta no histórico de auditorias.'),
+    el('dl', { class: 'kv', style: 'margin:0' },
+      el('div', null, el('dt', null, 'Lead informado'), el('dd', null, lead)),
+      el('div', null, el('dt', null, 'Auditorias anteriores'), el('dd', null, String(ocorrencias.length))),
+      el('div', null, el('dt', null, 'Última auditoria'), el('dd', null, dataBR(u.data) + ' às ' + u.hora)),
+      el('div', null, el('dt', null, 'Operador'), el('dd', null, nomeOperadorAtual(u))),
+      el('div', null, el('dt', null, 'Tipo'), el('dd', null, TIPOS[u.tipo].rotulo)),
+      el('div', null, el('dt', null, 'Observação'), el('dd', null, u.obs || '—'))),
+    el('div', null, el('div', { class: 'rotulo', style: 'margin-bottom:6px' }, 'OCORRÊNCIAS ANTERIORES'),
+      el('ul', { class: 'ocorrencias' }, recentes.map(function (a) {
+        return el('li', null, el('b', null, dataBR(a.data) + ' ' + a.hora), ' · ' + nomeOperadorAtual(a) + ' · ' + TIPOS[a.tipo].rotulo + (a.obs ? ' · ' + a.obs : ''));
+      })),
+      ocorrencias.length > recentes.length ? el('p', { class: 'dica', style: 'margin-top:6px' }, '… e mais ' + (ocorrencias.length - recentes.length) + ' ocorrência(s) anterior(es).') : null)
+  ];
+}
+async function registrarDoForm() {
+  if (estado.registrando) return;
+  var agora = new Date(); /* data e hora capturadas no instante da ação */
+  var opId = refs.fOperador.value, tipo = tipoSelecionado();
+  var lead = limparTexto(refs.fLead.value), obs = limparTexto(refs.fObs.value);
+  var op = estado.operadores.find(function (o) { return o.id === opId; });
+  var erro = null, foco = null;
+  if (!op) { erro = 'Selecione o operador auditado.'; foco = refs.fOperador; }
+  else if (!op.ativo) { erro = 'Este operador está inativo. Reative-o na aba Equipe ou escolha outro.'; foco = refs.fOperador; }
+  else if (!lead) { erro = 'Informe o lead ou ID do lead.'; foco = refs.fLead; }
+  else if (!normLead(lead)) { erro = 'O lead precisa conter letras ou números.'; foco = refs.fLead; }
+  else if (!tipo) { erro = 'Selecione o tipo: Rotina, Documentação ou Perdido.'; foco = refs.fTipos.rotina; }
+  if (erro) { mostrarErroForm(erro); tocar('erro'); foco.focus(); return; }
+  esconderErroForm();
+  var leadNorm = normLead(lead);
+  estado.registrando = true;
+  try {
+    var anteriores = ocorrenciasLead(leadNorm, null);
+    if (anteriores.length) {
+      tocar('alerta');
+      var r = await abrirModal({
+        titulo: 'ATENÇÃO: LEAD JÁ AUDITADO', classe: 'alerta', corpo: corpoLeadRepetido(lead, anteriores),
+        botoes: [
+          { rotulo: 'Voltar e revisar', valor: 'voltar', classe: 'btn-linha', foco: true },
+          { rotulo: 'Registrar mesmo assim', valor: 'registrar', classe: 'btn-perigo' }
+        ]
+      });
+      if (r !== 'registrar') { refs.fLead.focus(); refs.fLead.select(); return; }
+    }
+    var reg = {
+      id: novoId('a'), data: dataISO(agora), hora: horaISO(agora),
+      operadorId: op.id, operadorNome: op.nome, lead: lead, leadNorm: leadNorm, tipo: tipo, obs: obs, criadoEm: agora.getTime()
+    };
+    estado.auditorias.push(reg);
+    salvarAuditorias();
+    estado.ultimoOperadorId = op.id; estado.ultimoTipo = tipo; salvarEstadoUI();
+    refs.fLead.value = ''; refs.fObs.value = ''; refs.fDica.hidden = true;
+    renderTudo();
+    tocar('ok');
+    toast('Auditoria registrada: ' + lead + ' · ' + TIPOS[tipo].rotulo + ' · ' + reg.hora + (anteriores.length ? ' (lead repetido)' : ''));
+    refs.fLead.focus();
+  } finally {
+    estado.registrando = false;
+  }
+}
+function repetirUltimoOperador() {
+  var u = ultimoRegistro();
+  var op = u ? estado.operadores.find(function (o) { return o.id === u.operadorId && o.ativo; }) : null;
+  if (!op) { toast('Não há um operador ativo no último registro.', { tipo: 'aviso' }); return; }
+  definirOperadorForm(op.id);
+}
+function removerRegistro(a) {
+  var i = estado.auditorias.indexOf(a);
+  if (i >= 0) estado.auditorias.splice(i, 1);
+  salvarAuditorias(); renderTudo();
+}
+function restaurarRegistro(a) {
+  if (estado.auditorias.some(function (x) { return x.id === a.id; })) return;
+  estado.auditorias.push(a); salvarAuditorias(); renderTudo(); toast('Registro restaurado.');
+}
+function desfazerUltimo() {
+  var u = ultimoRegistro();
+  if (!u) { toast('Não há registro para desfazer.', { tipo: 'aviso' }); return; }
+  removerRegistro(u);
+  tocar('ok');
+  toast('Último registro desfeito: ' + u.lead, { acao: { rotulo: 'Refazer', fn: function () { restaurarRegistro(u); } } });
+}
+async function excluirRegistro(id) {
+  var a = estado.auditorias.find(function (x) { return x.id === id; });
+  if (!a) return;
+  if (estado.config.confirmarExclusao) {
+    var ok = await confirmar({
+      titulo: 'Excluir registro?', perigo: true, rotuloOk: 'Excluir',
+      corpo: [el('p', null, 'Você vai excluir a auditoria do lead ', el('b', null, a.lead), ' (' + TIPOS[a.tipo].rotulo + ') feita por ' + nomeOperadorAtual(a) + ' em ' + dataBR(a.data) + ' às ' + a.hora + '.')]
+    });
+    if (!ok) return;
+  }
+  removerRegistro(a);
+  toast('Registro excluído.', { acao: { rotulo: 'Desfazer', fn: function () { restaurarRegistro(a); } } });
+}
+async function editarRegistro(id) {
+  var a = estado.auditorias.find(function (x) { return x.id === id; });
+  if (!a) return;
+  var selOp = el('select', { id: 'e-op' });
+  var existe = a.operadorId && estado.operadores.some(function (o) { return o.id === a.operadorId; });
+  if (!existe) selOp.appendChild(opcao('__atual', a.operadorNome + ' (operador removido)', true));
+  estado.operadores.slice().sort(function (x, y) { return x.nome.localeCompare(y.nome, 'pt-BR'); }).forEach(function (o) {
+    selOp.appendChild(opcao(o.id, o.nome + (o.ativo ? '' : ' (inativo)'), o.id === a.operadorId));
+  });
+  var lead = el('input', { type: 'text', id: 'e-lead', maxlength: '120', value: a.lead });
+  var tipo = el('select', { id: 'e-tipo' }, TIPOS_ORDEM.map(function (t) { return opcao(t, TIPOS[t].rotulo, t === a.tipo); }));
+  var data = el('input', { type: 'date', id: 'e-data', value: a.data });
+  var hora = el('input', { type: 'time', id: 'e-hora', step: '1', value: a.hora });
+  var obs = el('input', { type: 'text', id: 'e-obs', maxlength: '300', value: a.obs });
+  var msg = el('div', { class: 'erro-form', role: 'alert', hidden: true });
+  var corpo = [
+    campoModal('Operador', selOp, 'e-op'), campoModal('Lead', lead, 'e-lead'), campoModal('Tipo', tipo, 'e-tipo'),
+    el('div', { class: 'linha-form' }, campoModal('Data', data, 'e-data'), campoModal('Hora', hora, 'e-hora')),
+    campoModal('Observação', obs, 'e-obs'), msg
+  ];
+  var novo = null;
+  var r = await abrirModal({
+    titulo: 'Editar registro', corpo: corpo,
+    botoes: [
+      { rotulo: 'Cancelar', valor: false, classe: 'btn-linha' },
+      { rotulo: 'Salvar alterações', valor: true, classe: 'btn-primario', validar: function () {
+        var erro = null, h = normalizarHora(hora.value), l = limparTexto(lead.value);
+        if (!l || !normLead(l)) erro = 'Informe um lead válido (com letras ou números).';
+        else if (!dataValida(data.value)) erro = 'Informe uma data válida.';
+        else if (!h) erro = 'Informe uma hora válida.';
+        else if (selOp.value !== '__atual' && !estado.operadores.some(function (o) { return o.id === selOp.value; })) erro = 'Selecione o operador.';
+        if (erro) { msg.textContent = erro; msg.hidden = false; return false; }
+        novo = { l: l, h: h };
+        return true;
+      } }
+    ]
+  });
+  if (r !== true || !novo) return;
+  a.lead = novo.l; a.leadNorm = normLead(novo.l); a.tipo = tipo.value; a.data = data.value; a.hora = novo.h; a.obs = limparTexto(obs.value);
+  if (selOp.value !== '__atual') {
+    var op = estado.operadores.find(function (o) { return o.id === selOp.value; });
+    a.operadorId = op.id; a.operadorNome = op.nome;
+  }
+  salvarAuditorias(); renderTudo(); toast('Registro atualizado.');
+}
+
+/* ---- Operadores ---- */
+function nomeOperadorDuplicado(nome, ignorarId) {
+  var n = normBusca(nome);
+  return estado.operadores.some(function (o) { return o.id !== ignorarId && normBusca(o.nome) === n; });
+}
+function adicionarOperador(nome) {
+  nome = limparTexto(nome);
+  if (!nome) { toast('Digite o nome do operador.', { tipo: 'aviso' }); return false; }
+  if (nomeOperadorDuplicado(nome)) { toast('Já existe um operador com esse nome.', { tipo: 'aviso' }); return false; }
+  var op = { id: novoId('op'), nome: nome.slice(0, 80), ativo: true, metaMensal: null };
+  estado.operadores.push(op);
+  var relinkou = relinkarOrfaos();
+  salvarOperadores(); if (relinkou) salvarAuditorias();
+  renderTudo(); toast('Operador adicionado: ' + op.nome + (relinkou ? ' (auditorias antigas reassociadas)' : ''));
+  return true;
+}
+async function editarOperador(id) {
+  var op = estado.operadores.find(function (o) { return o.id === id; });
+  if (!op) return;
+  var nome = el('input', { type: 'text', id: 'o-nome', maxlength: '80', value: op.nome });
+  var meta = el('input', { type: 'number', id: 'o-meta', min: '0', max: '999', step: '1', inputmode: 'numeric', placeholder: 'Padrão (' + estado.config.metaMensalPadrao + ')', value: op.metaMensal === null ? '' : String(op.metaMensal) });
+  var ativo = el('input', { type: 'checkbox', id: 'o-ativo' }); ativo.checked = op.ativo;
+  var msg = el('div', { class: 'erro-form', role: 'alert', hidden: true });
+  var dados = null;
+  var r = await abrirModal({
+    titulo: 'Editar operador',
+    corpo: [campoModal('Nome do operador', nome, 'o-nome'), campoModal('Meta mensal individual (vazio = usar a padrão)', meta, 'o-meta'),
+      el('label', { class: 'interruptor', for: 'o-ativo' }, ativo, 'Operador ativo'), msg],
+    botoes: [
+      { rotulo: 'Cancelar', valor: false, classe: 'btn-linha' },
+      { rotulo: 'Salvar', valor: true, classe: 'btn-primario', validar: function () {
+        var n = limparTexto(nome.value), erro = null, mt = null;
+        if (!n) erro = 'Informe o nome do operador.';
+        else if (nomeOperadorDuplicado(n, op.id)) erro = 'Já existe outro operador com esse nome.';
+        if (!erro && meta.value.trim() !== '') { mt = inteiroEntre(meta.value.trim(), 0, 999); if (mt === null) erro = 'A meta mensal deve ser um número inteiro entre 0 e 999.'; }
+        if (erro) { msg.textContent = erro; msg.hidden = false; return false; }
+        dados = { nome: n, meta: mt, ativo: ativo.checked };
+        return true;
+      } }
+    ]
+  });
+  if (r !== true || !dados) return;
+  var mudouNome = dados.nome !== op.nome;
+  op.nome = dados.nome; op.metaMensal = dados.meta; op.ativo = dados.ativo;
+  if (mudouNome) estado.auditorias.forEach(function (a) { if (a.operadorId === op.id) a.operadorNome = op.nome; });
+  salvarOperadores(); if (mudouNome) salvarAuditorias();
+  renderTudo(); toast('Operador atualizado.');
+}
+function alternarOperador(id) {
+  var op = estado.operadores.find(function (o) { return o.id === id; });
+  if (!op) return;
+  op.ativo = !op.ativo;
+  if (!op.ativo && estado.ultimoOperadorId === op.id) { estado.ultimoOperadorId = ''; salvarEstadoUI(); }
+  salvarOperadores(); renderTudo();
+  toast(op.nome + (op.ativo ? ' reativado.' : ' desativado.'));
+}
+async function excluirOperador(id) {
+  var op = estado.operadores.find(function (o) { return o.id === id; });
+  if (!op) return;
+  var qtd = estado.auditorias.filter(function (a) { return a.operadorId === id; }).length;
+  var ok = await confirmar({
+    titulo: 'Excluir operador?', perigo: true, rotuloOk: 'Excluir operador',
+    corpo: [el('p', null, 'Você vai excluir ', el('b', null, op.nome), ' da equipe.'),
+      el('p', null, qtd ? 'As ' + qtd + ' ' + plural(qtd, 'auditoria', 'auditorias') + ' deste operador continuarão no histórico, associadas ao nome.' : 'Este operador não possui auditorias registradas.'),
+      el('p', { class: 'dica' }, 'Se quiser apenas retirá-lo da distribuição, use "Desativar".')]
+  });
+  if (!ok) return;
+  estado.operadores = estado.operadores.filter(function (o) { return o.id !== id; });
+  if (estado.ultimoOperadorId === id) { estado.ultimoOperadorId = ''; salvarEstadoUI(); }
+  salvarOperadores(); renderTudo(); toast('Operador excluído. O histórico foi preservado.');
+}
+
+/* =====================================================
+   8. CSV E BACKUP JSON
+   ===================================================== */
+function campoCSV(v) {
+  var s = String(v === null || v === undefined ? '' : v);
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; /* evita injeção de fórmulas em planilhas */
+  if (/[";\r\n]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+function gerarCSV(lista) {
+  var linhas = [['Data', 'Hora', 'Operador', 'Lead', 'Tipo', 'Observação', 'Lead repetido'].join(';')];
+  lista.forEach(function (a) {
+    linhas.push([dataBR(a.data), a.hora, nomeOperadorAtual(a), a.lead, TIPOS[a.tipo].rotulo, a.obs, ehRepetido(a) ? 'Sim' : 'Não'].map(campoCSV).join(';'));
+  });
+  return '﻿' + linhas.join('\r\n') + '\r\n';
+}
+function exportarCSV(lista) {
+  if (!lista.length) { toast('Não há registros para exportar.', { tipo: 'aviso' }); return; }
+  var ord = lista.slice().sort(porTempoAsc);
+  baixar('finx_auditorias_' + dataISO(new Date()) + '.csv', gerarCSV(ord), 'text/csv;charset=utf-8');
+  toast(ord.length + ' ' + plural(ord.length, 'registro exportado', 'registros exportados') + ' em CSV.');
+}
+function parseCSV(texto, sep) {
+  var linhas = [], campo = '', linha = [], aspas = false;
+  for (var i = 0; i < texto.length; i++) {
+    var ch = texto[i];
+    if (aspas) {
+      if (ch === '"') { if (texto[i + 1] === '"') { campo += '"'; i++; } else aspas = false; }
+      else campo += ch;
+    } else if (ch === '"' && campo === '') aspas = true;
+    else if (ch === sep) { linha.push(campo); campo = ''; }
+    else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && texto[i + 1] === '\n') i++;
+      linha.push(campo); campo = ''; linhas.push(linha); linha = [];
+    } else campo += ch;
+  }
+  if (campo !== '' || linha.length) { linha.push(campo); linhas.push(linha); }
+  return linhas.filter(function (l) { return l.some(function (c) { return c.trim() !== ''; }); });
+}
+function lerArquivo(arquivo, codificacao) {
+  return new Promise(function (ok, falha) {
+    var fr = new FileReader();
+    fr.onload = function () { ok(String(fr.result)); };
+    fr.onerror = function () { falha(fr.error); };
+    fr.readAsText(arquivo, codificacao || 'UTF-8');
+  });
+}
+function parseDataCSV(s) {
+  s = String(s || '').trim();
+  var m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s);
+  var iso = m ? m[3] + '-' + pad(+m[2]) + '-' + pad(+m[1]) : s.slice(0, 10);
+  return dataValida(iso) ? iso : null;
+}
+function analisarCSV(texto) {
+  texto = texto.replace(/^﻿/, '');
+  var primeira = texto.split(/\r?\n/)[0] || '';
+  var sep = primeira.indexOf(';') !== -1 ? ';' : primeira.indexOf('\t') !== -1 ? '\t' : ',';
+  var linhas = parseCSV(texto, sep);
+  if (linhas.length < 2) return { erro: 'O arquivo não possui linhas de dados.' };
+  if (linhas.length > 100001) return { erro: 'O arquivo possui linhas demais (máximo de 100.000 registros).' };
+  var cab = linhas[0].map(function (c) { return normBusca(c); });
+  var col = {};
+  [['data', 'data'], ['hora', 'hora'], ['operador', 'operador'], ['lead', 'lead'], ['tipo', 'tipo'], ['obs', 'observacao']].forEach(function (p) { col[p[0]] = cab.indexOf(p[1]); });
+  var faltando = ['data', 'hora', 'operador', 'lead', 'tipo'].filter(function (k) { return col[k] < 0; });
+  if (faltando.length) return { erro: 'Cabeçalho inválido. Colunas obrigatórias ausentes: ' + faltando.join(', ') + '. Esperado: Data;Hora;Operador;Lead;Tipo;Observação;Lead repetido.' };
+  var existentes = new Set(estado.auditorias.map(chaveDup)), vistos = new Set();
+  var res = { novos: [], invalidos: 0, amostras: [], jaExistem: 0, operadoresNovos: [] };
+  var nomesOps = new Set(estado.operadores.map(function (o) { return normBusca(o.nome); }));
+  var novosOps = {};
+  function cel(l, k) { var v = col[k] >= 0 && l[col[k]] !== undefined ? l[col[k]] : ''; return /^'[=+\-@\t\r]/.test(v) ? v.slice(1) : v; }
+  for (var i = 1; i < linhas.length; i++) {
+    var l = linhas[i];
+    var a = sanitizarAuditoria({
+      data: parseDataCSV(cel(l, 'data')), hora: cel(l, 'hora'), operadorNome: cel(l, 'operador'), lead: cel(l, 'lead'),
+      tipo: cel(l, 'tipo'), obs: cel(l, 'obs'), criadoEm: 0
+    });
+    if (!a) { res.invalidos++; if (res.amostras.length < 3) res.amostras.push('linha ' + (i + 1)); continue; }
+    a.id = novoId('a'); a.operadorId = null;
+    var k = chaveDup(a);
+    if (existentes.has(k) || vistos.has(k)) { res.jaExistem++; continue; }
+    vistos.add(k);
+    var nn = normBusca(a.operadorNome);
+    if (!nomesOps.has(nn) && !novosOps[nn]) { novosOps[nn] = a.operadorNome; res.operadoresNovos.push(a.operadorNome); }
+    res.novos.push(a);
+  }
+  return res;
+}
+function chaveDup(a) { return [a.data, a.hora, a.leadNorm, normBusca(a.operadorNome), a.tipo].join('|'); }
+async function importarCSV(arquivo) {
+  if (!arquivo) return;
+  if (arquivo.size > 25 * 1024 * 1024) { await avisoModal('Arquivo muito grande', 'O arquivo CSV excede 25 MB e não pode ser importado.'); return; }
+  var texto;
+  try {
+    texto = await lerArquivo(arquivo, 'UTF-8');
+    if (texto.indexOf('�') !== -1) texto = await lerArquivo(arquivo, 'windows-1252');
+  } catch (e) { await avisoModal('Erro ao ler o arquivo', 'Não foi possível ler o arquivo selecionado.'); return; }
+  var res;
+  try { res = analisarCSV(texto); } catch (e) { res = { erro: 'O conteúdo do arquivo não pôde ser interpretado como CSV.' }; }
+  if (res.erro) { await avisoModal('Arquivo CSV inválido', res.erro); return; }
+  if (!res.novos.length) {
+    await avisoModal('Nada para importar', 'Nenhum registro novo foi encontrado. Registros já existentes: ' + res.jaExistem + '. Linhas inválidas: ' + res.invalidos + '.');
+    return;
+  }
+  var itens = [
+    el('li', null, el('b', null, String(res.novos.length)), ' ' + plural(res.novos.length, 'registro será importado', 'registros serão importados') + '.'),
+    el('li', null, res.jaExistem + ' já existentes (serão ignorados).'),
+    el('li', null, res.invalidos + ' linhas inválidas (serão ignoradas)' + (res.amostras.length ? ': ' + res.amostras.join(', ') + (res.invalidos > res.amostras.length ? '…' : '') : '') + '.')
+  ];
+  if (res.operadoresNovos.length) itens.push(el('li', null, res.operadoresNovos.length + ' operador(es) novo(s) serão cadastrados: ' + res.operadoresNovos.slice(0, 6).join(', ') + (res.operadoresNovos.length > 6 ? '…' : '') + '.'));
+  var ok = await confirmar({ titulo: 'Importar CSV?', rotuloOk: 'Importar', corpo: [el('p', null, 'Resumo da importação de ', el('b', null, arquivo.name), ':'), el('ul', { class: 'frases' }, itens), el('p', { class: 'dica' }, 'Os dados atuais serão mantidos; os novos registros serão adicionados.')] });
+  if (!ok) return;
+  var porNome = {};
+  estado.operadores.forEach(function (o) { porNome[normBusca(o.nome)] = o; });
+  res.novos.forEach(function (a) {
+    var nn = normBusca(a.operadorNome), o = porNome[nn];
+    if (!o) { o = { id: novoId('op'), nome: a.operadorNome, ativo: true, metaMensal: null }; estado.operadores.push(o); porNome[nn] = o; }
+    a.operadorId = o.id; a.operadorNome = o.nome;
+    estado.auditorias.push(a);
+  });
+  salvarOperadores(); salvarAuditorias(); renderTudo();
+  toast(res.novos.length + ' ' + plural(res.novos.length, 'registro importado', 'registros importados') + ' com sucesso.');
+}
+
+function montarBackup() {
+  var individuais = {};
+  estado.operadores.forEach(function (o) { if (o.metaMensal !== null) individuais[o.id] = o.metaMensal; });
+  return {
+    app: 'finx_monitoria', versao: VERSAO, geradoEm: new Date().toISOString(),
+    auditorias: estado.auditorias, operadores: estado.operadores,
+    metas: estado.config.metas, horarios: estado.config.horarios,
+    metasMensais: { padrao: estado.config.metaMensalPadrao, individuais: individuais },
+    configuracoes: estado.config
+  };
+}
+function fazerBackup() {
+  var d = new Date();
+  baixar('finx_backup_' + dataISO(d) + '_' + pad(d.getHours()) + pad(d.getMinutes()) + '.json', JSON.stringify(montarBackup(), null, 2), 'application/json');
+  Armazenamento.gravar(CH.backup, String(Date.now()));
+  renderTudo();
+  toast('Backup JSON gerado. Guarde o arquivo em local seguro.');
+}
+function validarBackup(obj) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return { erro: 'O arquivo não contém um backup válido do sistema.' };
+  if (!Array.isArray(obj.auditorias) || !Array.isArray(obj.operadores)) return { erro: 'Estrutura inválida: o backup precisa conter as listas "auditorias" e "operadores".' };
+  if (obj.app !== undefined && obj.app !== 'finx_monitoria') return { erro: 'Este arquivo pertence a outro sistema e não pode ser restaurado aqui.' };
+  if (obj.versao !== undefined && (typeof obj.versao !== 'number' || obj.versao > VERSAO)) return { erro: 'Versão de backup não suportada.' };
+  var listas = sanitizarListas(obj.auditorias, obj.operadores);
+  var cfg = mesclarConfig(obj.configuracoes || { metas: obj.metas, horarios: obj.horarios });
+  if (obj.metasMensais && typeof obj.metasMensais === 'object') {
+    var p = inteiroEntre(obj.metasMensais.padrao, 0, 999);
+    if (p !== null && !obj.configuracoes) cfg.metaMensalPadrao = p;
+    var ind = obj.metasMensais.individuais;
+    if (ind && typeof ind === 'object') listas.operadores.forEach(function (o) { var v = inteiroEntre(ind[o.id], 0, 999); if (v !== null && o.metaMensal === null) o.metaMensal = v; });
+  }
+  return { listas: listas, config: cfg, geradoEm: typeof obj.geradoEm === 'string' ? obj.geradoEm : '' };
+}
+async function restaurarBackup(arquivo) {
+  if (!arquivo) return;
+  if (arquivo.size > 60 * 1024 * 1024) { await avisoModal('Arquivo muito grande', 'O backup excede 60 MB e não pode ser restaurado.'); return; }
+  var obj;
+  try { obj = JSON.parse(await lerArquivo(arquivo, 'UTF-8')); }
+  catch (e) { await avisoModal('Arquivo inválido', 'O arquivo selecionado não é um JSON válido. Nada foi alterado.'); return; }
+  var v = validarBackup(obj);
+  if (v.erro) { await avisoModal('Backup inválido', v.erro + ' Nada foi alterado.'); return; }
+  var L = v.listas, gerado = v.geradoEm && !isNaN(Date.parse(v.geradoEm)) ? dataHoraBR(Date.parse(v.geradoEm)) : 'data desconhecida';
+  var ok = await confirmar({
+    titulo: 'Restaurar backup?', perigo: true, rotuloOk: 'Restaurar e substituir',
+    corpo: [el('p', null, 'Backup gerado em ', el('b', null, gerado), '. Conteúdo que será restaurado:'),
+      el('ul', { class: 'frases' },
+        el('li', null, L.auditorias.length + ' auditorias' + (L.descartadosA ? ' (' + L.descartadosA + ' inválidas ignoradas)' : '')),
+        el('li', null, L.operadores.length + ' operadores' + (L.descartadosO ? ' (' + L.descartadosO + ' inválidos ignorados)' : '')),
+        el('li', null, 'Metas diárias: Rotina ' + v.config.metas.rotina + ', Documentação ' + v.config.metas.documentacao + ', Perdidos ' + v.config.metas.perdido),
+        el('li', null, 'Expediente: ' + v.config.horarios.inicio + ' às ' + v.config.horarios.fim + ' (almoço ' + v.config.horarios.almocoInicio + '–' + v.config.horarios.almocoFim + ')'),
+        el('li', null, 'Meta mensal padrão por operador: ' + v.config.metaMensalPadrao)),
+      el('p', null, el('b', null, 'Os dados atuais (' + estado.auditorias.length + ' auditorias) serão substituídos. Esta ação não poderá ser desfeita.'))]
+  });
+  if (!ok) return;
+  estado.auditorias = L.auditorias; estado.operadores = L.operadores; estado.config = v.config;
+  relinkarOrfaos();
+  salvarOperadores(); salvarAuditorias(); salvarConfig();
+  estado.ultimoOperadorId = ''; salvarEstadoUI();
+  aplicarConfigNaUI(); renderTudo();
+  toast('Backup restaurado com sucesso.');
+}
+
+/* =====================================================
+   9. CONFIGURAÇÕES E DADOS
+   ===================================================== */
+function aplicarConfigNaUI() { atualizarRelogio(new Date()); renderCabecalho(new Date()); }
+function salvarFormConfig() {
+  var erro = $('#c-erro'), g = function (id) { return $(id).value.trim(); };
+  var metas = { rotina: inteiroEntre(g('#c-rotina'), 0, 9999), documentacao: inteiroEntre(g('#c-doc'), 0, 9999), perdido: inteiroEntre(g('#c-perd'), 0, 9999) };
+  var mensal = inteiroEntre(g('#c-mensal'), 0, 999);
+  var hor = { inicio: g('#c-ini'), fim: g('#c-fim'), almocoInicio: g('#c-alm-ini'), almocoFim: g('#c-alm-fim') };
+  var msg = null;
+  if (metas.rotina === null || metas.documentacao === null || metas.perdido === null) msg = 'As metas diárias devem ser números inteiros entre 0 e 9999.';
+  else if (metas.rotina + metas.documentacao + metas.perdido <= 0) msg = 'A soma das metas diárias deve ser maior que zero.';
+  else if (mensal === null) msg = 'A meta mensal padrão deve ser um número inteiro entre 0 e 999.';
+  else if (Object.keys(hor).some(function (k) { return !/^([01]\d|2[0-3]):[0-5]\d$/.test(hor[k]); })) msg = 'Preencha todos os horários do expediente.';
+  else if (!horariosCoerentes(hor)) msg = 'Horários incoerentes: o início deve ser antes do fim, e o almoço deve estar dentro do expediente (início do almoço não pode ser depois do fim).';
+  if (msg) { erro.textContent = msg; erro.hidden = false; tocar('erro'); return; }
+  erro.hidden = true;
+  estado.config.metas = metas; estado.config.horarios = hor; estado.config.metaMensalPadrao = mensal;
+  estado.config.mostrarSegundos = $('#c-seg').checked; estado.config.sons = $('#c-som').checked; estado.config.confirmarExclusao = $('#c-conf').checked;
+  salvarConfig(); aplicarConfigNaUI(); renderTudo();
+  toast('Configurações salvas.');
+}
+async function restaurarConfigPadrao() {
+  var ok = await confirmar({ titulo: 'Restaurar configurações padrão?', rotuloOk: 'Restaurar', corpo: ['Metas diárias, horários e preferências voltarão aos valores iniciais. Auditorias e operadores não serão alterados.'] });
+  if (!ok) return;
+  estado.config = copiar(CONFIG_PADRAO);
+  salvarConfig(); aplicarConfigNaUI(); renderTudo(); toast('Configurações padrão restauradas.');
+}
+async function apagarHoje() {
+  var hoje = dataISO(new Date()), lista = estado.auditorias.filter(function (a) { return a.data === hoje; });
+  if (!lista.length) { await avisoModal('Nada a apagar', 'Não há registros de hoje (' + dataBR(hoje) + ').'); return; }
+  var ok = await confirmar({ titulo: 'Apagar registros de hoje?', perigo: true, rotuloOk: 'Apagar registros de hoje',
+    corpo: [el('p', null, 'Serão apagados ', el('b', null, String(lista.length)), ' ' + plural(lista.length, 'registro', 'registros') + ' de ' + dataBR(hoje) + '.'), el('p', null, el('b', null, 'Esta ação não poderá ser desfeita.')), el('p', { class: 'dica' }, 'Dica: faça um backup JSON antes.')] });
+  if (!ok) return;
+  estado.auditorias = estado.auditorias.filter(function (a) { return a.data !== hoje; });
+  salvarAuditorias(); renderTudo(); toast(lista.length + ' ' + plural(lista.length, 'registro apagado', 'registros apagados') + '.');
+}
+async function apagarTudo() {
+  var campo = el('input', { type: 'text', id: 'x-conf', autocomplete: 'off', placeholder: 'Digite APAGAR' });
+  var msg = el('div', { class: 'erro-form', role: 'alert', hidden: true });
+  var r = await abrirModal({
+    titulo: 'Apagar todos os dados?', classe: 'perigo',
+    corpo: [el('p', null, 'Serão apagadas ', el('b', null, estado.auditorias.length + ' auditorias'), '. Operadores e configurações voltarão ao padrão inicial.'),
+      el('p', null, el('b', null, 'Esta ação não poderá ser desfeita.')), el('p', { class: 'dica' }, 'Recomendamos fazer um backup JSON antes de continuar.'),
+      campoModal('Para confirmar, digite APAGAR', campo, 'x-conf'), msg],
+    botoes: [
+      { rotulo: 'Cancelar', valor: false, classe: 'btn-linha', foco: true },
+      { rotulo: 'Apagar tudo', valor: true, classe: 'btn-perigo', validar: function () {
+        if (campo.value.trim().toUpperCase() !== 'APAGAR') { msg.textContent = 'Digite APAGAR (em maiúsculas) para confirmar.'; msg.hidden = false; return false; }
+        return true;
+      } }
+    ]
+  });
+  if (r !== true) return;
+  estado.auditorias = []; estado.operadores = operadoresPadrao(); estado.config = copiar(CONFIG_PADRAO);
+  estado.ultimoOperadorId = ''; estado.ultimoTipo = '';
+  salvarAuditorias(); salvarOperadores(); salvarConfig(); salvarEstadoUI();
+  Armazenamento.remover(CH.backup);
+  aplicarConfigNaUI(); renderTudo(); toast('Todos os dados foram apagados.');
+}
+
+/* =====================================================
+   10. EVENTOS E INICIALIZAÇÃO
+   ===================================================== */
+function ligarEventos() {
+  $$('.nav-btn').forEach(function (b) { b.addEventListener('click', function () { mostrarAba(b.dataset.aba, { focarLead: b.dataset.aba === 'registrar' }); }); });
+
+  /* Equipe */
+  var ue = estado.ui.equipe;
+  $('#eq-busca').addEventListener('input', function (e) { ue.busca = e.target.value; renderEquipe(); });
+  $('#eq-filtro').addEventListener('change', function (e) { ue.filtro = e.target.value; renderEquipe(); });
+  $('#eq-ordem').addEventListener('change', function (e) { ue.ordem = e.target.value; renderEquipe(); });
+  $('#eq-dir').addEventListener('click', function (e) { ue.dir = ue.dir === 'asc' ? 'desc' : 'asc'; e.currentTarget.textContent = ue.dir === 'asc' ? '↑ Crescente' : '↓ Decrescente'; renderEquipe(); });
+  $('#eq-add').addEventListener('submit', function (e) { e.preventDefault(); var i = $('#eq-novo'); if (adicionarOperador(i.value)) { i.value = ''; } i.focus(); });
+  $('#eq-lista').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-acao]'); if (!b) return;
+    var id = b.dataset.id, ac = b.dataset.acao;
+    if (ac === 'registrar') { mostrarAba('registrar'); definirOperadorForm(id); }
+    else if (ac === 'editar') editarOperador(id);
+    else if (ac === 'alternar') alternarOperador(id);
+    else if (ac === 'excluir') excluirOperador(id);
+  });
+
+  /* Histórico */
+  var hf = estado.ui.hist;
+  function filtro(id, chave, tipo) {
+    $(id).addEventListener(tipo || 'input', function (e) { hf[chave] = e.target.type === 'checkbox' ? e.target.checked : e.target.value; hf.pag = 1; renderHistorico(); });
+  }
+  filtro('#h-q', 'q'); filtro('#h-ini', 'ini', 'change'); filtro('#h-fim', 'fim', 'change'); filtro('#h-op', 'op', 'change');
+  filtro('#h-tipo', 'tipo', 'change'); filtro('#h-lead', 'lead'); filtro('#h-rep', 'soRep', 'change');
+  $('#h-tam').addEventListener('change', function (e) { hf.tam = +e.target.value || 25; hf.pag = 1; renderHistorico(); });
+  $('#h-hoje').addEventListener('click', function () { var h = dataISO(new Date()); aplicarPeriodo(h, h); });
+  $('#h-semana').addEventListener('click', function () { var h = dataISO(new Date()), s = inicioSemana(h); aplicarPeriodo(s, somarDias(s, 6)); });
+  $('#h-mes').addEventListener('click', function () { var h = dataISO(new Date()); aplicarPeriodo(primeiroDiaMes(h), ultimoDiaMes(h)); });
+  $('#h-limpar').addEventListener('click', function () {
+    hf.q = ''; hf.ini = ''; hf.fim = ''; hf.op = ''; hf.tipo = ''; hf.lead = ''; hf.soRep = false; hf.pag = 1;
+    sincronizarFiltrosHistorico(); renderHistorico(); toast('Filtros limpos.');
+  });
+  $('#h-csv').addEventListener('click', function () { exportarCSV(filtrarHistorico()); });
+  $$('#h-tabela .ord').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var o = b.dataset.ordem;
+      if (hf.ordem === o) hf.dir = hf.dir === 'asc' ? 'desc' : 'asc'; else { hf.ordem = o; hf.dir = o === 'tempo' ? 'desc' : 'asc'; }
+      renderHistorico();
+    });
+  });
+  function acaoRegistro(e) {
+    var b = e.target.closest('[data-acao]'); if (!b) return;
+    if (b.dataset.acao === 'editar-reg') editarRegistro(b.dataset.id);
+    else if (b.dataset.acao === 'excluir-reg') excluirRegistro(b.dataset.id);
+  }
+  $('#h-corpo').addEventListener('click', acaoRegistro);
+  $('#reg-hoje').addEventListener('click', acaoRegistro);
+
+  /* Relatórios */
+  $('#r-data').addEventListener('change', function (e) { estado.ui.relData = e.target.value; renderRelatorios(); });
+  $('#r-mes').addEventListener('change', function (e) { estado.ui.relMes = +e.target.value; renderRelatorios(); });
+  $('#r-ano').addEventListener('change', function (e) { estado.ui.relAno = +e.target.value; renderRelatorios(); });
+  function copiarRel(id) {
+    return function () {
+      copiarTexto($(id).textContent).then(function (ok) {
+        if (ok) { tocar('ok'); toast('Relatório copiado para a área de transferência.'); }
+        else toast('Não foi possível copiar automaticamente. Selecione o texto e use Ctrl + C.', { tipo: 'erro' });
+      });
+    };
+  }
+  $('#r-copiar-d').addEventListener('click', copiarRel('#r-diario'));
+  $('#r-copiar-m').addEventListener('click', copiarRel('#r-mensal'));
+
+  /* Configurações e dados */
+  $('#cfg-form').addEventListener('submit', function (e) { e.preventDefault(); salvarFormConfig(); });
+  $('#c-padrao').addEventListener('click', restaurarConfigPadrao);
+  $('#d-csv-exp').addEventListener('click', function () { exportarCSV(estado.auditorias); });
+  $('#d-csv-imp').addEventListener('click', function () { $('#file-csv').click(); });
+  $('#file-csv').addEventListener('change', function (e) { var f = e.target.files[0]; e.target.value = ''; importarCSV(f); });
+  $('#d-bkp').addEventListener('click', fazerBackup);
+  $('#d-rest').addEventListener('click', function () { $('#file-json').click(); });
+  $('#file-json').addEventListener('change', function (e) { var f = e.target.files[0]; e.target.value = ''; restaurarBackup(f); });
+  $('#d-apagar-hoje').addEventListener('click', apagarHoje);
+  $('#d-apagar-tudo').addEventListener('click', apagarTudo);
+
+  /* Voltar ao topo */
+  var topoBtn = $('#voltar-topo');
+  topoBtn.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+  window.addEventListener('scroll', function () { topoBtn.hidden = window.scrollY < 400; }, { passive: true });
+}
+
+function tick() {
+  try {
+    var agora = new Date();
+    atualizarRelogio(agora);
+    var hoje = dataISO(agora);
+    if (hoje !== estado.diaRender) {
+      var primeira = estado.diaRender === '';
+      estado.diaRender = hoje; estado.minutoRender = agora.getHours() * 60 + agora.getMinutes();
+      if (!primeira) { renderTudo(); toast('Novo dia: ' + dataBR(hoje) + '. Metas diárias recalculadas.'); }
+      return;
+    }
+    var min = agora.getHours() * 60 + agora.getMinutes();
+    if (min !== estado.minutoRender) {
+      estado.minutoRender = min;
+      renderCabecalho(agora);
+      if (estado.ui.aba === 'geral' || estado.ui.aba === 'registrar') { atualizarForm(); renderAba(estado.ui.aba); }
+    }
+  } catch (e) { /* um erro de renderização nunca deve parar o relógio */ }
+}
+
+function iniciar() {
+  var problemas = carregarTudo();
+  var hoje = new Date();
+  estado.ui.relMes = hoje.getMonth(); estado.ui.relAno = hoje.getFullYear();
+  criarFormRegistro();
+  ligarEventos();
+  if (!Armazenamento.ok) {
+    $('#avisos').appendChild(el('div', { class: 'banner vermelho', role: 'alert' }, 'O armazenamento do navegador está indisponível. Os dados valerão apenas até fechar esta página. Faça backup JSON com frequência.'));
+  }
+  if (problemas.length) {
+    $('#avisos').appendChild(el('div', { class: 'banner amarelo', role: 'alert' }, 'Atenção: foram encontrados problemas ao carregar os dados salvos (' + problemas.join(', ') + '). O sistema continuou funcionando; uma cópia do conteúdo original foi mantida no navegador.'));
+  }
+  estado.diaRender = dataISO(hoje);
+  estado.minutoRender = hoje.getHours() * 60 + hoje.getMinutes();
+  mostrarAba('geral', { semRolar: true });
+  renderTudo();
+  setInterval(tick, 1000);
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar); else iniciar();
+})();
+</script>
+</body>
+</html>
