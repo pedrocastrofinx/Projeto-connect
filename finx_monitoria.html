@@ -371,6 +371,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
     <section class="aba" id="aba-equipe" data-aba="equipe" aria-label="Cobertura da equipe" hidden>
       <div class="secao-titulo"><h2>Cobertura da equipe</h2><span id="eq-mes"></span></div>
       <div class="grid-resumo" id="eq-resumo"></div>
+      <div id="eq-nivel" style="margin-top:16px"></div>
       <div class="card filtros-card">
         <div class="linha-form">
           <div class="campo"><label for="eq-busca">Buscar operador</label><input type="search" id="eq-busca" placeholder="Digite um nome" autocomplete="off"></div>
@@ -399,6 +400,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
         </div>
         <form class="linha-form" id="eq-add" novalidate>
           <div class="campo"><label for="eq-novo">Novo operador</label><input type="text" id="eq-novo" maxlength="80" placeholder="Nome completo" autocomplete="off"></div>
+          <div class="campo"><label for="eq-novo-entrada">Data de entrada (opcional)</label><input type="date" id="eq-novo-entrada"></div>
           <div class="campo"><button type="submit" class="btn btn-primario">＋ Adicionar operador</button></div>
         </form>
       </div>
@@ -614,6 +616,10 @@ var NOMES_PADRAO = [
   'Adrielli Angela Maccio Moreto', 'Raquel Lima dos Anjos', 'Larissa Domingues Silva',
   'Kethelyn Cristina Faria de Oliveira', 'Nelio Fernando de Souza Junior', 'Isabelly Rocha de Souza'
 ];
+/* Data de entrada dos closers (na ordem de NOMES_PADRAO) — usada para priorizar os novatos */
+var ENTRADAS_PADRAO = ['2026-09-28', '2026-09-28', '2026-09-28', '2026-09-28', '2026-09-21', '2026-09-21', '2026-09-21',
+  '2026-09-14', '2026-09-08', '2026-09-08', '2026-08-31', '2026-08-24', '2026-08-24', '2026-08-17'];
+var NOVATO_DIAS = 30;
 var CONFIG_PADRAO = {
   metas: { rotina: 30, documentacao: 8, perdido: 6 },
   horarios: { inicio: '09:00', fim: '18:00', almocoInicio: '12:00', almocoFim: '13:00' },
@@ -747,7 +753,17 @@ var refs = {};
 function copiar(o) { return JSON.parse(JSON.stringify(o)); }
 
 function operadoresPadrao() {
-  return NOMES_PADRAO.map(function (nome, i) { return { id: 'op_' + pad(i + 1), nome: nome, ativo: true, metaMensal: null }; });
+  return NOMES_PADRAO.map(function (nome, i) { return { id: 'op_' + pad(i + 1), nome: nome, ativo: true, metaMensal: null, entrada: ENTRADAS_PADRAO[i] || null }; });
+}
+/* Preenche a data de entrada dos operadores padrão salvos antes deste campo existir */
+function preencherEntrada(lista) {
+  var mudou = false;
+  (Array.isArray(lista) ? lista : []).forEach(function (o) {
+    if (!o || typeof o !== 'object' || 'entrada' in o) return;
+    var m = /^op_(\d{2})$/.exec(String(o.id));
+    if (m && ENTRADAS_PADRAO[+m[1] - 1]) { o.entrada = ENTRADAS_PADRAO[+m[1] - 1]; mudou = true; }
+  });
+  return mudou;
 }
 function horariosCoerentes(h) {
   var i = hm(h.inicio), f = hm(h.fim), a = hm(h.almocoInicio), b = hm(h.almocoFim);
@@ -802,7 +818,8 @@ function sanitizarOperador(x) {
   return {
     id: typeof x.id === 'string' && x.id ? x.id.slice(0, 64) : novoId('op'),
     nome: nome, ativo: x.ativo !== false,
-    metaMensal: inteiroEntre(x.metaMensal, 0, 999)
+    metaMensal: inteiroEntre(x.metaMensal, 0, 999),
+    entrada: dataValida(x.entrada) ? x.entrada : null
   };
 }
 function sanitizarListas(auds, ops) {
@@ -1013,8 +1030,10 @@ function carregarTudo() {
   var ra = carregarJSON(CH.aud, Array.isArray);
   if (ro.corrompido) problemas.push('operadores');
   if (ra.corrompido) problemas.push('auditorias');
+  var migrou = preencherEntrada(ro.valor);
   var s = sanitizarListas(ra.valor || [], ro.valor || []);
   estado.operadores = ro.valor ? s.operadores : operadoresPadrao();
+  if (migrou && ro.valor) salvarOperadores();
   estado.auditorias = s.auditorias;
   if (s.descartadosA || s.descartadosO) problemas.push('registros inválidos ignorados');
   relinkarOrfaos();
@@ -1266,11 +1285,15 @@ function calcPrevisao(ctx) {
 
 /* ---- Equipe ---- */
 function metaDe(op) { return op.metaMensal !== null && op.metaMensal !== undefined ? op.metaMensal : estado.config.metaMensalPadrao; }
+function tipoDaPlanilha(formulario) {
+  var f = normBusca(formulario);
+  return f.indexOf('document') !== -1 ? 'documentacao' : f.indexOf('perdid') !== -1 ? 'perdido' : 'rotina';
+}
 function calcEquipe(refData) {
   var mes = refData.slice(0, 7), si = inicioSemana(refData), sf = somarDias(si, 6), hojeStr = refData;
   var mapa = new Map(), lista = [], totalMes = 0;
   estado.operadores.forEach(function (op) {
-    var s = { op: op, hoje: 0, semana: 0, mes: 0, tipos: { rotina: 0, documentacao: 0, perdido: 0 }, ultima: null, diasSem: null, part: 0, meta: metaDe(op) };
+    var s = { op: op, hoje: 0, semana: 0, mes: 0, tipos: { rotina: 0, documentacao: 0, perdido: 0 }, ultima: null, diasSem: null, part: 0, daBase: 0, meta: metaDe(op) };
     mapa.set(op.id, s); lista.push(s);
   });
   estado.auditorias.forEach(function (a) {
@@ -1283,6 +1306,21 @@ function calcEquipe(refData) {
     if (a.data >= si && a.data <= sf) s.semana++;
     if (noMes) { s.mes++; s.tipos[a.tipo]++; }
   });
+  /* Auditorias da planilha (base de leads) também contam para a cobertura de cada closer,
+     exceto as que já foram registradas no sistema (mesmo lead, dia e operador) */
+  var porNome = new Map(), chavesSistema = new Set();
+  lista.forEach(function (s) { porNome.set(normBusca(s.op.nome), s); });
+  estado.auditorias.forEach(function (a) { chavesSistema.add(a.leadNorm + '|' + a.data + '|' + a.operadorId); });
+  estado.baseLeads.forEach(function (b) {
+    var s = porNome.get(normBusca(b.avaliado));
+    if (!s || chavesSistema.has(b.codigoNorm + '|' + b.data + '|' + s.op.id)) return;
+    var noMes = b.data.slice(0, 7) === mes;
+    if (noMes) totalMes++;
+    if (!s.ultima || b.data + ' ' > s.ultima.data + ' ' + s.ultima.hora) s.ultima = { data: b.data, hora: '' };
+    if (b.data === hojeStr) s.hoje++;
+    if (b.data >= si && b.data <= sf) s.semana++;
+    if (noMes) { s.mes++; s.daBase++; s.tipos[tipoDaPlanilha(b.formulario)]++; }
+  });
   lista.forEach(function (s) {
     s.diasSem = s.ultima ? Math.max(0, diasEntre(s.ultima.data, hojeStr)) : null;
     s.part = totalMes ? s.mes / totalMes * 100 : 0;
@@ -1291,12 +1329,13 @@ function calcEquipe(refData) {
   var auditados = ativos.filter(function (s) { return s.mes > 0; }).length;
   var max = ativos.length ? Math.max.apply(null, ativos.map(function (s) { return s.mes; })) : 0;
   var min = ativos.length ? Math.min.apply(null, ativos.map(function (s) { return s.mes; })) : 0;
+  var soma = ativos.reduce(function (t, s) { return t + s.mes; }, 0);
   return {
     lista: lista, ativos: ativos, mapa: mapa, totalMes: totalMes, refData: refData,
     resumo: {
       ativos: ativos.length, auditados: auditados, sem: ativos.length - auditados,
       cobertura: ativos.length ? auditados / ativos.length * 100 : 0,
-      max: max, min: min,
+      max: max, min: min, soma: soma, media: ativos.length ? soma / ativos.length : 0,
       maisAud: ativos.filter(function (s) { return s.mes === max; }),
       menosAud: ativos.filter(function (s) { return s.mes === min; }),
       diferenca: max - min
@@ -1312,6 +1351,8 @@ function statusOperador(s) {
 }
 function cmpPrioridadeOperador(a, b) {
   if (a.mes !== b.mes) return a.mes - b.mes;
+  var ea = a.op.entrada || '', eb = b.op.entrada || '';
+  if (ea !== eb) { if (!ea) return 1; if (!eb) return -1; return ea < eb ? 1 : -1; } /* entrou há menos tempo = prioridade */
   var ua = a.ultima ? a.ultima.data + ' ' + a.ultima.hora : '', ub = b.ultima ? b.ultima.data + ' ' + b.ultima.hora : '';
   if (ua !== ub) return ua < ub ? -1 : 1;
   return a.op.nome.localeCompare(b.op.nome, 'pt-BR');
@@ -1336,6 +1377,39 @@ function calcPlano(agora, eq) {
     porDia: sem.length ? (uteis > 0 ? Math.ceil(sem.length / uteis) : sem.length) : 0,
     equilibrar: equilibrar, prioritarios: prioritarios
   };
+}
+
+function diasDeCasa(entrada, hojeStr) { return entrada ? Math.max(0, diasEntre(entrada, hojeStr)) : null; }
+function ehNovato(op, hojeStr) { var d = diasDeCasa(op.entrada, hojeStr); return d !== null && d <= NOVATO_DIAS; }
+function proximosDiasUteis(agora, hr) {
+  var fimMes = new Date(agora.getFullYear(), agora.getMonth() + 1, 0), d = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+  var abertoHoje = minutosDoDia(agora) < hr.fim, out = [], primeiro = true;
+  while (d <= fimMes) {
+    if (ehDiaUtil(d) && (!primeiro || abertoHoje)) out.push(dataISO(d));
+    primeiro = false; d.setDate(d.getDate() + 1);
+  }
+  return out;
+}
+/* Plano para que todos os closers ativos cheguem à meta mensal.
+   Fila: menos auditorias primeiro; em empate, quem entrou há menos tempo (novatos). */
+function calcNivelamento(agora, eq) {
+  var hr = horariosMin(), dias = proximosDiasUteis(agora, hr);
+  var fila = eq.ativos.filter(function (s) { return s.mes < s.meta; }).sort(cmpPrioridadeOperador);
+  var restante = fila.map(function (s) { return s.meta - s.mes; });
+  var vagas = [], falta = restante.reduce(function (t, f) { return t + f; }, 0);
+  while (restante.some(function (f) { return f > 0; })) {
+    fila.forEach(function (s, i) { if (restante[i] > 0) { vagas.push(s); restante[i]--; } });
+  }
+  var porDia = dias.length ? Math.ceil(vagas.length / dias.length) : vagas.length, agenda = [];
+  dias.forEach(function (data, i) {
+    var itens = [], mapa = new Map();
+    vagas.slice(i * porDia, (i + 1) * porDia).forEach(function (s) {
+      if (mapa.has(s)) mapa.get(s).n++; else { var x = { s: s, n: 1 }; mapa.set(s, x); itens.push(x); }
+    });
+    if (itens.length) agenda.push({ data: data, itens: itens });
+  });
+  return { fila: fila, falta: falta, dias: dias, porDia: porDia, agenda: agenda,
+    sugerida: Math.max(1, Math.ceil(eq.resumo.media)) };
 }
 
 /* =====================================================
@@ -1637,6 +1711,8 @@ function construirPlano(ctx) {
       ? 'Trabalhe pelo menos ' + p.porDia + ' ' + plural(p.porDia, 'novo operador', 'novos operadores') + ' por dia útil para concluir a cobertura.'
       : 'Audite hoje os operadores restantes para concluir a cobertura do mês.');
   } else if (ctx.eq.ativos.length) frases.push('Todos os operadores ativos já foram auditados neste mês.');
+  var nv = calcNivelamento(ctx.agora, ctx.eq);
+  if (nv.agenda.length && nv.agenda[0].data === ctx.hojeStr) frases.push('Hoje, audite: ' + nv.agenda[0].itens.map(function (x) { return x.s.op.nome + (x.n > 1 ? ' ×' + x.n : ''); }).join(', ') + '. (Plano completo na aba Equipe.)');
   if (p.prioritarios.length) frases.push('Para equilibrar a equipe, priorize ' + (p.prioritarios.length === 1 ? 'o operador' : 'os ' + p.prioritarios.length + ' operadores') + ' com menor quantidade: ' + p.prioritarios.map(function (s) { return s.op.nome; }).join(', ') + '.');
   return el('article', { class: 'card' },
     el('div', { class: 'card-cab' }, el('h3', null, 'Plano até o final do mês')),
@@ -1810,13 +1886,14 @@ function nomesEmpate(lista) { return lista.length ? lista[0].op.nome + (lista.le
 function cardOperador(s, eq) {
   var op = s.op, st = statusOperador(s);
   var concentra = op.ativo && eq.totalMes >= 8 && eq.ativos.length > 1 && s.part >= 2 * (100 / eq.ativos.length);
-  var ultimaTxt = s.ultima ? dataBR(s.ultima.data) + ' ' + s.ultima.hora.slice(0, 5) + ' (' + (s.diasSem === 0 ? 'hoje' : 'há ' + s.diasSem + ' ' + plural(s.diasSem, 'dia', 'dias')) + ')' : 'Nunca auditado';
+  var ultimaTxt = s.ultima ? dataBR(s.ultima.data) + (s.ultima.hora ? ' ' + s.ultima.hora.slice(0, 5) : '') + ' (' + (s.diasSem === 0 ? 'hoje' : 'há ' + s.diasSem + ' ' + plural(s.diasSem, 'dia', 'dias')) + ')' : 'Nunca auditado';
   return el('article', { class: 'op-card st-' + st.classe, dataset: { id: op.id } },
     el('div', { class: 'op-topo' },
       el('span', { class: 'avatar', 'aria-hidden': 'true' }, iniciais(op.nome)),
       el('div', { class: 'op-nome' }, el('strong', null, op.nome),
         el('span', null, tag(st.rotulo, st.classe === 'cinza' ? 'cinza' : st.classe), ' ',
-          concentra ? tag('CONCENTRA AUDITORIAS', 'amarelo', 'Participação muito acima da média da equipe') : null))),
+          concentra ? tag('CONCENTRA AUDITORIAS', 'amarelo', 'Participação muito acima da média da equipe') : null, ' ',
+          op.ativo && ehNovato(op, eq.refData) ? tag('NOVATO', 'amarelo', 'Entrou há ' + diasDeCasa(op.entrada, eq.refData) + ' dias') : null))),
     el('div', { class: 'op-nums' },
       el('div', null, el('b', null, String(s.hoje)), el('span', null, 'Hoje')),
       el('div', null, el('b', null, String(s.semana)), el('span', null, 'Semana')),
@@ -1825,15 +1902,59 @@ function cardOperador(s, eq) {
     el('div', { class: 'op-det' },
       el('span', null, 'Última auditoria: ', el('b', null, ultimaTxt)),
       el('span', null, 'No mês: ', el('b', null, 'Rotina ' + s.tipos.rotina + ' · Doc. ' + s.tipos.documentacao + ' · Perdidos ' + s.tipos.perdido)),
-      el('span', null, 'Participação no total mensal: ', el('b', null, fmtPct(s.part)))),
+      el('span', null, 'Participação no total mensal: ', el('b', null, fmtPct(s.part))),
+      el('span', null, 'Entrada: ', el('b', null, op.entrada ? dataBR(op.entrada) + ' (' + diasDeCasa(op.entrada, eq.refData) + ' dias de casa)' : 'não informada')),
+      s.daBase ? el('span', null, 'Inclui ', el('b', null, String(s.daBase)), ' ' + plural(s.daBase, 'auditoria', 'auditorias') + ' da planilha') : null),
     el('div', { class: 'op-acoes' },
       op.ativo ? el('button', { type: 'button', class: 'btn btn-primario btn-peq', dataset: { acao: 'registrar', id: op.id } }, '✚ Registrar') : null,
       el('button', { type: 'button', class: 'btn btn-linha btn-peq', dataset: { acao: 'editar', id: op.id }, 'aria-label': 'Editar ' + op.nome }, '✎ Editar'),
       el('button', { type: 'button', class: 'btn btn-linha btn-peq', dataset: { acao: 'alternar', id: op.id } }, op.ativo ? 'Desativar' : 'Reativar'),
       el('button', { type: 'button', class: 'btn btn-perigo-linha btn-peq', dataset: { acao: 'excluir', id: op.id }, 'aria-label': 'Excluir ' + op.nome }, '🗑 Excluir')));
 }
+function construirNivelamento(agora, eq) {
+  var n = calcNivelamento(agora, eq), r = eq.resumo, hojeStr = dataISO(agora), meta = estado.config.metaMensalPadrao;
+  var inp = el('input', { type: 'number', id: 'n-meta', min: '0', max: '999', step: '1', inputmode: 'numeric', value: String(meta) });
+  var msg = el('div', { class: 'erro-form', role: 'alert', hidden: true });
+  function aplicar(v) {
+    var m = inteiroEntre(String(v).trim(), 0, 999);
+    if (m === null) { msg.textContent = 'Informe um número inteiro entre 0 e 999.'; msg.hidden = false; return; }
+    estado.config.metaMensalPadrao = m; salvarConfig(); renderTudo();
+    toast('Meta por closer atualizada para ' + m + ' ' + plural(m, 'auditoria', 'auditorias') + ' no mês.');
+  }
+  var form = el('form', { class: 'linha-form', novalidate: true, onsubmit: function (e) { e.preventDefault(); aplicar(inp.value); } },
+    campoModal('Meta por closer no mês', inp, 'n-meta'),
+    el('div', { class: 'campo' }, el('button', { type: 'submit', class: 'btn btn-primario' }, 'Aplicar meta')),
+    n.sugerida !== meta ? el('div', { class: 'campo' }, el('button', { type: 'button', class: 'btn btn-sec', title: 'Média da equipe arredondada para cima', onclick: function () { aplicar(n.sugerida); } }, 'Usar sugestão: ' + n.sugerida)) : null);
+  var frases = [];
+  if (!eq.ativos.length) frases.push('Cadastre operadores ativos para gerar o plano.');
+  else if (n.falta === 0) frases.push('Todos os closers ativos já atingiram a meta de ' + meta + ' ' + plural(meta, 'auditoria', 'auditorias') + ' no mês. Aumente a meta para continuar nivelando.');
+  else {
+    frases.push('Para todos os closers chegarem a ' + meta + ' ' + plural(meta, 'auditoria', 'auditorias') + ' no mês, faltam ' + n.falta + ' ' + plural(n.falta, 'auditoria', 'auditorias') + '.');
+    frases.push(n.dias.length ? 'Restam ' + n.dias.length + ' ' + plural(n.dias.length, 'dia útil', 'dias úteis') + ': faça cerca de ' + n.porDia + ' ' + plural(n.porDia, 'auditoria', 'auditorias') + ' por dia útil.' : 'Não restam dias úteis neste mês: audite o quanto antes quem está na fila.');
+    frases.push('Ordem de prioridade: quem tem menos auditorias; em caso de empate, quem entrou há menos tempo (novatos).');
+  }
+  var fila = n.fila.length ? el('ol', { class: 'frases', style: 'margin:0;padding-left:0;counter-reset:f' }, n.fila.map(function (s, i) {
+    var d = diasDeCasa(s.op.entrada, hojeStr);
+    return el('li', null, el('b', null, (i + 1) + '. ' + s.op.nome), ' ', ehNovato(s.op, hojeStr) ? tag('NOVATO', 'amarelo', 'Entrou há ' + d + ' dias') : null,
+      el('span', { class: 'dica' }, ' — tem ' + s.mes + ', faltam ' + (s.meta - s.mes) + (s.op.entrada ? ' · entrou em ' + dataBR(s.op.entrada) + ' (' + d + ' ' + plural(d, 'dia', 'dias') + ')' : ' · sem data de entrada')));
+  })) : null;
+  var limite = estado.ui.agendaCompleta ? n.agenda.length : 5, agenda = null;
+  if (n.agenda.length) {
+    agenda = el('div', null, el('div', { class: 'rotulo', style: 'margin:14px 0 6px' }, 'AGENDA SUGERIDA POR DIA ÚTIL'),
+      el('div', { style: 'display:grid;gap:6px' }, n.agenda.slice(0, limite).map(function (d) {
+        var dt = parseData(d.data), rot = (d.data === hojeStr ? 'Hoje' : DIAS_SEMANA[dt.getDay()].split('-')[0]) + ' · ' + pad(dt.getDate()) + '/' + pad(dt.getMonth() + 1);
+        return el('div', { style: 'display:flex;gap:10px;flex-wrap:wrap;align-items:center' }, el('b', { style: 'min-width:112px;text-transform:capitalize' }, rot),
+          el('span', { class: 'lista-nomes', style: 'margin:0' }, d.itens.map(function (x) { return el('span', { class: 'chip-nome' }, x.s.op.nome + (x.n > 1 ? ' ×' + x.n : '')); })));
+      })),
+      n.agenda.length > 5 ? el('button', { type: 'button', class: 'btn btn-linha btn-peq', style: 'margin-top:10px', onclick: function () { estado.ui.agendaCompleta = !estado.ui.agendaCompleta; renderEquipe(); } }, estado.ui.agendaCompleta ? 'Mostrar menos' : 'Mostrar todos os ' + n.agenda.length + ' dias') : null);
+  }
+  return el('article', { class: 'card', style: 'display:grid;gap:12px' },
+    el('div', { class: 'card-cab', style: 'margin:0' }, el('h3', null, 'Plano de nivelamento do mês'), tag('MÉDIA ATUAL: ' + fmt1(r.media) + ' POR CLOSER', 'azul')),
+    form, msg, el('ul', { class: 'frases', style: 'margin:0' }, frases.map(function (t) { return el('li', null, t); })), fila, agenda);
+}
 function renderEquipe() {
   var agora = new Date(), eq = calcEquipe(dataISO(agora)), r = eq.resumo;
+  $('#eq-nivel').replaceChildren(construirNivelamento(agora, eq));
   $('#eq-mes').textContent = maiusc(MESES[agora.getMonth()]) + ' de ' + agora.getFullYear();
   $('#eq-resumo').replaceChildren(
     statEquipe('Operadores ativos', String(r.ativos)),
@@ -1842,7 +1963,9 @@ function renderEquipe() {
     statEquipe('Cobertura da equipe', fmtPct(r.cobertura)),
     statEquipe('Mais auditado', nomesEmpate(r.maisAud), r.ativos ? r.max + ' ' + plural(r.max, 'auditoria', 'auditorias') : ''),
     statEquipe('Menos auditado', nomesEmpate(r.menosAud), r.ativos ? r.min + ' ' + plural(r.min, 'auditoria', 'auditorias') : ''),
-    statEquipe('Diferença maior × menor', String(r.diferenca), 'auditorias no mês'));
+    statEquipe('Diferença maior × menor', String(r.diferenca), 'auditorias no mês'),
+    statEquipe('Auditorias da equipe no mês', String(eq.totalMes), 'sistema + planilha'),
+    statEquipe('Média por closer', fmt1(r.media), 'auditorias no mês (ativos)'));
   var lista = filtrarEquipe(eq), cont = $('#eq-lista');
   $('#eq-contagem').textContent = 'Exibindo ' + lista.length + ' de ' + eq.lista.length + ' ' + plural(eq.lista.length, 'operador', 'operadores') + '.';
   if (!eq.lista.length) cont.replaceChildren(el('div', { class: 'vazio', style: 'grid-column:1/-1' }, 'Nenhum operador cadastrado. Adicione o primeiro acima.'));
@@ -1960,6 +2083,7 @@ function relatorioMensal(ano, mes0) {
   return [
     'Resumo de ' + MESES[mes0] + ' de ' + ano + ':',
     'Total de auditorias: ' + eq.totalMes,
+    'Média por operador: ' + fmt1(r.media) + ' auditorias',
     'Operadores auditados: ' + r.auditados + ' de ' + r.ativos,
     'Operadores sem auditoria: ' + r.sem,
     'Maior cobertura: ' + (r.ativos ? nomeEmpate(r.maisAud) + ', com ' + r.max + ' ' + plural(r.max, 'auditoria', 'auditorias') : '—'),
@@ -2217,11 +2341,11 @@ function nomeOperadorDuplicado(nome, ignorarId) {
   var n = normBusca(nome);
   return estado.operadores.some(function (o) { return o.id !== ignorarId && normBusca(o.nome) === n; });
 }
-function adicionarOperador(nome) {
+function adicionarOperador(nome, entrada) {
   nome = limparTexto(nome);
   if (!nome) { toast('Digite o nome do operador.', { tipo: 'aviso' }); return false; }
   if (nomeOperadorDuplicado(nome)) { toast('Já existe um operador com esse nome.', { tipo: 'aviso' }); return false; }
-  var op = { id: novoId('op'), nome: nome.slice(0, 80), ativo: true, metaMensal: null };
+  var op = { id: novoId('op'), nome: nome.slice(0, 80), ativo: true, metaMensal: null, entrada: dataValida(entrada) ? entrada : null };
   estado.operadores.push(op);
   var relinkou = relinkarOrfaos();
   salvarOperadores(); if (relinkou) salvarAuditorias();
@@ -2233,12 +2357,13 @@ async function editarOperador(id) {
   if (!op) return;
   var nome = el('input', { type: 'text', id: 'o-nome', maxlength: '80', value: op.nome });
   var meta = el('input', { type: 'number', id: 'o-meta', min: '0', max: '999', step: '1', inputmode: 'numeric', placeholder: 'Padrão (' + estado.config.metaMensalPadrao + ')', value: op.metaMensal === null ? '' : String(op.metaMensal) });
+  var entrada = el('input', { type: 'date', id: 'o-entrada', value: op.entrada || '' });
   var ativo = el('input', { type: 'checkbox', id: 'o-ativo' }); ativo.checked = op.ativo;
   var msg = el('div', { class: 'erro-form', role: 'alert', hidden: true });
   var dados = null;
   var r = await abrirModal({
     titulo: 'Editar operador',
-    corpo: [campoModal('Nome do operador', nome, 'o-nome'), campoModal('Meta mensal individual (vazio = usar a padrão)', meta, 'o-meta'),
+    corpo: [campoModal('Nome do operador', nome, 'o-nome'), campoModal('Meta mensal individual (vazio = usar a padrão)', meta, 'o-meta'), campoModal('Data de entrada (prioriza novatos no plano)', entrada, 'o-entrada'),
       el('label', { class: 'interruptor', for: 'o-ativo' }, ativo, 'Operador ativo'), msg],
     botoes: [
       { rotulo: 'Cancelar', valor: false, classe: 'btn-linha' },
@@ -2248,14 +2373,14 @@ async function editarOperador(id) {
         else if (nomeOperadorDuplicado(n, op.id)) erro = 'Já existe outro operador com esse nome.';
         if (!erro && meta.value.trim() !== '') { mt = inteiroEntre(meta.value.trim(), 0, 999); if (mt === null) erro = 'A meta mensal deve ser um número inteiro entre 0 e 999.'; }
         if (erro) { msg.textContent = erro; msg.hidden = false; return false; }
-        dados = { nome: n, meta: mt, ativo: ativo.checked };
+        dados = { nome: n, meta: mt, ativo: ativo.checked, entrada: dataValida(entrada.value) ? entrada.value : null };
         return true;
       } }
     ]
   });
   if (r !== true || !dados) return;
   var mudouNome = dados.nome !== op.nome;
-  op.nome = dados.nome; op.metaMensal = dados.meta; op.ativo = dados.ativo;
+  op.nome = dados.nome; op.metaMensal = dados.meta; op.ativo = dados.ativo; op.entrada = dados.entrada;
   if (mudouNome) estado.auditorias.forEach(function (a) { if (a.operadorId === op.id) a.operadorNome = op.nome; });
   salvarOperadores(); if (mudouNome) salvarAuditorias();
   renderTudo(); toast('Operador atualizado.');
@@ -2430,6 +2555,7 @@ function validarBackup(obj) {
   if (!Array.isArray(obj.auditorias) || !Array.isArray(obj.operadores)) return { erro: 'Estrutura inválida: o backup precisa conter as listas "auditorias" e "operadores".' };
   if (obj.app !== undefined && obj.app !== 'finx_monitoria') return { erro: 'Este arquivo pertence a outro sistema e não pode ser restaurado aqui.' };
   if (obj.versao !== undefined && (typeof obj.versao !== 'number' || obj.versao > VERSAO)) return { erro: 'Versão de backup não suportada.' };
+  preencherEntrada(obj.operadores);
   var listas = sanitizarListas(obj.auditorias, obj.operadores);
   var cfg = mesclarConfig(obj.configuracoes || { metas: obj.metas, horarios: obj.horarios });
   if (obj.metasMensais && typeof obj.metasMensais === 'object') {
@@ -2593,7 +2719,7 @@ function ligarEventos() {
   $('#eq-filtro').addEventListener('change', function (e) { ue.filtro = e.target.value; renderEquipe(); });
   $('#eq-ordem').addEventListener('change', function (e) { ue.ordem = e.target.value; renderEquipe(); });
   $('#eq-dir').addEventListener('click', function (e) { ue.dir = ue.dir === 'asc' ? 'desc' : 'asc'; e.currentTarget.textContent = ue.dir === 'asc' ? '↑ Crescente' : '↓ Decrescente'; renderEquipe(); });
-  $('#eq-add').addEventListener('submit', function (e) { e.preventDefault(); var i = $('#eq-novo'); if (adicionarOperador(i.value)) { i.value = ''; } i.focus(); });
+  $('#eq-add').addEventListener('submit', function (e) { e.preventDefault(); var i = $('#eq-novo'); var d = $('#eq-novo-entrada'); if (adicionarOperador(i.value, d.value)) { i.value = ''; d.value = ''; } i.focus(); });
   $('#eq-lista').addEventListener('click', function (e) {
     var b = e.target.closest('[data-acao]'); if (!b) return;
     var id = b.dataset.id, ac = b.dataset.acao;
