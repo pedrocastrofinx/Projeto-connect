@@ -208,8 +208,47 @@ input[type=checkbox],input[type=radio]{width:18px;height:18px;accent-color:var(-
 .ia-inicio .btn-grande{font-size:1.15rem;padding:16px 26px}
 .ia-inicio.vazio-ia{border-style:dashed;text-align:center;justify-items:center;cursor:default}
 .ia-inicio.vazio-ia.sobre{background:var(--azul-hover)}
-#aba-ia.ia-foco .filtros-card,#aba-ia.ia-foco #ia-lista,#aba-ia.ia-foco #ia-resumo,#aba-ia.ia-foco #ia-rel,#aba-ia.ia-foco #ia-rel-tit{display:none}
+#aba-ia.ia-foco .filtros-card,#aba-ia.ia-foco #ia-lista,#aba-ia.ia-foco #ia-resumo,#aba-ia.ia-foco #ia-dash,#aba-ia.ia-foco #ia-rel,#aba-ia.ia-foco #ia-rel-tit{display:none}
 #aba-ia.ia-foco .ia-grid{grid-template-columns:minmax(0,1fr)}
+/* Dashboard da validação (gráficos simples, só HTML/CSS) */
+.ia-dash{--v1:#2a78d6;--v2:#eb6834;--vn:#898781;--vb-forte:#1c5cab;--vb-claro:#86b6ef;--vb-t1:#fff;--vb-t2:#0b0b0b;--vtrilho:#e1e0d9;--vgrade:#e1e0d9;margin:14px 0}
+:root[data-tema=escuro] .ia-dash{--v1:#3987e5;--v2:#d95926;--vn:#898781;--vb-forte:#86b6ef;--vb-claro:#2a78d6;--vb-t1:#0b0b0b;--vb-t2:#fff;--vtrilho:#2c2c2a;--vgrade:#2c2c2a}
+.viz-grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px;margin-top:10px}
+.viz-grade>*{min-width:0}
+.viz-card{display:grid;gap:10px;align-content:start}
+.viz-card h3{margin:0;font-size:1rem}
+.viz-card .viz-sub{margin:0;color:var(--muted);font-size:.85rem}
+.viz-pilha{display:flex;gap:2px;height:34px}
+.viz-seg{border:0;padding:0;min-width:3px;cursor:pointer;color:#fff;font-weight:700;font-size:.85rem;display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--c)}
+.viz-seg:first-child{border-radius:6px 0 0 6px}.viz-seg:last-child{border-radius:0 6px 6px 0}.viz-seg:only-child{border-radius:6px}
+.viz-seg:hover,.viz-seg:focus-visible{filter:brightness(1.12);outline:2px solid var(--texto);outline-offset:1px}
+.viz-seg.sem-clique{cursor:default}
+.viz-leg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.88rem;color:var(--texto)}
+.viz-leg span{display:inline-flex;align-items:center;gap:6px}
+.viz-leg i{width:10px;height:10px;border-radius:3px;background:var(--c);display:inline-block}
+.viz-linhas{display:grid;gap:6px}
+.viz-linha{display:grid;grid-template-columns:minmax(110px,46%) 1fr auto;gap:8px;align-items:center;font-size:.86rem}
+.viz-linha .viz-rot{line-height:1.2;overflow-wrap:anywhere;color:var(--texto)}
+.viz-trilho{height:14px;background:var(--vtrilho);border-radius:4px;overflow:hidden;display:block}
+.viz-trilho i{display:block;height:100%;background:var(--v1);border-radius:0 4px 4px 0}
+.viz-linha b{font-variant-numeric:tabular-nums;min-width:2ch;text-align:right}
+.viz-colunas{display:flex;gap:10px;align-items:flex-end;height:170px;border-bottom:1.5px solid var(--vgrade);padding-top:18px}
+.viz-col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;height:100%;gap:2px;position:relative;min-width:0}
+.viz-col .viz-topo{text-align:center;font-size:.8rem;font-weight:700;color:var(--texto)}
+.viz-col .viz-parte{display:block;background:var(--c);min-height:0;cursor:pointer;border:0;padding:0}
+.viz-col .viz-parte:first-of-type{border-radius:4px 4px 0 0}
+.viz-eixo{display:flex;gap:10px}.viz-eixo span{flex:1;text-align:center;font-size:.78rem;color:var(--muted);min-width:0}
+.viz-tab summary{cursor:pointer;color:var(--muted);font-size:.85rem}
+.viz-tab table{width:100%;border-collapse:collapse;font-size:.85rem;margin-top:6px}
+.viz-tab th,.viz-tab td{text-align:left;padding:4px 6px;border-bottom:1px solid var(--vgrade)}
+.viz-tab td:not(:first-child),.viz-tab th:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+#viz-dica{position:fixed;z-index:60;pointer-events:none;background:var(--texto);color:var(--sup);padding:6px 10px;border-radius:8px;font-size:.82rem;max-width:260px;box-shadow:var(--sombra);display:none}
+.ia-pend{display:grid;gap:8px;border:2px solid var(--borda-amar);background:var(--amarelo-cl);color:var(--amarelo-esc)}
+.ia-pend.ok{border-color:var(--azul-med);background:var(--azul-cl);color:var(--azul-esc)}
+.ia-pend.neutro{border-style:dashed;border-color:var(--linha);background:var(--sup2);color:var(--texto)}
+.ia-pend h3{margin:0;font-size:1.05rem}
+.ia-pend ul{margin:0;padding-left:18px;font-size:.88rem;max-height:220px;overflow:auto}
+.ia-pend code{display:block;white-space:pre-wrap;word-break:break-all;background:var(--sup);color:var(--texto);padding:8px 10px;border-radius:8px;font-size:.82rem}
 .ia-transc{background:var(--sup2);border:1.5px solid var(--linha);border-radius:12px;padding:8px 12px}
 .ia-transc summary{cursor:pointer;font-weight:700}
 .ia-transc-txt{margin:8px 0 2px;line-height:1.6}
@@ -669,13 +708,15 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
         </div>
       </details>
       <div class="grid-resumo" id="ia-resumo"></div>
+      <div id="ia-pend"></div>
+      <section class="ia-dash" id="ia-dash" aria-label="Dashboard da validação"></section>
       <div class="card filtros-card">
         <div class="linha-form">
           <div class="campo"><label for="ia-filtro">Mostrar</label>
             <select id="ia-filtro">
               <option value="pend">Pendentes de análise</option><option value="ana">Já analisados</option>
               <option value="nao">Motivo incorreto</option><option value="sim">Motivo correto</option>
-              <option value="duvida">Sem como avaliar</option><option value="transc">Com transcrição (análise automática)</option><option value="diverge">⚠ Divergem da IA</option><option value="todos">Todos</option>
+              <option value="duvida">Sem como avaliar</option><option value="transc">Com transcrição (análise automática)</option><option value="diverge">⚠ Divergem da IA</option><option value="pendtr">🎙 Áudio baixado sem transcrição</option><option value="todos">Todos</option>
             </select></div>
           <div class="campo"><label for="ia-ordem">Ordem da fila</label>
             <select id="ia-ordem"><option value="dia">Hoje primeiro, depois ontem…; no dia, as mais longas</option><option value="fala">Mais longas de todos os dias</option><option value="data">Mais recentes primeiro</option></select></div>
@@ -4704,7 +4745,7 @@ function iaProximoPendente(exceto) {
   return estado.ia.leads.filter(function (x) { return !iaStatus(estado.ia.analises[x.codigoNorm]) && x.codigoNorm !== exceto; }).sort(iaComparar)[0];
 }
 function iaFiltrados() {
-  var u = estado.ui.ia, b = normLead(u.busca);
+  var u = estado.ui.ia, b = normLead(u.busca), pendTr = u.filtro === 'pendtr' ? iaPendTransc() : null;
   return estado.ia.leads.filter(function (l) {
     var st = iaStatus(estado.ia.analises[l.codigoNorm]);
     if (b && l.codigoNorm.indexOf(b) === -1) return false;
@@ -4713,6 +4754,7 @@ function iaFiltrados() {
     if (u.filtro === 'todos') return true;
     if (u.filtro === 'transc') return iaTranscDoLead(l).length > 0;
     if (u.filtro === 'diverge') return iaDiverge(estado.ia.analises[l.codigoNorm]);
+    if (u.filtro === 'pendtr') return !!pendTr.leads[l.codigoNorm];
     return st === u.filtro;
   }).sort(iaComparar);
 }
@@ -4860,7 +4902,148 @@ function iaRodarLote() {
   if (modoNav) nota('Modo “abrir cada gravação no 3C”: usa o seu login do 3C neste navegador, uma aba por arquivo a cada 2,5 s (a aba fecha sozinha). Se o navegador bloquear, aparece o botão “Baixar próxima”.');
   proximo();
 }
-function iaRenderLateral() { iaAudioInfo(); iaRenderInicio(); iaRenderResumo(); iaRenderLista(); iaRenderRelatorio(); }
+/* ===== Áudios baixados que ainda NÃO foram transcritos (aviso) ===== */
+function iaPendTransc() {
+  var itens = [], codigos = {}, arqs = new Map(), soltos = [], transcritos = 0;
+  estado.ia.leads.forEach(function (l) {
+    l.ligacoes.forEach(function (g) {
+      var c = iaCodigoGravacao(g); if (c) codigos[c] = 1; if (g.id) codigos[g.id] = 1;
+      if (!g.id) return;
+      var loc = iaAudioLocal(g);
+      if (estado.ia.transc[g.id]) { if (loc) transcritos++; return; }
+      if (loc) itens.push({ l: l, g: g, tipo: 'pasta', nome: loc.name });
+      else if (estado.ia.baixados[g.id] && !estado.ia.semAudio[g.id]) itens.push({ l: l, g: g, tipo: 'pedido', nome: iaNomeAudio(g) });
+    });
+  });
+  iaArquivos.forEach(function (f, cod) { var r = arqs.get(f) || { f: f, ok: false }; if (codigos[cod]) r.ok = true; arqs.set(f, r); });
+  arqs.forEach(function (r) { if (!r.ok) soltos.push(r.f.name); });
+  return { itens: itens, soltos: soltos, naPasta: arqs.size, transcritos: transcritos, leads: itens.reduce(function (m, i) { m[i.l.codigoNorm] = 1; return m; }, {}) };
+}
+function iaComandoTranscrever() {
+  var x = /\.xlsx$/i.test(estado.ia.arquivo || '') ? estado.ia.arquivo : 'SUA_PLANILHA.xlsx';
+  return 'python transcrever.py --csv "SEU_ARQUIVO.csv" --xlsx "' + x + '" --pasta "." --rapido';
+}
+function iaCSVPendentes(pt) {
+  var linhas = [['Lead', 'Telefone', 'Data', 'Hora', 'Fala (s)', 'Arquivo', 'Origem'].join(';')];
+  pt.itens.forEach(function (i) { linhas.push([i.l.codigo, formatTel(i.l.tel), i.g.data ? dataBR(i.g.data) : '', i.g.hora, i.g.fala || 0, i.nome, i.tipo === 'pasta' ? 'na pasta carregada' : 'download pedido pelo painel'].map(campoCSV).join(';')); });
+  return '﻿' + linhas.join('\r\n') + '\r\n';
+}
+function iaRenderPend() {
+  var cont = $('#ia-pend'); if (!cont) return;
+  if (!estado.ia.leads.length) { cont.replaceChildren(); return; }
+  var pt = iaPendTransc(), n = pt.itens.length, nl = Object.keys(pt.leads).length, temAudios = pt.naPasta > 0 || Object.keys(estado.ia.baixados).length > 0;
+  var det = [];
+  if (!temAudios) {
+    cont.replaceChildren(el('article', { class: 'card ia-pend neutro' }, el('h3', null, '🎙 Quais áudios ainda não foram transcritos?'),
+      el('p', { class: 'dica', style: 'margin:0' }, 'Clique em “📂 Carregar pasta de áudios” (em Baixar gravações) ou arraste os .mp3 aqui: o painel confere um por um e avisa os que ainda não têm transcrição.')));
+    return;
+  }
+  var resumo = [pt.naPasta ? pt.naPasta + ' ' + plural(pt.naPasta, 'arquivo', 'arquivos') + ' na pasta carregada (' + pt.transcritos + ' já transcritos)' : null, Object.keys(estado.ia.baixados).length ? Object.keys(estado.ia.baixados).length + ' com download pedido pelo painel' : null, pt.soltos.length ? pt.soltos.length + ' ' + plural(pt.soltos.length, 'arquivo que não casa', 'arquivos que não casam') + ' com nenhuma ligação' : null].filter(Boolean).join(' · ');
+  if (!n) {
+    cont.replaceChildren(el('article', { class: 'card ia-pend ok' }, el('h3', null, '✔ Nenhum áudio baixado está sem transcrição'), el('div', { class: 'dica', style: 'margin:0;color:inherit' }, resumo),
+      pt.soltos.length ? el('details', null, el('summary', null, 'Arquivos que não casam com nenhuma ligação'), el('ul', null, pt.soltos.slice(0, 40).map(function (x) { return el('li', null, x); }))) : null));
+    return;
+  }
+  det = pt.itens.slice().sort(function (a, b) { return (b.g.fala || 0) - (a.g.fala || 0); }).slice(0, 80).map(function (i) {
+    return el('li', null, el('b', null, i.l.codigo), ' · ' + (i.g.data ? dataBR(i.g.data).slice(0, 5) : '') + ' ' + i.g.hora + ' · fala ' + fmtSeg(i.g.fala || 0) + ' · ' + i.nome + (i.tipo === 'pedido' ? ' (download pedido; confira se chegou à pasta)' : ''));
+  });
+  cont.replaceChildren(el('article', { class: 'card ia-pend' },
+    el('h3', null, '⚠ ' + n + ' ' + plural(n, 'áudio baixado ainda NÃO foi transcrito', 'áudios baixados ainda NÃO foram transcritos') + ' (' + nl + ' ' + plural(nl, 'lead', 'leads') + ')'),
+    el('div', { style: 'font-size:.88rem' }, resumo),
+    el('div', null, el('b', null, 'Para transcrever: '), 'rode no PowerShell, na pasta dos áudios (ele pula o que já foi transcrito):', el('code', null, iaComandoTranscrever())),
+    el('div', { class: 'acoes' },
+      el('button', { type: 'button', class: 'btn btn-primario', onclick: function () { estado.ui.ia.filtro = 'pendtr'; renderIA(); toast('Mostrando só os leads com áudio sem transcrição.'); } }, 'Ver só esses leads'),
+      el('button', { type: 'button', class: 'btn btn-sec', onclick: function () { copiarTexto(iaComandoTranscrever()).then(function (ok) { toast(ok ? 'Comando copiado.' : 'Não consegui copiar.', { tipo: ok ? 'ok' : 'erro' }); }); } }, '⧉ Copiar o comando'),
+      el('button', { type: 'button', class: 'btn btn-linha', onclick: function () { baixar('finx_audios_sem_transcricao_' + dataISO(new Date()) + '.csv', iaCSVPendentes(pt), 'text/csv;charset=utf-8'); toast('Lista exportada (' + n + ' áudios).'); } }, '⭳ Lista dos que faltam (CSV)')),
+    el('details', null, el('summary', null, 'Ver a lista (' + (n > 80 ? '80 mais longos de ' + n : n) + ')'), el('ul', null, det))));
+}
+function iaAvisoPendentes() {
+  var pt = iaPendTransc();
+  if (pt.itens.length) toast('⚠ ' + pt.itens.length + ' ' + plural(pt.itens.length, 'áudio baixado ainda não foi transcrito', 'áudios baixados ainda não foram transcritos') + ' (veja o aviso amarelo na aba IA).', { tipo: 'aviso' });
+  else if (pt.naPasta) toast('✔ Todos os áudios da pasta que casam com ligações já estão transcritos.');
+}
+
+/* ===== Dashboard da validação ===== */
+function vizDica(e) {
+  var d = $('#viz-dica'); if (!d) { d = el('div', { id: 'viz-dica', role: 'tooltip' }); document.body.appendChild(d); }
+  var alvo = e.target && e.target.closest ? e.target.closest('[data-dica]') : null;
+  if (!alvo || e.type === 'mouseout' || e.type === 'focusout') { d.style.display = 'none'; return; }
+  d.textContent = alvo.getAttribute('data-dica'); d.style.display = 'block';
+  var r = alvo.getBoundingClientRect(), x = e.type === 'mousemove' && e.clientX ? e.clientX + 12 : r.left + r.width / 2, y = e.type === 'mousemove' && e.clientY ? e.clientY + 14 : r.bottom + 6;
+  d.style.left = Math.max(8, Math.min(x, window.innerWidth - d.offsetWidth - 8)) + 'px'; d.style.top = Math.min(y, window.innerHeight - d.offsetHeight - 8) + 'px';
+}
+function vizIrFiltro(f) { return function () { estado.ui.ia.filtro = f; renderIA(); var l = $('#ia-lista'); if (l && l.scrollIntoView) l.scrollIntoView({ behavior: 'smooth', block: 'start' }); }; }
+function vizPilha(segs, total) {
+  var vis = segs.filter(function (x) { return x.n > 0; });
+  if (!total || !vis.length) return el('p', { class: 'dica', style: 'margin:0' }, 'Sem dados ainda.');
+  return el('div', { class: 'viz-pilha', role: 'img', 'aria-label': segs.map(function (x) { return x.rot + ': ' + x.n; }).join(', ') },
+    vis.map(function (x) {
+      var pct = x.n / total * 100;
+      return el('button', { type: 'button', class: 'viz-seg' + (x.filtro ? '' : ' sem-clique'), style: '--c:' + x.cor + ';flex:' + x.n + ' 1 0;' + (x.txt ? 'color:' + x.txt : ''), 'data-dica': x.rot + ': ' + x.n + ' (' + fmtPct(pct) + ')' + (x.filtro ? ' · clique para ver' : ''), 'aria-label': x.rot + ': ' + x.n, onclick: x.filtro ? vizIrFiltro(x.filtro) : null }, pct >= 9 ? String(x.n) : '');
+    }));
+}
+function vizLegenda(segs, total) {
+  return el('div', { class: 'viz-leg' }, segs.map(function (x) { return el('span', { style: '--c:' + x.cor }, el('i'), x.rot + ' ', el('b', null, String(x.n)), total ? ' (' + fmtPct(x.n / total * 100) + ')' : ''); }));
+}
+function vizLinhas(pares, total) {
+  pares = pares.filter(function (p) { return p[1] > 0; });
+  if (!pares.length) return el('p', { class: 'dica', style: 'margin:0' }, 'Sem dados ainda.');
+  var max = Math.max.apply(null, pares.map(function (p) { return p[1]; }));
+  return el('div', { class: 'viz-linhas' }, pares.map(function (p) {
+    return el('div', { class: 'viz-linha', 'data-dica': p[0] + ': ' + p[1] + (total ? ' (' + fmtPct(p[1] / total * 100) + ')' : '') }, el('span', { class: 'viz-rot', title: p[0] }, p[0]), el('span', { class: 'viz-trilho' }, el('i', { style: 'width:' + Math.max(2, p[1] / max * 100) + '%' })), el('b', null, String(p[1])));
+  }));
+}
+function vizTabela(cab, linhas) {
+  return el('details', { class: 'viz-tab' }, el('summary', null, 'Ver como tabela'), el('table', null, el('thead', null, el('tr', null, cab.map(function (c) { return el('th', null, c); }))), el('tbody', null, linhas.map(function (r) { return el('tr', null, r.map(function (c) { return el('td', null, String(c)); })); }))));
+}
+function vizCard(titulo, sub, corpo) { return el('article', { class: 'card viz-card' }, el('h3', null, titulo), sub ? el('p', { class: 'viz-sub' }, sub) : null, corpo); }
+function iaDashDados() {
+  var t = iaStats(), d = { t: t, qual: { ok: 0, err: 0 }, cmp: { n: 0, igual: 0, dif: 0 }, dur: [{ rot: 'sem fala', a: 0, b: 30 }, { rot: 'até 10 s', a: 0.001, b: 10 }, { rot: '10–29 s', a: 10, b: 30 }, { rot: '30–59 s', a: 30, b: 60 }, { rot: '1–3 min', a: 60, b: 180 }, { rot: '3 min+', a: 180, b: 1e9 }] };
+  d.dur[0].b = 0.001; d.dur.forEach(function (x) { x.sim = 0; x.nao = 0; x.duvida = 0; });
+  estado.ia.leads.forEach(function (l) {
+    var a = estado.ia.analises[l.codigoNorm], st = iaStatus(a); if (!st) return;
+    var q = a.qualOk || (a.cop && a.cop.qualOk) || ''; if (q === 'sim') d.qual.ok++; else if (q === 'nao') d.qual.err++;
+    if (a.cop && a.cop.correto && a.via !== 'copilot' && a.cop.correto !== 'duvida' && a.correto !== 'duvida') { d.cmp.n++; if (iaDiverge(a)) d.cmp.dif++; else d.cmp.igual++; }
+    var f = iaMaiorFala(l), b = d.dur.filter(function (x) { return f >= x.a && f < x.b; })[0]; if (b) b[st]++;
+  });
+  return d;
+}
+function iaRenderDash() {
+  var cont = $('#ia-dash'); if (!cont) return;
+  if (!estado.ia.leads.length) { cont.replaceChildren(); return; }
+  if (!cont.dataset.pronto) { cont.dataset.pronto = '1'; ['mouseover', 'mousemove', 'mouseout', 'focusin', 'focusout'].forEach(function (ev) { cont.addEventListener(ev, vizDica); }); }
+  var d = iaDashDados(), t = d.t, cor = function (n) { return 'var(' + n + ')'; };
+  if (!t.ana) { cont.replaceChildren(el('article', { class: 'card' }, el('p', { class: 'dica', style: 'margin:0' }, 'Os gráficos aparecem assim que houver análises (manuais ou da IA).'))); return; }
+  var cob = [{ rot: 'Analisados por você', n: t.man, cor: cor('--vb-forte'), txt: 'var(--vb-t1)', filtro: 'ana' }, { rot: 'Analisados pela IA', n: t.viaC + t.viaT, cor: cor('--vb-claro'), txt: 'var(--vb-t2)', filtro: 'ana' }, { rot: 'Pendentes', n: t.pend, cor: cor('--vtrilho'), txt: 'var(--texto)', filtro: 'pend' }];
+  var ver = [{ rot: 'Motivo correto', n: t.sim, cor: cor('--v1'), filtro: 'sim' }, { rot: 'Motivo incorreto', n: t.nao, cor: cor('--v2'), filtro: 'nao' }, { rot: 'Sem como avaliar', n: t.duvida, cor: cor('--vn'), filtro: 'duvida' }];
+  var mot = Object.keys(t.motivos).sort(function (a, b) { return t.motivos[b] - t.motivos[a]; }).map(function (k) { return [k, t.motivos[k]]; });
+  var por = Object.keys(t.porque).sort(function (a, b) { return t.porque[b] - t.porque[a]; }).slice(0, 7).map(function (k) { return [k, t.porque[k]]; });
+  var comp = [['Boa', t.comp.boa], ['Média', t.comp.media], ['Ruim', t.comp.ruim]], nc = t.comp.boa + t.comp.media + t.comp.ruim;
+  var qual = [{ rot: 'Qualificação da IA correta', n: d.qual.ok, cor: cor('--v1') }, { rot: 'Qualificação errada', n: d.qual.err, cor: cor('--v2') }], nq = d.qual.ok + d.qual.err;
+  var cmp = [{ rot: 'Concordam', n: d.cmp.igual, cor: cor('--v1') }, { rot: 'Divergem', n: d.cmp.dif, cor: cor('--v2'), filtro: 'diverge' }];
+  var maxCol = Math.max.apply(null, d.dur.map(function (x) { return x.sim + x.nao + x.duvida; }).concat([1]));
+  var colunas = el('div', null,
+    el('div', { class: 'viz-colunas', role: 'img', 'aria-label': 'Quantidade de leads por duração da maior fala, dividida por veredito' }, d.dur.map(function (x) {
+      var tot = x.sim + x.nao + x.duvida, h = tot / maxCol * 100;
+      return el('div', { class: 'viz-col' }, tot ? el('div', { class: 'viz-topo' }, String(tot)) : null,
+        el('div', { style: 'display:flex;flex-direction:column;gap:2px;height:' + h + '%;justify-content:flex-end' }, [['nao', 'Motivo incorreto', '--v2'], ['sim', 'Motivo correto', '--v1'], ['duvida', 'Sem como avaliar', '--vn']].map(function (v) {
+          return x[v[0]] ? el('button', { type: 'button', class: 'viz-parte', style: '--c:' + cor(v[2]) + ';flex:' + x[v[0]] + ' 1 0', 'data-dica': x.rot + ' · ' + v[1] + ': ' + x[v[0]], 'aria-label': x.rot + ', ' + v[1] + ': ' + x[v[0]], onclick: vizIrFiltro(v[0]) }) : null;
+        })));
+    })),
+    el('div', { class: 'viz-eixo' }, d.dur.map(function (x) { return el('span', null, x.rot); })));
+  cont.replaceChildren(
+    el('div', { class: 'secao-titulo' }, el('h2', null, 'Dashboard da validação'), el('span', null, 'Clique numa barra para ver os leads')),
+    el('div', { class: 'viz-grade' },
+      vizCard('Cobertura da base', t.ana + ' de ' + t.total + ' leads analisados (' + fmtPct(t.total ? t.ana / t.total * 100 : 0) + ')', el('div', { style: 'display:grid;gap:10px' }, vizPilha(cob, t.total), vizLegenda(cob, t.total), vizTabela(['Grupo', 'Leads'], cob.map(function (x) { return [x.rot, x.n]; })))),
+      vizCard('O motivo “Motorista de App” estava certo?', 'Sobre os ' + t.ana + ' leads analisados', el('div', { style: 'display:grid;gap:10px' }, vizPilha(ver, t.ana), vizLegenda(ver, t.ana), vizTabela(['Veredito', 'Leads'], ver.map(function (x) { return [x.rot, x.n]; })))),
+      vizCard('Qual era o motivo real?', 'Nos ' + t.nao + ' leads em que o motivo estava incorreto', el('div', { style: 'display:grid;gap:10px' }, vizLinhas(mot, t.nao), mot.length ? vizTabela(['Motivo real', 'Leads'], mot) : null)),
+      por.length ? vizCard('Por que estava errado', 'Marcações das análises manuais', el('div', { style: 'display:grid;gap:10px' }, vizLinhas(por, t.nao), vizTabela(['Motivo', 'Leads'], por))) : null,
+      vizCard('Quanto tempo o cliente falou', 'Maior fala por lead, dividida por veredito. Conversa curta quase nunca chega à pergunta do Uber/99.', el('div', { style: 'display:grid;gap:10px' }, colunas, vizLegenda(ver, 0), vizTabela(['Maior fala', 'Correto', 'Incorreto', 'Sem como avaliar'], d.dur.map(function (x) { return [x.rot, x.sim, x.nao, x.duvida]; })))),
+      vizCard('Comportamento da Natasha', nc ? 'Nos ' + nc + ' leads com essa avaliação' : 'Ainda sem avaliações', el('div', { style: 'display:grid;gap:10px' }, vizLinhas(comp, nc), nc ? vizTabela(['Comportamento', 'Leads'], comp) : null)),
+      vizCard('A qualificação da IA estava certa?', nq ? 'Em ' + nq + ' leads avaliados' : 'Ainda sem avaliações', el('div', { style: 'display:grid;gap:10px' }, vizPilha(qual, nq), vizLegenda(qual, nq))),
+      d.cmp.n ? vizCard('Você × IA', 'Nos ' + d.cmp.n + ' leads que os dois analisaram (sem contar “sem como avaliar”)', el('div', { style: 'display:grid;gap:10px' }, vizPilha(cmp, d.cmp.n), vizLegenda(cmp, d.cmp.n))) : null));
+}
+function iaRenderLateral() { iaAudioInfo(); iaRenderInicio(); iaRenderResumo(); iaRenderPend(); iaRenderDash(); iaRenderLista(); iaRenderRelatorio(); }
 /* Cartão de partida: sem base → soltar a planilha aqui; com base → botão “Fazer auditorias” que abre o próximo lead pendente já com o telefone copiado */
 function iaIniciar() {
   var u = estado.ui.ia, prox = iaProximoPendente('');
@@ -4904,12 +5087,13 @@ function iaRenderResumo() {
 }
 function iaRenderLista() {
   var lista = iaFiltrados(), u = estado.ui.ia, cont = $('#ia-lista');
+  var pendLista = iaPendTransc().leads;
   if (!estado.ia.leads.length) { cont.replaceChildren(el('div', { class: 'vazio' }, 'Nenhum lead. Em Ajustes → “Atualizar os dados”, arraste o arquivo “agente IA perdidos por motivo” (e, se quiser, o CSV da telefonia).')); return; }
   if (!lista.length) { cont.replaceChildren(el('div', { class: 'vazio' }, 'Nenhum lead neste filtro.')); return; }
   cont.replaceChildren.apply(cont, lista.slice(0, 400).map(function (l) {
     var st = iaStatus(estado.ia.analises[l.codigoNorm]), ult = l.ligacoes.length ? l.ligacoes[l.ligacoes.length - 1].qual : '';
     return el('button', { type: 'button', class: 'ia-item' + (u.sel === l.codigoNorm ? ' sel' : ''), dataset: { cod: l.codigoNorm } },
-      el('b', null, semaforo(iaNotaGeral(l)), l.codigo, ' ', tag(IA_ROTULO[st], IA_COR[st]), iaDiverge(estado.ia.analises[l.codigoNorm]) ? ' ' : '', iaDiverge(estado.ia.analises[l.codigoNorm]) ? tag('DIVERGE DA IA', 'amarelo') : null),
+      el('b', null, semaforo(iaNotaGeral(l)), l.codigo, ' ', tag(IA_ROTULO[st], IA_COR[st]), iaDiverge(estado.ia.analises[l.codigoNorm]) ? ' ' : '', iaDiverge(estado.ia.analises[l.codigoNorm]) ? tag('DIVERGE DA IA', 'amarelo') : null, pendLista[l.codigoNorm] ? ' ' : '', pendLista[l.codigoNorm] ? tag('FALTA TRANSCREVER', 'amarelo', 'Tem áudio baixado que ainda não foi transcrito') : null),
       el('span', null, (formatTel(l.tel) || 'sem telefone') + (iaMaiorFala(l) ? ' · maior fala ' + fmtSeg(iaMaiorFala(l)) : '')),
       el('span', null, l.ligacoes.length + ' ' + plural(l.ligacoes.length, 'ligação IA', 'ligações IA') + (ult && ult !== '-' ? ' · ' + ult : '') + (l.dataPerdido ? ' · perdido ' + dataBR(l.dataPerdido).slice(0, 5) : '')));
   }));
@@ -5182,7 +5366,7 @@ function ligarEventosIA() {
   $('#au-min').addEventListener('input', iaAudioInfo);
   $('#au-lote').addEventListener('click', iaRodarLote);
   $('#au-pasta').addEventListener('click', function () { $('#au-pasta-in').click(); });
-  $('#au-pasta-in').addEventListener('change', function (e) { var fs = Array.from(e.target.files); e.target.value = ''; if (!fs.length) return; var r = iaIndexarAudios(fs); toast(r.novos + ' áudios encontrados na pasta; ' + r.casam + ' casam com ligações dos leads (📁).'); iaRenderLateral(); iaRenderDetalhe(); });
+  $('#au-pasta-in').addEventListener('change', function (e) { var fs = Array.from(e.target.files); e.target.value = ''; if (!fs.length) return; var r = iaIndexarAudios(fs); toast(r.novos + ' áudios encontrados na pasta; ' + r.casam + ' casam com ligações dos leads (📁).'); iaRenderLateral(); iaRenderDetalhe(); iaAvisoPendentes(); });
   $('#au-esquecer').addEventListener('click', function () { estado.ia.baixados = {}; estado.ia.semAudio = {}; salvarIA(); iaAudioInfo(); iaRenderLista(); toast('Lista de baixadas zerada.'); });
   $('#au-proxima').addEventListener('click', function () { if (iaLote.manual) iaLote.manual(); });
   $('#au-parar').addEventListener('click', function () { iaLote.parar = true; });
@@ -5305,7 +5489,7 @@ async function processarArquivos(arquivos) {
   var audios = Array.from(arquivos).filter(function (f) { return /\.(mp3|wav|ogg|m4a|opus|aac|flac|webm)$/i.test(f.name) || /^audio\//.test(f.type); });
   if (audios.length) {
     var r = iaIndexarAudios(audios); arquivos = Array.from(arquivos).filter(function (f) { return audios.indexOf(f) < 0; });
-    toast(audios.length + ' ' + plural(audios.length, 'áudio carregado', 'áudios carregados') + ': ' + r.casam + ' ligações com áudio local (agora dá para avançar e acelerar).'); renderTudo();
+    toast(audios.length + ' ' + plural(audios.length, 'áudio carregado', 'áudios carregados') + ': ' + r.casam + ' ligações com áudio local (agora dá para avançar e acelerar).'); renderTudo(); iaAvisoPendentes();
     if (!arquivos.length) return;
   }
   var log = $('#dz-log');
