@@ -8,6 +8,7 @@ Na primeira vez baixa o modelo de voz (~500 MB, precisa de internet). Depois rod
 Opcional: --modelo tiny|base|small|medium  (small é o padrão)
           --dica   ajuda o programa a acertar nomes como "Dryve Assinaturas", Uber, 99 (compare com e sem)
 """
+import os
 import sys
 import time
 
@@ -31,10 +32,17 @@ def main():
 
     t0 = time.time()
     print("Carregando o modelo '%s' (na 1ª vez baixa da internet)..." % modelo)
+    gpu = False
     try:
-        m = WhisperModel(modelo, device="auto", compute_type="default")
+        import ctranslate2
+        gpu = ctranslate2.get_cuda_device_count() > 0
+    except Exception:
+        pass
+    try:
+        m = WhisperModel(modelo, device="cuda", compute_type="float16") if gpu else WhisperModel(modelo, device="cpu", compute_type="int8", cpu_threads=os.cpu_count() or 4)
     except Exception:
         m = WhisperModel(modelo, device="cpu", compute_type="int8")
+    print("Rodando na placa de vídeo." if gpu else "Rodando no processador (int8).")
     t1 = time.time()
     print("Modelo pronto em %.0f s. Transcrevendo %s ..." % (t1 - t0, args[0]))
     segs, info = m.transcribe(args[0], language="pt", vad_filter=True, beam_size=1, condition_on_previous_text=False, initial_prompt=(DICA if usar_dica else None))

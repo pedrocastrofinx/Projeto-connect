@@ -182,8 +182,19 @@ def carregar_modelo(nome):
         from faster_whisper import WhisperModel
     except ImportError:
         sys.exit("Falta instalar a transcrição: pip install faster-whisper")
+    gpu = False
     try:
-        return WhisperModel(nome, device="auto", compute_type="default")
+        import ctranslate2
+        gpu = ctranslate2.get_cuda_device_count() > 0
+    except Exception:
+        gpu = False
+    # int8 no processador é bem mais rápido que o float32 que o programa escolhia sozinho; com placa NVIDIA usa float16
+    try:
+        if gpu:
+            print("Usando a placa de vídeo (float16).")
+            return WhisperModel(nome, device="cuda", compute_type="float16")
+        print("Usando o processador (int8, %d núcleos)." % (os.cpu_count() or 4))
+        return WhisperModel(nome, device="cpu", compute_type="int8", cpu_threads=os.cpu_count() or 4)
     except Exception:
         return WhisperModel(nome, device="cpu", compute_type="int8")
 
@@ -349,7 +360,8 @@ def main():
     ap.add_argument("--ordem", choices=["dia", "fala"], default="dia", help="dia (padrão): hoje primeiro, depois ontem, anteontem…; dentro de cada dia, as ligações mais longas primeiro. fala: só pela duração, de todos os dias")
     ap.add_argument("--min", type=int, default=1, help="mínimo de segundos de fala (padrão 1 = todas as ligações em que alguém falou; use --min 10 para só as mais longas, ou --min 0 para absolutamente todas, inclusive as sem conversa)")
     ap.add_argument("--max", type=int, default=0, help="limitar a quantidade (0 = todas)")
-    ap.add_argument("--modelo", default="small")
+    ap.add_argument("--modelo", default="small", help="tiny | base | small (padrão) | medium")
+    ap.add_argument("--rapido", action="store_true", help="usa o modelo base: bem mais rápido (uns 3x), com um pouco mais de erros; ideal para o lote grande")
     ap.add_argument("--saida", default="transcricoes.csv")
     ap.add_argument("--audios", default="gravacoes_baixadas", help="onde guardar os áudios baixados")
     ap.add_argument("--listar", type=int, default=0, metavar="N", help="não transcreve: lista as N ligações mais longas que AINDA NÃO têm áudio na --pasta (telefone, data e duração), para você baixar no 3C; salva em faltam_baixar.csv")
@@ -403,6 +415,11 @@ def main():
         # com a pasta de áudios, a fila passa a ser só o que TEM áudio (as mais longas/de hoje primeiro entre elas)
         com_audio = [(k, v) for k, v in fila if achar_na_pasta(arquivos, k, v["rec"])]
         print("%d áudios na pasta; %d deles casam com ligações da fila (as demais ligações ficam para quando você baixar mais)." % (len(arquivos), len(com_audio)))
+        sem_par = [os.path.basename(f) for f in arquivos if not any(achar_na_pasta([f], k, v["rec"]) for k, v in ligacoes.items())]
+        ja_na_pasta = sum(1 for k, v in ligacoes.items() if k in feitas and achar_na_pasta(arquivos, k, v["rec"]))
+        print("RESUMO: %d áudios na pasta · %d já transcritos (serão pulados) · %d a transcrever agora%s" % (len(arquivos), ja_na_pasta, len(com_audio), "" if not a.max else " (limitado a %d pelo --max)" % a.max))
+        if sem_par:
+            print("  Sem ligação correspondente nas planilhas (ignorados): %s%s" % (", ".join(sem_par[:6]), " …" if len(sem_par) > 6 else ""))
         fila = com_audio[: a.max] if a.max else com_audio
         if not fila:
             ja = [k for k, v in ligacoes.items() if k in feitas and achar_na_pasta(arquivos, k, v["rec"])]
@@ -427,7 +444,7 @@ def main():
         return
     if a.token:
         os.makedirs(a.audios, exist_ok=True)
-    modelo = None if a.simular else carregar_modelo(a.modelo)
+    modelo = None if a.simular else carregar_modelo("base" if a.rapido else a.modelo)
 
     novo = not os.path.exists(a.saida)
     inicio, feitas_agora, falhas = time.time(), 0, 0
