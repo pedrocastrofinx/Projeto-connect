@@ -4703,7 +4703,7 @@ function iaRodarLote() {
       setTimeout(proximo, 1200);
     }, function (e) {
       if (e.pular) { pulados++; nota(i + '/' + fila.length + ' sem gravação, pulei.'); setTimeout(proximo, 600); return; }
-      if (e.rede) { modoNav = true; nota('O navegador não deixa ler o áudio; passei para o modo “pedir o download ao 3C” (usa o seu login do 3C; um a cada 2,5 s).'); viaNavegador(); return; }
+      if (e.rede) { modoNav = true; nota('O navegador não deixa ler o áudio por aqui; passei para o modo “abrir cada gravação no 3C” (usa o seu login do 3C; uma aba a cada 2,5 s). Se bloquear, use o botão “Baixar próxima”.'); viaNavegador(); return; }
       fim('Parei na ' + i + 'ª: ' + e.message + ' (' + feitos + ' baixadas antes).');
     });
   }
