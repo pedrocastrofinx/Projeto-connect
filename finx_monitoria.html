@@ -216,6 +216,8 @@ input[type=checkbox],input[type=radio]{width:18px;height:18px;accent-color:var(-
 .ia-transc-txt mark{background:var(--amarelo-cl);color:var(--amarelo-esc);border-radius:4px;padding:0 3px;font-weight:700}
 .ia-auto{border:1.5px solid var(--linha);border-radius:12px;padding:12px 14px;background:var(--sup2)}
 .ia-auto.sim{border-color:#2e9e5b}.ia-auto.nao{border-color:var(--vermelho)}.ia-auto.duvida{border-color:#e0a800}
+.ck-horas{display:block;font-variant-numeric:tabular-nums;color:var(--texto)}
+.ck-rep{display:block;color:var(--amarelo-esc)}
 .ia-ck{display:grid;gap:8px}
 .ia-ck-lin{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--sup2);border:1.5px solid var(--linha);border-radius:12px;padding:10px 14px}
 .ia-ck-lin>div:first-child{flex:1 1 160px;min-width:0}
@@ -683,6 +685,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
             <div class="campo"><label for="c-cad-n">Ligações por lead no dia (cadência)</label><input type="number" id="c-cad-n" min="1" max="20" step="1" inputmode="numeric"></div>
             <div class="campo"><label for="c-cad-seg">Ligação efetiva a partir de (segundos; 90 = 1:30)</label><input type="number" id="c-cad-seg" min="5" max="3600" step="1" inputmode="numeric"></div>
           </div>
+          <label class="interruptor" for="c-cad-rep" style="margin-top:10px"><input type="checkbox" id="c-cad-rep"> Ignorar ligações repetidas (mesmo operador e mesmo lead no mesmo minuto contam como uma só)</label>
         </div>
         <div>
           <h3 class="rotulo" style="margin-bottom:8px">PREFERÊNCIAS</h3>
@@ -842,7 +845,7 @@ var CONFIG_PADRAO = {
   urlLead: 'https://app.dryve.pro/dashboard/opportunities?keyword={lead}',
   apiSite: '/api/monitoria',
   siteUrl: 'https://projectlocus.pages.dev/monitoria',
-  cadencia: { ligacoes: 3, efetivaSeg: 90 }
+  cadencia: { ligacoes: 3, efetivaSeg: 90, ignorarRepetidas: true }
 };
 
 function $(sel, raiz) { return (raiz || document).querySelector(sel); }
@@ -1020,6 +1023,7 @@ function mesclarConfig(c) {
   var cdN = inteiroEntre(cd.ligacoes, 1, 20), cdS = inteiroEntre(cd.efetivaSeg, 5, 3600);
   if (cdN !== null) p.cadencia.ligacoes = cdN;
   if (cdS !== null) p.cadencia.efetivaSeg = cdS;
+  if (typeof cd.ignorarRepetidas === 'boolean') p.cadencia.ignorarRepetidas = cd.ignorarRepetidas;
   if (siteUrlValida(c.siteUrl)) p.siteUrl = c.siteUrl.trim();
   if (apiSiteValida(c.apiSite)) p.apiSite = c.apiSite.trim().replace(/\/+$/, '');
   if (p.metas.rotina + p.metas.documentacao + p.metas.perdido <= 0) p.metas = copiar(CONFIG_PADRAO.metas);
@@ -1289,19 +1293,21 @@ function sanitizarChamada(x) {
   var lead = limparTexto(x.lead).slice(0, 60), ln = normLead(lead), usuario = limparTexto(x.user).slice(0, 120);
   if (!ln || !usuario || !dataValida(x.data)) return null;
   var seg = Number(x.seg); if (!isFinite(seg) || seg < 0) seg = 0;
-  return { lead: lead, leadNorm: ln, user: usuario, data: x.data, hora: /^([01]\d|2[0-3]):[0-5]\d$/.test(String(x.hora)) ? x.hora : '00:00', seg: Math.min(86400, Math.round(seg)) };
+  return { lead: lead, leadNorm: ln, user: usuario, data: x.data, hora: /^([01]\d|2[0-3]):[0-5]\d$/.test(String(x.hora)) ? x.hora : '00:00', seg: Math.min(86400, Math.round(seg)), tipo: limparTexto(x.tipo).slice(0, 14) };
 }
 var CHAMADAS_DIAS = 62; /* histórico guardado: ~2 meses */
 function limiteChamadas() { return somarDias(dataISO(new Date()), -CHAMADAS_DIAS); }
 /* Formato compacto para o localStorage e o backup (22 mil ligações cabem em ~1 MB) */
 function compactarChamadas(lista) {
-  var us = [], idx = new Map();
+  var us = [], idx = new Map(), ts = [], tidx = new Map();
   var rows = lista.map(function (c) {
     var u = idx.get(c.user);
     if (u === undefined) { u = us.length; us.push(c.user); idx.set(c.user, u); }
-    return [u, c.lead, +c.data.replace(/-/g, ''), +c.hora.slice(0, 2) * 60 + +c.hora.slice(3), c.seg];
+    var t = tidx.get(c.tipo || '');
+    if (t === undefined) { t = ts.length; ts.push(c.tipo || ''); tidx.set(c.tipo || '', t); }
+    return [u, c.lead, +c.data.replace(/-/g, ''), +c.hora.slice(0, 2) * 60 + +c.hora.slice(3), c.seg, t];
   });
-  return { v: 2, u: us, r: rows };
+  return { v: 2, u: us, t: ts, r: rows };
 }
 function descompactarChamadas(o) {
   if (Array.isArray(o)) return sanitizarChamadas(o);
@@ -1311,7 +1317,7 @@ function descompactarChamadas(o) {
     if (!Array.isArray(r)) return;
     var d = String(r[2]), m = Number(r[3]) || 0;
     if (d.length !== 8) return;
-    var c = sanitizarChamada({ lead: r[1], user: o.u[r[0]], data: d.slice(0, 4) + '-' + d.slice(4, 6) + '-' + d.slice(6), hora: pad(Math.floor(m / 60) % 24) + ':' + pad(m % 60), seg: r[4] });
+    var c = sanitizarChamada({ lead: r[1], user: o.u[r[0]], data: d.slice(0, 4) + '-' + d.slice(4, 6) + '-' + d.slice(6), hora: pad(Math.floor(m / 60) % 24) + ':' + pad(m % 60), seg: r[4], tipo: Array.isArray(o.t) ? o.t[r[5]] : '' });
     if (c) out.push(c);
   });
   return out;
@@ -1345,14 +1351,14 @@ function analisarChamadas(linhas) {
   if (!linhas || linhas.length < 2) return { erro: 'Não encontrei linhas de ligações.' };
   var cab = linhas[0].map(colunaKey);
   function achar(nomes) { for (var i = 0; i < nomes.length; i++) { var k = cab.indexOf(nomes[i]); if (k >= 0) return k; } return -1; }
-  var col = { lead: achar(['leadcode', 'codigolead']), quando: achar(['createdat', 'datahora', 'data']), dur: achar(['duracaochamada', 'duracao']), user: achar(['username', 'usuario', 'operador']) };
+  var col = { lead: achar(['leadcode', 'codigolead']), quando: achar(['createdat', 'datahora', 'data']), dur: achar(['duracaochamada', 'duracao']), tipo: achar(['tipochamada', 'tipo']), user: achar(['username', 'usuario', 'operador']) };
   if (col.lead < 0 || col.quando < 0 || col.dur < 0 || col.user < 0) return { erro: 'Cabeçalho das ligações não reconhecido (esperado: lead_code, created_at, duracao_chamada, user_name).' };
   var mesIni = limiteChamadas(), itens = [], invalidos = 0, antigas = 0;
   for (var i = 1; i < linhas.length; i++) {
     var l = linhas[i], q = parseDataHora(l[col.quando]);
     if (!q) { invalidos++; continue; }
     if (q.data < mesIni) { antigas++; continue; }
-    var c = sanitizarChamada({ lead: l[col.lead], user: l[col.user], data: q.data, hora: q.hora, seg: parseDuracao(l[col.dur]) });
+    var c = sanitizarChamada({ lead: l[col.lead], user: l[col.user], data: q.data, hora: q.hora, seg: parseDuracao(l[col.dur]), tipo: col.tipo >= 0 ? l[col.tipo] : '' });
     if (c) itens.push(c); else invalidos++;
   }
   return { itens: itens, invalidos: invalidos, antigas: antigas };
@@ -1388,10 +1394,32 @@ function faixaCadencia(modo) {
   if (modo === 'mesant') { var fim = somarDias(mi, -1); return [primeiroDiaMes(fim), fim]; }
   return [modo, modo];
 }
+/* Ligações “contadas”: com a opção ligada, várias ligações do mesmo operador ao mesmo lead no mesmo minuto valem uma só (fica a mais longa);
+   as repetidas removidas ficam guardadas para o histórico mostrar quantas foram. */
+var cacheChamadas = { rev: -1, flag: null, dados: null };
+function chamadasContadas() {
+  var flag = estado.config.cadencia.ignorarRepetidas !== false;
+  if (cacheChamadas.dados && cacheChamadas.rev === estado.rev && cacheChamadas.flag === flag) return cacheChamadas.dados;
+  var lista = [], removidas = [];
+  if (!flag) lista = estado.chamadas.slice();
+  else {
+    var m = new Map();
+    estado.chamadas.forEach(function (c) {
+      var k = normBusca(c.user) + '|' + c.leadNorm + '|' + c.data + '|' + c.hora, a = m.get(k);
+      if (!a) m.set(k, c);
+      else if (c.seg > a.seg) { removidas.push(a); m.set(k, c); } else removidas.push(c);
+    });
+    lista = Array.from(m.values());
+  }
+  cacheChamadas = { rev: estado.rev, flag: flag, dados: { lista: lista, removidas: removidas } };
+  return cacheChamadas.dados;
+}
+/* Cadência do dia cumprida: N ligações no lead OU pelo menos uma ligação efetiva (a efetiva vale como cadência feita) */
+function cadenciaCumprida(n, ef, cfg) { return ef > 0 || n >= cfg.ligacoes; }
 function calcCadencia(modo) {
   var faixa = faixaCadencia(modo), cfg = estado.config.cadencia, resolver = criarResolvedor(), agg = new Map(), porOp = new Map();
   estado.operadores.forEach(function (o) { porOp.set(o.id, { op: o, ligacoes: 0, efetivas: 0, leadDias: 0, cad: 0, efLeads: 0 }); });
-  estado.chamadas.forEach(function (c) {
+  chamadasContadas().lista.forEach(function (c) {
     if (c.data < faixa[0] || c.data > faixa[1]) return;
     var o = resolver(c.user); if (!o) return;
     var k = o.id + '|' + c.leadNorm + '|' + c.data, a = agg.get(k);
@@ -1401,7 +1429,7 @@ function calcCadencia(modo) {
   agg.forEach(function (a) {
     var s = porOp.get(a.op);
     s.ligacoes += a.n; s.efetivas += a.ef; s.leadDias++;
-    if (a.n >= cfg.ligacoes) s.cad++;
+    if (cadenciaCumprida(a.n, a.ef, cfg)) s.cad++;
     if (a.ef > 0) s.efLeads++;
   });
   return porOp;
@@ -1409,18 +1437,22 @@ function calcCadencia(modo) {
 function fmtSeg(seg) { return Math.floor(seg / 60) + ':' + pad(seg % 60); }
 /* Resumo das ligações de um lead (para a rotina de auditoria): último dia com ligação */
 function ligacoesDoLead(leadNorm) {
-  var porDia = new Map(), cfg = estado.config.cadencia, resolver = criarResolvedor();
-  estado.chamadas.forEach(function (c) {
+  var porDia = new Map(), cfg = estado.config.cadencia, resolver = criarResolvedor(), cc = chamadasContadas();
+  function dia(data) { var d = porDia.get(data); if (!d) { d = { data: data, n: 0, ef: 0, maior: 0, quem: new Set(), tipos: new Set(), calls: [], rep: [] }; porDia.set(data, d); } return d; }
+  cc.lista.forEach(function (c) {
     if (c.leadNorm !== leadNorm) return;
-    var d = porDia.get(c.data); if (!d) { d = { data: c.data, n: 0, ef: 0, maior: 0, quem: new Set() }; porDia.set(c.data, d); }
+    var d = dia(c.data);
     d.n++; if (c.seg >= cfg.efetivaSeg) d.ef++; d.maior = Math.max(d.maior, c.seg);
-    var o = resolver(c.user); d.quem.add(o ? o.nome : c.user);
+    var o = resolver(c.user); d.quem.add(o ? o.nome : c.user); if (c.tipo) d.tipos.add(c.tipo);
+    d.calls.push({ hora: c.hora, seg: c.seg, tipo: c.tipo || '' });
   });
-  var dias = Array.from(porDia.values()).sort(function (a, b) { return a.data < b.data ? 1 : -1; });
+  cc.removidas.forEach(function (c) { if (c.leadNorm === leadNorm) dia(c.data).rep.push({ hora: c.hora, seg: c.seg }); });
+  var dias = Array.from(porDia.values()).filter(function (d) { return d.n > 0; }).sort(function (a, b) { return a.data < b.data ? 1 : -1; });
+  dias.forEach(function (d) { d.calls.sort(function (x, y) { return x.hora < y.hora ? -1 : x.hora > y.hora ? 1 : x.seg - y.seg; }); });
   if (!dias.length) return null;
-  var total = dias.reduce(function (t, d) { return t + d.n; }, 0);
+  var total = dias.reduce(function (t, d) { return t + d.n; }, 0), repTotal = dias.reduce(function (t, d) { return t + d.rep.length; }, 0);
   var melhor = dias.reduce(function (a, d) { return d.n > a.n ? d : a; }, dias[0]);
-  return { lista: dias, total: total, ultimo: dias[0], melhor: melhor, dias: dias.length, temEfetiva: dias.some(function (d) { return d.ef > 0; }) };
+  return { lista: dias, total: total, repetidas: repTotal, ultimo: dias[0], melhor: melhor, dias: dias.length, temEfetiva: dias.some(function (d) { return d.ef > 0; }) };
 }
 
 function contarMescla(itens) {
@@ -2654,7 +2686,7 @@ function atualizarDicaLead() {
   var lg = n ? ligacoesDoLead(n) : null;
   if (lg) {
     var cf = estado.config.cadencia, d = lg.ultimo;
-    refs.fLig.textContent = '📞 Ligações em ' + dataBR(d.data).slice(0, 5) + ': ' + d.n + ' (' + Array.from(d.quem).join(', ') + ') — cadência ' + (d.n >= cf.ligacoes ? 'cumprida' : 'NÃO cumprida (' + d.n + '/' + cf.ligacoes + ')') + ' · ' + (d.ef ? 'com ligação efetiva (maior: ' + fmtSeg(d.maior) + ')' : 'SEM ligação efetiva (maior: ' + fmtSeg(d.maior) + ')') + (lg.dias > 1 ? ' · ' + lg.dias + ' dias com ligação no mês' : '');
+    refs.fLig.textContent = '📞 Ligações em ' + dataBR(d.data).slice(0, 5) + ': ' + d.n + ' (' + Array.from(d.quem).join(', ') + ') — cadência ' + (cadenciaCumprida(d.n, d.ef, cf) ? 'cumprida' + (d.n < cf.ligacoes ? ' (pela ligação efetiva)' : '') : 'NÃO cumprida (' + d.n + '/' + cf.ligacoes + ')') + ' · ' + (d.ef ? 'com ligação efetiva (maior: ' + fmtSeg(d.maior) + ')' : 'SEM ligação efetiva (maior: ' + fmtSeg(d.maior) + ')') + (lg.dias > 1 ? ' · ' + lg.dias + ' dias com ligação no mês' : '');
     refs.fLig.hidden = false;
   } else refs.fLig.hidden = true;
   refs.fCheck.replaceChildren();
@@ -3119,13 +3151,13 @@ function construirCadencia(agora) {
     el('dl', { class: 'kv', style: 'margin:0' },
       el('div', null, el('dt', null, 'Ligações (equipe)'), el('dd', null, String(tot.lig))),
       el('div', null, el('dt', null, 'Leads ligados'), el('dd', null, String(tot.ld))),
-      el('div', null, el('dt', null, 'Cadência (' + cfg.ligacoes + '+ ligações no lead)'), el('dd', null, fmtPct(pct(tot.cad, tot.ld)))),
+      el('div', null, el('dt', null, 'Cadência (' + cfg.ligacoes + '+ ligações ou 1 efetiva)'), el('dd', null, fmtPct(pct(tot.cad, tot.ld)))),
       el('div', null, el('dt', null, 'Com ligação efetiva (' + fmtSeg(cfg.efetivaSeg) + '+)'), el('dd', null, fmtPct(pct(tot.ef, tot.ld)))),
       el('div', null, el('dt', null, dia ? 'Operadores que não ligaram' : 'Operadores sem ligações'), el('dd', null, String(tot.naoLigou)))),
     el('div', { class: 'tabela-wrap', style: 'max-height:none' }, el('table', { style: 'min-width:640px' },
       el('thead', null, el('tr', null, ['Operador', 'Ligações', 'Leads ligados', 'Cadência (≥' + cfg.ligacoes + ' lig./lead)', 'Com efetiva (≥' + fmtSeg(cfg.efetivaSeg) + ')', 'Situação'].map(function (t) { return el('th', { scope: 'col' }, el('span', null, t)); }))),
       el('tbody', null, corpo))),
-    el('p', { class: 'dica', style: 'margin:0' }, 'Cadência: leads em que o operador ligou pelo menos ' + cfg.ligacoes + ' vezes no dia. Efetiva: pelo menos uma ligação de ' + fmtSeg(cfg.efetivaSeg) + ' ou mais com o lead no dia. “No ritmo”: cadência ≥ 70% e efetivas ≥ 40%. Piores primeiro. Só operadores ativos.'));
+    el('p', { class: 'dica', style: 'margin:0' }, 'Cadência: leads em que o operador ligou pelo menos ' + cfg.ligacoes + ' vezes no dia OU teve uma ligação efetiva (conta como cadência feita). Efetiva: pelo menos uma ligação de ' + fmtSeg(cfg.efetivaSeg) + ' ou mais com o lead no dia. “No ritmo”: cadência ≥ 70% e efetivas ≥ 40%. Piores primeiro. Só operadores ativos.'));
 }
 function renderEquipe() {
   var agora = new Date(), eq = calcEquipe(dataISO(agora)), r = eq.resumo;
@@ -3252,7 +3284,7 @@ function relatorioDiario(dataStr) {
   if (estado.chamadas.some(function (x) { return x.data === dataStr; })) {
     var cd = calcCadencia(dataStr), tl = 0, td = 0, tc = 0, te = 0, nl = 0;
     ativos.forEach(function (o) { var q = cd.get(o.id); tl += q.ligacoes; td += q.leadDias; tc += q.cad; te += q.efLeads; if (!q.ligacoes) nl++; });
-    linhas.push('Ligações: ' + tl + ' em ' + td + ' leads · cadência de ' + estado.config.cadencia.ligacoes + ': ' + fmtPct(td ? tc / td * 100 : 0) + ' · com ligação efetiva: ' + fmtPct(td ? te / td * 100 : 0));
+    linhas.push('Ligações: ' + tl + ' em ' + td + ' leads · cadência (' + estado.config.cadencia.ligacoes + ' ligações ou 1 efetiva): ' + fmtPct(td ? tc / td * 100 : 0) + ' · com ligação efetiva: ' + fmtPct(td ? te / td * 100 : 0));
     linhas.push('Operadores que não ligaram: ' + nl + ' de ' + ativos.length);
   }
   linhas.push('Média: ' + (real.base !== null ? fmt1(real.base) + ' auditorias por hora' : 'dados insuficientes para calcular'));
@@ -3305,7 +3337,7 @@ function renderConfig() {
   $('#c-url').value = c.urlLead;
   $('#c-api').value = c.apiSite;
   $('#c-site').value = c.siteUrl;
-  $('#c-cad-n').value = c.cadencia.ligacoes; $('#c-cad-seg').value = c.cadencia.efetivaSeg;
+  $('#c-cad-rep').checked = c.cadencia.ignorarRepetidas !== false; $('#c-cad-n').value = c.cadencia.ligacoes; $('#c-cad-seg').value = c.cadencia.efetivaSeg;
   $('#c-seg').checked = c.mostrarSegundos; $('#c-som').checked = c.sons; $('#c-conf').checked = c.confirmarExclusao;
   $('#c-erro').hidden = true;
   renderBase();
@@ -4064,8 +4096,9 @@ function construirChecklist(leadNorm, tipo) {
   var cl = tipo === 'perdido' ? CHECKLISTS.perdido : CHECKLISTS.geral, cf = estado.config.cadencia;
   var l = estado.kanban.leads.find(function (x) { return x.codigoNorm === leadNorm; }) || null, lg = ligacoesDoLead(leadNorm);
   var cadTxt = !lg ? 'sem ligações registradas'
+    : lg.lista.some(function (d) { return d.ef > 0; }) ? 'SIM — teve ligação efetiva em ' + dataBR(lg.lista.filter(function (d) { return d.ef > 0; })[0].data).slice(0, 5) + ' (conta como cadência feita)'
     : lg.melhor.n >= cf.ligacoes ? 'SIM — ' + lg.melhor.n + ' ligações em ' + dataBR(lg.melhor.data).slice(0, 5)
-    : 'NÃO — no máximo ' + lg.melhor.n + ' de ' + cf.ligacoes + ' ligações num dia (' + dataBR(lg.melhor.data).slice(0, 5) + ')';
+    : 'NÃO — no máximo ' + lg.melhor.n + ' de ' + cf.ligacoes + ' ligações num dia (' + dataBR(lg.melhor.data).slice(0, 5) + ') e nenhuma efetiva';
   var auto = { fase: l ? l.etapa : 'importe o kanban para ver a fase', motivo: l ? (l.motivo || 'sem motivo informado') : 'importe o kanban para ver o motivo', cadencia: cadTxt };
   var fatos = [];
   if (l) {
@@ -4074,13 +4107,15 @@ function construirChecklist(leadNorm, tipo) {
     if (l.dPerdido) fatos.push('Perdido em ' + dataBR(l.dPerdido));
   }
   var historico = lg ? el('div', null,
-    el('div', { class: 'rotulo', style: 'margin-bottom:6px' }, 'HISTÓRICO DE LIGAÇÕES · ' + lg.total + ' ' + plural(lg.total, 'ligação', 'ligações') + ' em ' + lg.dias + ' ' + plural(lg.dias, 'dia', 'dias')),
+    el('div', { class: 'rotulo', style: 'margin-bottom:6px' }, 'HISTÓRICO DE LIGAÇÕES · ' + lg.total + ' ' + plural(lg.total, 'ligação', 'ligações') + ' em ' + lg.dias + ' ' + plural(lg.dias, 'dia', 'dias') + (lg.repetidas ? ' · ' + lg.repetidas + ' ' + plural(lg.repetidas, 'repetida ignorada', 'repetidas ignoradas') : '')),
     el('div', { class: 'ck-lista' }, lg.lista.slice(0, 10).map(function (d) {
-      var okCad = d.n >= cf.ligacoes;
+      var okCad = cadenciaCumprida(d.n, d.ef, cf);
       return el('div', { class: 'ck-item' },
-        el('span', { class: 'ck-nome' }, DIAS_SEMANA[parseData(d.data).getDay()].split('-')[0] + ' ' + dataBR(d.data).slice(0, 5), el('small', null, Array.from(d.quem).join(', '))),
+        el('span', { class: 'ck-nome' }, DIAS_SEMANA[parseData(d.data).getDay()].split('-')[0] + ' ' + dataBR(d.data).slice(0, 5), el('small', null, Array.from(d.quem).join(', ') + (d.tipos.size ? ' · ' + Array.from(d.tipos).join(', ') : '')),
+          el('small', { class: 'ck-horas' }, d.calls.map(function (c) { return c.hora + ' (' + fmtSeg(c.seg) + ')' + (c.seg >= cf.efetivaSeg ? ' ★' : ''); }).join(' · ')),
+          d.rep.length ? el('small', { class: 'ck-rep' }, d.rep.length + ' ' + plural(d.rep.length, 'repetida removida', 'repetidas removidas') + ' (' + d.rep.map(function (c) { return c.hora + ' ' + fmtSeg(c.seg); }).join(', ') + ')') : null),
         el('span', { class: 'ck-val' }, d.n + ' ' + plural(d.n, 'ligação', 'ligações') + ' ',
-          tag(okCad ? 'CADÊNCIA OK' : 'CADÊNCIA ' + d.n + '/' + cf.ligacoes, okCad ? 'azul' : 'vermelho'), ' ',
+          tag(okCad ? (d.n >= cf.ligacoes ? 'CADÊNCIA OK' : 'CADÊNCIA OK (EFETIVA)') : 'CADÊNCIA ' + d.n + '/' + cf.ligacoes, okCad ? 'azul' : 'vermelho'), ' ',
           tag(d.ef ? 'EFETIVA ' + fmtSeg(d.maior) : 'SEM EFETIVA (máx. ' + fmtSeg(d.maior) + ')', d.ef ? 'azul' : 'amarelo')));
     })),
     lg.lista.length > 10 ? el('p', { class: 'dica', style: 'margin:6px 0 0' }, '… e mais ' + (lg.lista.length - 10) + ' dias anteriores.') : null)
@@ -4833,7 +4868,7 @@ function salvarFormConfig() {
   if (msg) { erro.textContent = msg; erro.hidden = false; tocar('erro'); return; }
   erro.hidden = true;
   estado.config.metas = metas; estado.config.horarios = hor; estado.config.metaMensalPadrao = mensal;
-  estado.config.urlLead = url; estado.config.apiSite = api.replace(/\/+$/, ''); estado.config.siteUrl = site; estado.config.cadencia = { ligacoes: cadN, efetivaSeg: cadS };
+  estado.config.urlLead = url; estado.config.apiSite = api.replace(/\/+$/, ''); estado.config.siteUrl = site; estado.config.cadencia = { ligacoes: cadN, efetivaSeg: cadS, ignorarRepetidas: $('#c-cad-rep').checked };
   estado.config.mostrarSegundos = $('#c-seg').checked; estado.config.sons = $('#c-som').checked; estado.config.confirmarExclusao = $('#c-conf').checked;
   salvarConfig(); aplicarConfigNaUI(); renderTudo();
   toast('Configurações salvas.');
