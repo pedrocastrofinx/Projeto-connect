@@ -149,6 +149,12 @@ input[type=checkbox],input[type=radio]{width:18px;height:18px;accent-color:var(-
 .dropzone:hover,.dropzone.sobre{border-color:var(--azul);background:#D8E6FF}
 .pl-ajustes summary{cursor:pointer;font-weight:700;color:var(--azul-esc)}
 .aviso-lead.azul{background:var(--azul-cl);color:var(--azul-esc);border-color:var(--azul-med)}
+.ck-lista{display:grid;gap:6px}
+.ck-item{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:#F7FAFF;border:1px solid #E1E9F8;border-radius:10px;padding:8px 12px}
+.ck-nome{font-weight:700;display:flex;flex-direction:column}
+.ck-nome small{font-weight:600;color:var(--muted);font-size:.72rem}
+.ck-val{font-weight:700;color:var(--azul-esc);text-align:right}
+.ck-man{color:var(--muted);font-size:.85rem}
 .input-com-botao{display:flex;gap:8px;align-items:stretch}
 .input-com-botao .btn{white-space:nowrap}
 .link-mini{margin-left:4px;text-decoration:none;font-weight:800;color:var(--azul);border:1px solid var(--azul-med);border-radius:8px;padding:0 6px;display:inline-block}
@@ -844,7 +850,7 @@ var estado = {
     equipe: { busca: '', filtro: 'todos', ordem: 'nome', dir: 'asc' },
     hist: { q: '', ini: '', fim: '', op: '', tipo: '', lead: '', soRep: false, ordem: 'tempo', dir: 'desc', pag: 1, tam: 25 },
     plano: { dia: '', tipo: '', closer: '', ajustes: false, pulados: [] },
-    cad: { dia: 'auto' },
+    cad: { dia: 'auto' }, checkAberto: true,
     relData: '', relMes: 0, relAno: 0
   }
 };
@@ -1268,7 +1274,9 @@ function ligacoesDoLead(leadNorm) {
     var o = resolver(c.user); d.quem.add(o ? o.nome : c.user);
   });
   var dias = Array.from(porDia.values()).sort(function (a, b) { return a.data < b.data ? 1 : -1; });
-  return dias.length ? { ultimo: dias[0], dias: dias.length } : null;
+  if (!dias.length) return null;
+  var melhor = dias.reduce(function (a, d) { return d.n > a.n ? d : a; }, dias[0]);
+  return { ultimo: dias[0], melhor: melhor, dias: dias.length, temEfetiva: dias.some(function (d) { return d.ef > 0; }) };
 }
 
 function contarMescla(itens) {
@@ -2434,6 +2442,7 @@ function criarFormRegistro() {
   refs.fErro = el('div', { class: 'erro-form', id: 'f-erro', role: 'alert', hidden: true });
   refs.fDica = el('div', { class: 'aviso-lead vermelho', hidden: true, 'aria-live': 'polite' });
   refs.fLig = el('div', { class: 'aviso-lead azul', hidden: true, 'aria-live': 'polite' });
+  refs.fCheck = el('div');
   refs.fTipos = {}; refs.fTiposInfo = {};
   var chips = el('div', { class: 'chips-tipo', role: 'radiogroup', 'aria-label': 'Tipo da auditoria' });
   TIPOS_ORDEM.forEach(function (t) {
@@ -2450,6 +2459,7 @@ function criarFormRegistro() {
   f.appendChild(el('div', { class: 'campo' }, el('label', { for: 'f-lead' }, 'Lead ou ID do lead'), el('div', { class: 'input-com-botao' }, refs.fLead, refs.fLink)));
   f.appendChild(refs.fDica);
   f.appendChild(refs.fLig);
+  f.appendChild(refs.fCheck);
   f.appendChild(el('div', { class: 'campo' }, el('span', { class: 'rotulo' }, 'Tipo'), chips));
   f.appendChild(campoModal('Observação (opcional)', refs.fObs, 'f-obs'));
   f.appendChild(refs.fErro);
@@ -2466,7 +2476,7 @@ function criarFormRegistro() {
     estado.ultimoOperadorId = refs.fOperador.value; salvarEstadoUI(); esconderErroForm();
   });
   TIPOS_ORDEM.forEach(function (t) {
-    refs.fTipos[t].addEventListener('change', function () { estado.ultimoTipo = t; salvarEstadoUI(); });
+    refs.fTipos[t].addEventListener('change', function () { estado.ultimoTipo = t; salvarEstadoUI(); atualizarDicaLead(); });
   });
   refs.formCard = f;
   return f;
@@ -2499,6 +2509,9 @@ function atualizarDicaLead() {
     refs.fLig.textContent = '📞 Ligações em ' + dataBR(d.data).slice(0, 5) + ': ' + d.n + ' (' + Array.from(d.quem).join(', ') + ') — cadência ' + (d.n >= cf.ligacoes ? 'cumprida' : 'NÃO cumprida (' + d.n + '/' + cf.ligacoes + ')') + ' · ' + (d.ef ? 'com ligação efetiva (maior: ' + fmtSeg(d.maior) + ')' : 'SEM ligação efetiva (maior: ' + fmtSeg(d.maior) + ')') + (lg.dias > 1 ? ' · ' + lg.dias + ' dias com ligação no mês' : '');
     refs.fLig.hidden = false;
   } else refs.fLig.hidden = true;
+  refs.fCheck.replaceChildren();
+  var blk = n ? construirChecklist(n, tipoSelecionado() || tipoPeloKanban(n)) : null;
+  if (blk) refs.fCheck.appendChild(blk);
   if (cod) refs.fLink.href = urlDryve(cod, uuidDe(oc));
   if (!oc.length) { refs.fDica.hidden = true; return; }
   var u = oc[oc.length - 1];
@@ -2644,6 +2657,7 @@ function construirProximaAuditoria(pl) {
     el('div', { class: 'proxima-acao' }, VERBO_TIPO[it.tipo]),
     el('div', { class: 'proxima-cod' }, l.codigo),
     el('div', { class: 'proxima-det' }, el('b', null, it.op.nome), el('span', null, '· ' + sub), it.motivos.slice(0, 4).map(function (m) { return tag(m, 'cinza'); })),
+    construirChecklist(l.codigoNorm, it.tipo),
     el('div', { class: 'acoes' },
       l.uuid ? linkDryve(urlLeadDryve(l), '↗ Abrir no Dryve', 'btn-abrir btn-grande', 'Abre este lead no Dryve Pro em outra aba')
         : el('button', { type: 'button', class: 'btn btn-abrir btn-grande', title: 'Reimporte o kanban para abrir direto no Dryve', onclick: function () { copiarTexto(l.codigo).then(function () { toast('Código ' + l.codigo + ' copiado. Reimporte o kanban para abrir direto no Dryve.', { tipo: 'aviso', dur: 6000 }); }); } }, '⧉ Copiar código'),
@@ -3877,6 +3891,50 @@ function tipoDasLinhas(linhas) {
   if (tem(CAB_AUD_CODIGO) && tem(CAB_AUD_DATA)) return 'auditorias';
   return null;
 }
+/* ---- Guia dos checklists do site (os itens vêm das telas de auditoria; o painel só pré-preenche o que ele sabe) ---- */
+var CHECKLISTS = {
+  geral: { titulo: 'Rotina / Documentação', itens: [
+    { n: 'Fase atual', susp: true, auto: 'fase' }, { n: 'Status fase' }, { n: 'Fase correta', susp: true }, { n: 'Tag', susp: true },
+    { n: 'Status tag' }, { n: 'Rotina' }, { n: 'Registro na interna' }, { n: 'Tarefa' }] },
+  perdido: { titulo: 'Perdidos', itens: [
+    { n: 'Seguiu o processo de argumentação' }, { n: 'Realizou a cadência', auto: 'cadencia' },
+    { n: 'Motivo da perda', susp: true, auto: 'motivo' }, { n: 'Motivo correto' }, { n: 'Houve indicação' }] }
+};
+function tipoPeloKanban(leadNorm) {
+  var l = estado.kanban.leads.find(function (x) { return x.codigoNorm === leadNorm; });
+  return (l && tipoDoLead(l)) || 'rotina';
+}
+function construirChecklist(leadNorm, tipo) {
+  if (!leadNorm) return null;
+  var cl = tipo === 'perdido' ? CHECKLISTS.perdido : CHECKLISTS.geral, cf = estado.config.cadencia;
+  var l = estado.kanban.leads.find(function (x) { return x.codigoNorm === leadNorm; }) || null, lg = ligacoesDoLead(leadNorm);
+  var cadTxt = !lg ? 'sem ligações registradas neste mês'
+    : lg.melhor.n >= cf.ligacoes ? 'SIM — ' + lg.melhor.n + ' ligações em ' + dataBR(lg.melhor.data).slice(0, 5)
+    : 'NÃO — no máximo ' + lg.melhor.n + ' de ' + cf.ligacoes + ' ligações num dia (' + dataBR(lg.melhor.data).slice(0, 5) + ')';
+  var efTxt = !lg ? '' : lg.temEfetiva ? 'com ligação efetiva (' + fmtSeg(estado.config.cadencia.efetivaSeg) + '+)' : 'SEM ligação efetiva';
+  var auto = { fase: l ? l.etapa : 'importe o kanban para ver a fase', motivo: l ? (l.motivo || 'sem motivo informado') : 'importe o kanban para ver o motivo', cadencia: cadTxt };
+  var fatos = [];
+  if (l) {
+    fatos.push(['Closer', l.closer || '—'], ['Etapa no kanban', l.etapa], ['Temperatura', l.temp || '—'], ['Discagens', String(l.disc)]);
+    if (LOCACAO_APROVADA.indexOf(l.locacao) !== -1) fatos.push(['Crédito', 'aprovado']);
+    if (l.dPerdido) fatos.push(['Perdido em', dataBR(l.dPerdido)]);
+  }
+  fatos.push(['Ligações', lg ? dataBR(lg.ultimo.data).slice(0, 5) + ': ' + lg.ultimo.n + (lg.ultimo.n >= cf.ligacoes ? ' (cadência ok)' : ' (cadência não cumprida)') + ' · ' + efTxt : 'nenhuma neste mês']);
+  var det = el('details', { class: 'pl-ajustes ck' },
+    el('summary', null, '✅ Guia do checklist · ' + cl.titulo),
+    el('div', { style: 'display:grid;gap:10px;margin-top:10px' },
+      el('dl', { class: 'kv', style: 'margin:0' }, fatos.map(function (f) { return el('div', null, el('dt', null, f[0]), el('dd', null, f[1])); })),
+      el('div', { class: 'ck-lista' }, cl.itens.map(function (it) {
+        return el('div', { class: 'ck-item' },
+          el('span', { class: 'ck-nome' }, it.n, it.susp ? el('small', null, 'lista suspensa · não entra na conformidade') : null),
+          it.auto ? el('span', { class: 'ck-val' }, tag('PAINEL', 'azul'), ' ', auto[it.auto]) : el('span', { class: 'ck-man' }, 'marcar no site'));
+      })),
+      el('p', { class: 'dica', style: 'margin:0' }, 'O painel só preenche o que sabe (kanban e chamadas). As respostas são marcadas no site.')));
+  det.open = estado.ui.checkAberto !== false;
+  det.addEventListener('toggle', function () { estado.ui.checkAberto = det.open; });
+  return det;
+}
+
 /* Abre a janela de arquivos já na pasta Downloads (Chrome/Edge); nos demais navegadores usa o seletor comum */
 async function escolherDosDownloads() {
   if (window.showOpenFilePicker) {
