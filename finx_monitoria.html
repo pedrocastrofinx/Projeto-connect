@@ -148,6 +148,7 @@ input[type=checkbox],input[type=radio]{width:18px;height:18px;accent-color:var(-
 .dropzone{border:2px dashed var(--azul-med);border-radius:16px;padding:28px 18px;text-align:center;background:var(--azul-cl);cursor:pointer;transition:background .15s,border-color .15s;color:var(--azul-esc)}
 .dropzone:hover,.dropzone.sobre{border-color:var(--azul);background:#D8E6FF}
 .pl-ajustes summary{cursor:pointer;font-weight:700;color:var(--azul-esc)}
+.aviso-lead.azul{background:var(--azul-cl);color:var(--azul-esc);border-color:var(--azul-med)}
 .input-com-botao{display:flex;gap:8px;align-items:stretch}
 .input-com-botao .btn{white-space:nowrap}
 .link-mini{margin-left:4px;text-decoration:none;font-weight:800;color:var(--azul);border:1px solid var(--azul-med);border-radius:8px;padding:0 6px;display:inline-block}
@@ -421,6 +422,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
       <div class="secao-titulo"><h2>Cobertura da equipe</h2><span id="eq-mes"></span></div>
       <div class="grid-resumo" id="eq-resumo"></div>
       <div id="eq-nivel" style="margin-top:16px"></div>
+      <div id="eq-cad" style="margin-top:16px"></div>
       <div class="card filtros-card">
         <div class="linha-form">
           <div class="campo"><label for="eq-busca">Buscar operador</label><input type="search" id="eq-busca" placeholder="Digite um nome" autocomplete="off"></div>
@@ -558,6 +560,13 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
           </div>
         </div>
         <div>
+          <h3 class="rotulo" style="margin-bottom:8px">LIGAÇÕES (CADÊNCIA)</h3>
+          <div class="cfg-grid">
+            <div class="campo"><label for="c-cad-n">Ligações por lead no dia (cadência)</label><input type="number" id="c-cad-n" min="1" max="20" step="1" inputmode="numeric"></div>
+            <div class="campo"><label for="c-cad-seg">Ligação efetiva a partir de (segundos; 90 = 1:30)</label><input type="number" id="c-cad-seg" min="5" max="3600" step="1" inputmode="numeric"></div>
+          </div>
+        </div>
+        <div>
           <h3 class="rotulo" style="margin-bottom:8px">PREFERÊNCIAS</h3>
           <div class="cfg-grid">
             <label class="interruptor" for="c-seg"><input type="checkbox" id="c-seg"> Exibir segundos no relógio</label>
@@ -677,7 +686,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
 var VERSAO = 1;
 var CH = {
   aud: 'finx_auditorias', op: 'finx_operadores', cfg: 'finx_configuracoes', ver: 'finx_versao',
-  salvo: 'finx_salvo_em', estado: 'finx_estado', backup: 'finx_ultimo_backup', base: 'finx_base_leads', kanban: 'finx_kanban', sync: 'finx_sync_site', forms: 'finx_formularios_site'
+  salvo: 'finx_salvo_em', estado: 'finx_estado', backup: 'finx_ultimo_backup', base: 'finx_base_leads', kanban: 'finx_kanban', sync: 'finx_sync_site', forms: 'finx_formularios_site', chamadas: 'finx_chamadas'
 };
 var TIPOS = {
   rotina: { rotulo: 'Rotina', titulo: 'Rotina' },
@@ -714,7 +723,8 @@ var CONFIG_PADRAO = {
   confirmarExclusao: true,
   urlLead: 'https://app.dryve.pro/dashboard/opportunities?keyword={lead}',
   apiSite: '/api/monitoria',
-  siteUrl: 'https://projectlocus.pages.dev/monitoria'
+  siteUrl: 'https://projectlocus.pages.dev/monitoria',
+  cadencia: { ligacoes: 3, efetivaSeg: 90 }
 };
 
 function $(sel, raiz) { return (raiz || document).querySelector(sel); }
@@ -826,7 +836,7 @@ var Armazenamento = {
    3. ESTADO E SANITIZAÇÃO
    ===================================================== */
 var estado = {
-  auditorias: [], operadores: [], baseLeads: [], kanban: { importadoEm: 0, arquivo: '', leads: [] }, config: null,
+  auditorias: [], operadores: [], baseLeads: [], chamadas: [], kanban: { importadoEm: 0, arquivo: '', leads: [] }, config: null,
   rev: 0, registrando: false, diaRender: '', minutoRender: -1,
   ultimoOperadorId: '', ultimoTipo: '', avisoBackupFechado: false,
   ui: {
@@ -834,6 +844,7 @@ var estado = {
     equipe: { busca: '', filtro: 'todos', ordem: 'nome', dir: 'asc' },
     hist: { q: '', ini: '', fim: '', op: '', tipo: '', lead: '', soRep: false, ordem: 'tempo', dir: 'desc', pag: 1, tam: 25 },
     plano: { dia: '', tipo: '', closer: '', ajustes: false, pulados: [] },
+    cad: { dia: 'auto' },
     relData: '', relMes: 0, relAno: 0
   }
 };
@@ -887,6 +898,10 @@ function mesclarConfig(c) {
   }
   ['mostrarSegundos', 'sons', 'confirmarExclusao'].forEach(function (k) { if (typeof c[k] === 'boolean') p[k] = c[k]; });
   if (urlLeadValida(c.urlLead)) p.urlLead = c.urlLead.trim();
+  var cd = c.cadencia && typeof c.cadencia === 'object' ? c.cadencia : {};
+  var cdN = inteiroEntre(cd.ligacoes, 1, 20), cdS = inteiroEntre(cd.efetivaSeg, 5, 3600);
+  if (cdN !== null) p.cadencia.ligacoes = cdN;
+  if (cdS !== null) p.cadencia.efetivaSeg = cdS;
   if (siteUrlValida(c.siteUrl)) p.siteUrl = c.siteUrl.trim();
   if (apiSiteValida(c.apiSite)) p.apiSite = c.apiSite.trim().replace(/\/+$/, '');
   if (p.metas.rotina + p.metas.documentacao + p.metas.perdido <= 0) p.metas = copiar(CONFIG_PADRAO.metas);
@@ -1149,6 +1164,113 @@ function analisarBase(texto, linhasProntas) {
   }
   return { itens: itens, invalidos: invalidos };
 }
+/* ---- Ligações (export "Chamadas no WhatsApp") ----
+   Guarda só: lead, usuário, data, hora e duração. Nome e telefone do cliente são descartados. */
+function sanitizarChamada(x) {
+  if (!x || typeof x !== 'object') return null;
+  var lead = limparTexto(x.lead).slice(0, 60), ln = normLead(lead), usuario = limparTexto(x.user).slice(0, 120);
+  if (!ln || !usuario || !dataValida(x.data)) return null;
+  var seg = Number(x.seg); if (!isFinite(seg) || seg < 0) seg = 0;
+  return { lead: lead, leadNorm: ln, user: usuario, data: x.data, hora: /^([01]\d|2[0-3]):[0-5]\d$/.test(String(x.hora)) ? x.hora : '00:00', seg: Math.min(86400, Math.round(seg)) };
+}
+function chaveChamada(c) { return [normBusca(c.user), c.leadNorm, c.data, c.hora, c.seg].join('|'); }
+function sanitizarChamadas(lista) {
+  var mapa = new Map();
+  (Array.isArray(lista) ? lista : []).forEach(function (x) { var c = sanitizarChamada(x); if (c) mapa.set(chaveChamada(c), c); });
+  return Array.from(mapa.values());
+}
+function parseDuracao(v) {
+  var t = String(v === null || v === undefined ? '' : v).trim(), m;
+  if (!t) return 0;
+  if ((m = /^(\d+):(\d{2}):(\d{2})(?:\.\d+)?$/.exec(t))) return +m[1] * 3600 + +m[2] * 60 + +m[3];
+  if ((m = /^(\d+):(\d{2})$/.exec(t))) return +m[1] * 60 + +m[2];
+  if (/^\d+([.,]\d+)?$/.test(t)) { var n = parseFloat(t.replace(',', '.')); return n < 1 ? Math.round(n * 86400) : Math.round(n); }
+  return 0;
+}
+function parseDataHora(v) {
+  var t = String(v === null || v === undefined ? '' : v).trim(), m;
+  if ((m = /^(\d{4}-\d{2}-\d{2})[ T](\d{1,2}):(\d{2})/.exec(t))) return { data: m[1], hora: pad(+m[2]) + ':' + m[3] };
+  if ((m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})[ T](\d{1,2}):(\d{2})/.exec(t))) return { data: m[3] + '-' + pad(+m[2]) + '-' + pad(+m[1]), hora: pad(+m[4]) + ':' + m[5] };
+  if (/^\d+(\.\d+)?$/.test(t) && +t > 20000 && +t < 80000) {
+    var n = parseFloat(t), dia = Math.floor(n), min = Math.round((n - dia) * 1440);
+    return { data: new Date(Date.UTC(1899, 11, 30) + dia * 86400000).toISOString().slice(0, 10), hora: pad(Math.floor(min / 60) % 24) + ':' + pad(min % 60) };
+  }
+  var d = parseDataKanban(t);
+  return d ? { data: d, hora: '00:00' } : null;
+}
+function analisarChamadas(linhas) {
+  if (!linhas || linhas.length < 2) return { erro: 'Não encontrei linhas de ligações.' };
+  var cab = linhas[0].map(colunaKey);
+  function achar(nomes) { for (var i = 0; i < nomes.length; i++) { var k = cab.indexOf(nomes[i]); if (k >= 0) return k; } return -1; }
+  var col = { lead: achar(['leadcode', 'codigolead']), quando: achar(['createdat', 'datahora', 'data']), dur: achar(['duracaochamada', 'duracao']), user: achar(['username', 'usuario', 'operador']) };
+  if (col.lead < 0 || col.quando < 0 || col.dur < 0 || col.user < 0) return { erro: 'Cabeçalho das ligações não reconhecido (esperado: lead_code, created_at, duracao_chamada, user_name).' };
+  var mesIni = primeiroDiaMes(dataISO(new Date())), itens = [], invalidos = 0, antigas = 0;
+  for (var i = 1; i < linhas.length; i++) {
+    var l = linhas[i], q = parseDataHora(l[col.quando]);
+    if (!q) { invalidos++; continue; }
+    if (q.data < mesIni) { antigas++; continue; }
+    var c = sanitizarChamada({ lead: l[col.lead], user: l[col.user], data: q.data, hora: q.hora, seg: parseDuracao(l[col.dur]) });
+    if (c) itens.push(c); else invalidos++;
+  }
+  return { itens: itens, invalidos: invalidos, antigas: antigas };
+}
+function mesclarChamadas(itens) {
+  var mesIni = primeiroDiaMes(dataISO(new Date())), mapa = new Map();
+  estado.chamadas.concat(itens).forEach(function (c) { if (c.data >= mesIni) mapa.set(chaveChamada(c), c); });
+  estado.chamadas = Array.from(mapa.values());
+}
+/* Liga o nome do usuário das chamadas ao operador cadastrado (nome igual, ou primeiro + último nome únicos: "Ingrid Martins" = "Ingrid Calderoni Martins") */
+function criarResolvedor() {
+  var exato = new Map(), pontas = new Map(), cache = new Map();
+  estado.operadores.forEach(function (o) {
+    var n = normBusca(o.nome), t = n.split(/\s+/);
+    exato.set(n, o);
+    var k = t[0] + '|' + t[t.length - 1];
+    pontas.set(k, pontas.has(k) ? null : o);
+  });
+  return function (usuario) {
+    if (cache.has(usuario)) return cache.get(usuario);
+    var n = normBusca(usuario), t = n.split(/\s+/), o = exato.get(n) || pontas.get(t[0] + '|' + t[t.length - 1]) || null;
+    cache.set(usuario, o); return o;
+  };
+}
+function diasComChamadas() {
+  var d = {}; estado.chamadas.forEach(function (c) { d[c.data] = true; });
+  return Object.keys(d).sort().reverse();
+}
+/* Por operador: ligações, leads ligados, quantos cumpriram a cadência (N ligações no dia) e quantos tiveram ligação efetiva */
+function calcCadencia(dia) {
+  var cfg = estado.config.cadencia, resolver = criarResolvedor(), agg = new Map(), porOp = new Map();
+  estado.operadores.forEach(function (o) { porOp.set(o.id, { op: o, ligacoes: 0, efetivas: 0, leadDias: 0, cad: 0, efLeads: 0 }); });
+  estado.chamadas.forEach(function (c) {
+    if (dia && c.data !== dia) return;
+    var o = resolver(c.user); if (!o) return;
+    var k = o.id + '|' + c.leadNorm + '|' + c.data, a = agg.get(k);
+    if (!a) { a = { op: o.id, n: 0, ef: 0 }; agg.set(k, a); }
+    a.n++; if (c.seg >= cfg.efetivaSeg) a.ef++;
+  });
+  agg.forEach(function (a) {
+    var s = porOp.get(a.op);
+    s.ligacoes += a.n; s.efetivas += a.ef; s.leadDias++;
+    if (a.n >= cfg.ligacoes) s.cad++;
+    if (a.ef > 0) s.efLeads++;
+  });
+  return porOp;
+}
+function fmtSeg(seg) { return Math.floor(seg / 60) + ':' + pad(seg % 60); }
+/* Resumo das ligações de um lead (para a rotina de auditoria): último dia com ligação */
+function ligacoesDoLead(leadNorm) {
+  var porDia = new Map(), cfg = estado.config.cadencia, resolver = criarResolvedor();
+  estado.chamadas.forEach(function (c) {
+    if (c.leadNorm !== leadNorm) return;
+    var d = porDia.get(c.data); if (!d) { d = { data: c.data, n: 0, ef: 0, maior: 0, quem: new Set() }; porDia.set(c.data, d); }
+    d.n++; if (c.seg >= cfg.efetivaSeg) d.ef++; d.maior = Math.max(d.maior, c.seg);
+    var o = resolver(c.user); d.quem.add(o ? o.nome : c.user);
+  });
+  var dias = Array.from(porDia.values()).sort(function (a, b) { return a.data < b.data ? 1 : -1; });
+  return dias.length ? { ultimo: dias[0], dias: dias.length } : null;
+}
+
 function contarMescla(itens) {
   var existentes = new Set(estado.baseLeads.map(chaveBase)), novos = 0, atualizados = 0, vistos = new Set();
   itens.forEach(function (b) {
@@ -1354,6 +1476,10 @@ function carregarTudo() {
   if (rb.valor) estado.baseLeads = sanitizarBase(rb.valor).itens;
   else if (rb.novo) { estado.baseLeads = sanitizarBase(analisarBase(BASE_SEMENTE).itens).itens; salvarBase(); }
 
+  var rch = carregarJSON(CH.chamadas, Array.isArray);
+  if (rch.corrompido) problemas.push('ligações');
+  if (rch.valor) estado.chamadas = sanitizarChamadas(rch.valor);
+
   var rk = carregarJSON(CH.kanban, function (v) { return v && typeof v === 'object' && Array.isArray(v.leads); });
   if (rk.corrompido) problemas.push('kanban');
   if (rk.valor) estado.kanban = sanitizarKanban(rk.valor);
@@ -1382,6 +1508,7 @@ function salvarChave(chave, valor) {
 }
 function salvarAuditorias() { estado.rev++; return salvarChave(CH.aud, estado.auditorias); }
 function salvarOperadores() { estado.rev++; return salvarChave(CH.op, estado.operadores); }
+function salvarChamadas() { estado.rev++; return salvarChave(CH.chamadas, estado.chamadas); }
 function salvarBase() { estado.rev++; return salvarChave(CH.base, estado.baseLeads); }
 function salvarKanban() { return salvarChave(CH.kanban, estado.kanban); }
 function salvarConfig() { return salvarChave(CH.cfg, estado.config); }
@@ -2306,6 +2433,7 @@ function criarFormRegistro() {
   refs.fObs = el('input', { type: 'text', id: 'f-obs', maxlength: '300', placeholder: 'Opcional', autocomplete: 'off' });
   refs.fErro = el('div', { class: 'erro-form', id: 'f-erro', role: 'alert', hidden: true });
   refs.fDica = el('div', { class: 'aviso-lead vermelho', hidden: true, 'aria-live': 'polite' });
+  refs.fLig = el('div', { class: 'aviso-lead azul', hidden: true, 'aria-live': 'polite' });
   refs.fTipos = {}; refs.fTiposInfo = {};
   var chips = el('div', { class: 'chips-tipo', role: 'radiogroup', 'aria-label': 'Tipo da auditoria' });
   TIPOS_ORDEM.forEach(function (t) {
@@ -2321,6 +2449,7 @@ function criarFormRegistro() {
   refs.fLink = el('a', { class: 'btn btn-sec', target: '_blank', rel: 'noopener noreferrer', hidden: true, 'aria-label': 'Abrir o lead no Dryve (nova aba)', title: 'Abrir este lead no Dryve (nova aba)' }, '↗ Dryve');
   f.appendChild(el('div', { class: 'campo' }, el('label', { for: 'f-lead' }, 'Lead ou ID do lead'), el('div', { class: 'input-com-botao' }, refs.fLead, refs.fLink)));
   f.appendChild(refs.fDica);
+  f.appendChild(refs.fLig);
   f.appendChild(el('div', { class: 'campo' }, el('span', { class: 'rotulo' }, 'Tipo'), chips));
   f.appendChild(campoModal('Observação (opcional)', refs.fObs, 'f-obs'));
   f.appendChild(refs.fErro);
@@ -2364,6 +2493,12 @@ function aoDigitarLead() {
 function atualizarDicaLead() {
   var n = normLead(refs.fLead.value), oc = n ? ocorrenciasTotais(n) : [], cod = limparTexto(refs.fLead.value);
   refs.fLink.hidden = !cod;
+  var lg = n ? ligacoesDoLead(n) : null;
+  if (lg) {
+    var cf = estado.config.cadencia, d = lg.ultimo;
+    refs.fLig.textContent = '📞 Ligações em ' + dataBR(d.data).slice(0, 5) + ': ' + d.n + ' (' + Array.from(d.quem).join(', ') + ') — cadência ' + (d.n >= cf.ligacoes ? 'cumprida' : 'NÃO cumprida (' + d.n + '/' + cf.ligacoes + ')') + ' · ' + (d.ef ? 'com ligação efetiva (maior: ' + fmtSeg(d.maior) + ')' : 'SEM ligação efetiva (maior: ' + fmtSeg(d.maior) + ')') + (lg.dias > 1 ? ' · ' + lg.dias + ' dias com ligação no mês' : '');
+    refs.fLig.hidden = false;
+  } else refs.fLig.hidden = true;
   if (cod) refs.fLink.href = urlDryve(cod, uuidDe(oc));
   if (!oc.length) { refs.fDica.hidden = true; return; }
   var u = oc[oc.length - 1];
@@ -2785,9 +2920,55 @@ function construirNivelamento(agora, eq) {
     el('div', { class: 'card-cab', style: 'margin:0' }, el('h3', null, 'Plano de nivelamento do mês'), tag('MÉDIA ATUAL: ' + fmt1(r.media) + ' POR CLOSER', 'azul')),
     form, msg, el('ul', { class: 'frases', style: 'margin:0' }, frases.map(function (t) { return el('li', null, t); })), fila, agenda);
 }
+function construirCadencia(agora) {
+  var cfg = estado.config.cadencia, dias = diasComChamadas(), u = estado.ui.cad;
+  if (!dias.length) {
+    return el('article', { class: 'card' }, el('div', { class: 'card-cab', style: 'margin:0 0 8px' }, el('h3', null, 'Ligações e cadência')),
+      el('div', { class: 'vazio' }, 'Sem dados de ligações. Em Ajustes → “Atualizar os dados”, arraste o arquivo “Chamadas no WhatsApp” (Exportador do site).'));
+  }
+  var dia = u.dia === 'mes' ? null : (dias.indexOf(u.dia) >= 0 ? u.dia : dias[0]);
+  var sel = el('select', { id: 'cad-dia', 'aria-label': 'Período das ligações' },
+    dias.map(function (d, i) { return opcao(d, (i === 0 ? 'Último dia: ' : '') + DIAS_SEMANA[parseData(d).getDay()].split('-')[0] + ' ' + dataBR(d).slice(0, 5), dia === d); }),
+    opcao('mes', 'Mês todo', dia === null));
+  sel.addEventListener('change', function () { u.dia = sel.value; renderEquipe(); });
+  var porOp = calcCadencia(dia), linhas = [], tot = { lig: 0, ld: 0, cad: 0, ef: 0, naoLigou: 0 };
+  estado.operadores.filter(function (o) { return o.ativo; }).forEach(function (o) {
+    var s = porOp.get(o.id); linhas.push(s);
+    tot.lig += s.ligacoes; tot.ld += s.leadDias; tot.cad += s.cad; tot.ef += s.efLeads; if (!s.ligacoes) tot.naoLigou++;
+  });
+  linhas.sort(function (a, b) {
+    var pa = a.leadDias ? a.cad / a.leadDias : -1, pb = b.leadDias ? b.cad / b.leadDias : -1;
+    return pa - pb || a.op.nome.localeCompare(b.op.nome, 'pt-BR');
+  });
+  function pct(a, b) { return b ? a / b * 100 : 0; }
+  function tagPct(p, bom, medio) { return tag(fmtPct(p), p >= bom ? 'azul' : p >= medio ? 'amarelo' : 'vermelho'); }
+  var corpo = linhas.map(function (s) {
+    var pc = pct(s.cad, s.leadDias), pe = pct(s.efLeads, s.leadDias);
+    return el('tr', null,
+      el('td', null, s.op.nome),
+      el('td', { class: 'num' }, String(s.ligacoes)),
+      el('td', { class: 'num' }, String(s.leadDias)),
+      el('td', { class: 'num' }, s.leadDias ? [s.cad + '/' + s.leadDias + ' ', tagPct(pc, 70, 40)] : '—'),
+      el('td', { class: 'num' }, s.leadDias ? [s.efLeads + '/' + s.leadDias + ' ', tagPct(pe, 40, 20)] : '—'),
+      el('td', null, !s.ligacoes ? tag(dia ? 'NÃO LIGOU' : 'SEM LIGAÇÕES', 'vermelho') : pc >= 70 && pe >= 40 ? tag('NO RITMO', 'azul') : tag('ATENÇÃO', 'amarelo')));
+  });
+  return el('article', { class: 'card', style: 'display:grid;gap:12px' },
+    el('div', { class: 'card-cab', style: 'margin:0' }, el('h3', null, 'Ligações e cadência'), el('div', { class: 'campo', style: 'min-width:190px' }, sel)),
+    el('dl', { class: 'kv', style: 'margin:0' },
+      el('div', null, el('dt', null, 'Ligações (equipe)'), el('dd', null, String(tot.lig))),
+      el('div', null, el('dt', null, 'Leads ligados'), el('dd', null, String(tot.ld))),
+      el('div', null, el('dt', null, 'Cadência (' + cfg.ligacoes + '+ ligações no lead)'), el('dd', null, fmtPct(pct(tot.cad, tot.ld)))),
+      el('div', null, el('dt', null, 'Com ligação efetiva (' + fmtSeg(cfg.efetivaSeg) + '+)'), el('dd', null, fmtPct(pct(tot.ef, tot.ld)))),
+      el('div', null, el('dt', null, dia ? 'Operadores que não ligaram' : 'Operadores sem ligações'), el('dd', null, String(tot.naoLigou)))),
+    el('div', { class: 'tabela-wrap', style: 'max-height:none' }, el('table', { style: 'min-width:640px' },
+      el('thead', null, el('tr', null, ['Operador', 'Ligações', 'Leads ligados', 'Cadência (≥' + cfg.ligacoes + ' lig./lead)', 'Com efetiva (≥' + fmtSeg(cfg.efetivaSeg) + ')', 'Situação'].map(function (t) { return el('th', { scope: 'col' }, el('span', null, t)); }))),
+      el('tbody', null, corpo))),
+    el('p', { class: 'dica', style: 'margin:0' }, 'Cadência: leads em que o operador ligou pelo menos ' + cfg.ligacoes + ' vezes no dia. Efetiva: pelo menos uma ligação de ' + fmtSeg(cfg.efetivaSeg) + ' ou mais com o lead no dia. “No ritmo”: cadência ≥ 70% e efetivas ≥ 40%. Piores primeiro. Só operadores ativos.'));
+}
 function renderEquipe() {
   var agora = new Date(), eq = calcEquipe(dataISO(agora)), r = eq.resumo;
   $('#eq-nivel').replaceChildren(construirNivelamento(agora, eq));
+  $('#eq-cad').replaceChildren(construirCadencia(agora));
   $('#eq-mes').textContent = maiusc(MESES[agora.getMonth()]) + ' de ' + agora.getFullYear();
   $('#eq-resumo').replaceChildren(
     statEquipe('Operadores ativos', String(r.ativos)),
@@ -2906,6 +3087,12 @@ function relatorioDiario(dataStr) {
   linhas.push('Total: ' + c.total + '/' + m.metaTotal + (m.excedente > 0 ? ' (+' + m.excedente + ' excedente)' : ''));
   linhas.push('Operadores trabalhados: ' + trab + ' de ' + ativos.length);
   linhas.push('Leads repetidos: ' + c.repetidos);
+  if (estado.chamadas.some(function (x) { return x.data === dataStr; })) {
+    var cd = calcCadencia(dataStr), tl = 0, td = 0, tc = 0, te = 0, nl = 0;
+    ativos.forEach(function (o) { var q = cd.get(o.id); tl += q.ligacoes; td += q.leadDias; tc += q.cad; te += q.efLeads; if (!q.ligacoes) nl++; });
+    linhas.push('Ligações: ' + tl + ' em ' + td + ' leads · cadência de ' + estado.config.cadencia.ligacoes + ': ' + fmtPct(td ? tc / td * 100 : 0) + ' · com ligação efetiva: ' + fmtPct(td ? te / td * 100 : 0));
+    linhas.push('Operadores que não ligaram: ' + nl + ' de ' + ativos.length);
+  }
   linhas.push('Média: ' + (real.base !== null ? fmt1(real.base) + ' auditorias por hora' : 'dados insuficientes para calcular'));
   linhas.push(m.faltaTotal === 0 ? 'Meta diária concluída.' : 'Meta diária não concluída: faltam ' + m.faltaTotal + ' ' + plural(m.faltaTotal, 'auditoria', 'auditorias') + '.');
   return linhas.join('\n');
@@ -2956,6 +3143,7 @@ function renderConfig() {
   $('#c-url').value = c.urlLead;
   $('#c-api').value = c.apiSite;
   $('#c-site').value = c.siteUrl;
+  $('#c-cad-n').value = c.cadencia.ligacoes; $('#c-cad-seg').value = c.cadencia.efetivaSeg;
   $('#c-seg').checked = c.mostrarSegundos; $('#c-som').checked = c.sons; $('#c-conf').checked = c.confirmarExclusao;
   $('#c-erro').hidden = true;
   renderBase();
@@ -3380,7 +3568,7 @@ function montarBackup() {
   estado.operadores.forEach(function (o) { if (o.metaMensal !== null) individuais[o.id] = o.metaMensal; });
   return {
     app: 'finx_monitoria', versao: VERSAO, geradoEm: new Date().toISOString(),
-    auditorias: estado.auditorias, operadores: estado.operadores, baseLeads: estado.baseLeads, kanban: estado.kanban,
+    auditorias: estado.auditorias, operadores: estado.operadores, baseLeads: estado.baseLeads, kanban: estado.kanban, chamadas: estado.chamadas,
     metas: estado.config.metas, horarios: estado.config.horarios,
     metasMensais: { padrao: estado.config.metaMensalPadrao, individuais: individuais },
     configuracoes: estado.config
@@ -3409,7 +3597,8 @@ function validarBackup(obj) {
   }
   var baseLeads = Array.isArray(obj.baseLeads) ? sanitizarBase(obj.baseLeads).itens : undefined;
   var kanban = obj.kanban && typeof obj.kanban === 'object' && Array.isArray(obj.kanban.leads) ? sanitizarKanban(obj.kanban) : undefined;
-  return { listas: listas, config: cfg, baseLeads: baseLeads, kanban: kanban, geradoEm: typeof obj.geradoEm === 'string' ? obj.geradoEm : '' };
+  var chamadas = Array.isArray(obj.chamadas) ? sanitizarChamadas(obj.chamadas) : undefined;
+  return { listas: listas, config: cfg, baseLeads: baseLeads, kanban: kanban, chamadas: chamadas, geradoEm: typeof obj.geradoEm === 'string' ? obj.geradoEm : '' };
 }
 async function restaurarBackup(arquivo) {
   if (!arquivo) return;
@@ -3428,6 +3617,7 @@ async function restaurarBackup(arquivo) {
         el('li', null, L.operadores.length + ' operadores' + (L.descartadosO ? ' (' + L.descartadosO + ' inválidos ignorados)' : '')),
         v.baseLeads ? el('li', null, v.baseLeads.length + ' auditorias na base de leads já auditados') : null,
         v.kanban ? el('li', null, v.kanban.leads.length + ' leads no kanban do plano semanal') : null,
+        v.chamadas ? el('li', null, v.chamadas.length + ' ligações do WhatsApp') : null,
         el('li', null, 'Metas diárias: Rotina ' + v.config.metas.rotina + ', Documentação ' + v.config.metas.documentacao + ', Perdidos ' + v.config.metas.perdido),
         el('li', null, 'Expediente: ' + v.config.horarios.inicio + ' às ' + v.config.horarios.fim + ' (almoço ' + v.config.horarios.almocoInicio + '–' + v.config.horarios.almocoFim + ')'),
         el('li', null, 'Meta mensal padrão por operador: ' + v.config.metaMensalPadrao)),
@@ -3437,6 +3627,7 @@ async function restaurarBackup(arquivo) {
   estado.auditorias = L.auditorias; estado.operadores = L.operadores; estado.config = v.config;
   if (v.baseLeads) estado.baseLeads = v.baseLeads;
   if (v.kanban) { estado.kanban = v.kanban; salvarKanban(); }
+  if (v.chamadas) { estado.chamadas = v.chamadas; salvarChamadas(); }
   relinkarOrfaos();
   salvarOperadores(); salvarAuditorias(); salvarConfig(); salvarBase();
   estado.ultimoOperadorId = ''; salvarEstadoUI();
@@ -3559,6 +3750,15 @@ function acaoPlano(e) {
   else if (b.dataset.acao === 'copiar' && it) copiarTexto(it.lead.codigo).then(function (ok) { toast(ok ? 'Lead ' + it.lead.codigo + ' copiado.' : 'Não foi possível copiar.', { tipo: ok ? 'ok' : 'erro' }); });
 }
 
+/* Importa o export de chamadas do WhatsApp: sem confirmação (é um acréscimo que não apaga nada); devolve um resumo em texto */
+async function importarChamadas(linhas) {
+  var res = analisarChamadas(linhas);
+  if (res.erro) return res.erro;
+  mesclarChamadas(res.itens); salvarChamadas(); renderTudo();
+  var resolver = criarResolvedor(), equipe = res.itens.filter(function (c) { return resolver(c.user); }).length, dias = diasComChamadas();
+  toast(res.itens.length + ' ligações importadas (' + equipe + ' da equipe).');
+  return 'ligações: ' + res.itens.length + ' do mês (' + equipe + ' dos operadores cadastrados' + (dias.length ? ', ' + dataBR(dias[dias.length - 1]).slice(0, 5) + ' a ' + dataBR(dias[0]).slice(0, 5) : '') + ')' + (res.antigas ? '; ' + res.antigas + ' de meses anteriores ignoradas' : '') + '. Nome e telefone dos clientes não são guardados.';
+}
 async function importarBase(texto, linhas) {
   var res;
   try { res = analisarBase(texto, linhas); } catch (e) { res = { erro: 'O conteúdo não pôde ser interpretado.' }; }
@@ -3672,6 +3872,7 @@ async function importarArquivoBase(arquivo) {
 /* Reconhece o tipo do arquivo pelas colunas do cabeçalho */
 function tipoDasLinhas(linhas) {
   var cab = (linhas[0] || []).map(colunaKey), tem = function (lista) { return lista.some(function (n) { return cab.indexOf(n) !== -1; }); };
+  if (tem(['leadcode']) && tem(['createdat']) && tem(['duracaochamada'])) return 'chamadas';
   if (tem(['referencecode']) || (tem(['etapadoboard']) && tem(['closer']))) return 'kanban';
   if (tem(CAB_AUD_CODIGO) && tem(CAB_AUD_DATA)) return 'auditorias';
   return null;
@@ -3758,6 +3959,7 @@ async function receberDoSite(m) {
   /* Leads do kanban: usa as chaves do JSON como cabeçalho e vê se bate com o formato conhecido */
   var chaves = Object.keys(primeiro).filter(function (k) { return typeof primeiro[k] !== 'object' || primeiro[k] === null; });
   var linhas = [chaves].concat(lista.slice(0, 100000).map(function (o) { return chaves.map(function (k) { var v = o && o[k]; return v === null || v === undefined ? '' : String(v); }); }));
+  if (tipoDasLinhas(linhas) === 'chamadas') { logSite(await importarChamadas(linhas)); return; }
   if (tipoDasLinhas(linhas) === 'kanban') {
     await importarKanbanLinhas(linhas, 'site (automático)', true);
     logSite('kanban do site: ' + lista.length + ' leads.');
@@ -3788,7 +3990,8 @@ async function processarArquivos(arquivos) {
     var tipo = tipoDasLinhas(linhas);
     if (tipo === 'kanban') { linha('↻ ' + f.name + ' — kanban de leads'); await importarKanbanLinhas(linhas, f.name); }
     else if (tipo === 'auditorias') { linha('↻ ' + f.name + ' — auditorias do mês'); await importarBase('', linhas); }
-    else linha('? ' + f.name + ' — formato não reconhecido (colunas: ' + (linhas[0] || []).slice(0, 8).join(', ') + '). Envie o kanban (reference_code, Etapa do Board…) ou as auditorias (CodigoLead, DataAuditoria…).', 'var(--amarelo-esc)');
+    else if (tipo === 'chamadas') { linha('↻ ' + f.name + ' — ' + await importarChamadas(linhas)); }
+    else linha('? ' + f.name + ' — formato não reconhecido (colunas: ' + (linhas[0] || []).slice(0, 8).join(', ') + '). Envie o kanban (reference_code, Etapa do Board…), as auditorias (CodigoLead, DataAuditoria…) ou as chamadas (lead_code, created_at, duracao_chamada…).', 'var(--amarelo-esc)');
   }
 }
 async function limparBase() {
@@ -3809,7 +4012,9 @@ function salvarFormConfig() {
   var mensal = inteiroEntre(g('#c-mensal'), 0, 999);
   var hor = { inicio: g('#c-ini'), fim: g('#c-fim'), almocoInicio: g('#c-alm-ini'), almocoFim: g('#c-alm-fim') };
   var url = g('#c-url'), api = g('#c-api'), site = g('#c-site'), msg = null;
-  if (!siteUrlValida(site)) msg = 'O endereço do site deve começar com https:// (ou http://).';
+  var cadN = inteiroEntre(g('#c-cad-n'), 1, 20), cadS = inteiroEntre(g('#c-cad-seg'), 5, 3600);
+  if (cadN === null || cadS === null) msg = 'Cadência: informe de 1 a 20 ligações e de 5 a 3600 segundos para a ligação efetiva.';
+  else if (!siteUrlValida(site)) msg = 'O endereço do site deve começar com https:// (ou http://).';
   else if (!apiSiteValida(api)) msg = 'O endereço da API deve começar com / (ex.: /api/monitoria) ou https://.';
   else if (!urlLeadValida(url)) msg = 'O endereço do Dryve deve começar com https:// e conter {lead} no lugar do código do lead.';
   else if (metas.rotina === null || metas.documentacao === null || metas.perdido === null) msg = 'As metas diárias devem ser números inteiros entre 0 e 9999.';
@@ -3820,7 +4025,7 @@ function salvarFormConfig() {
   if (msg) { erro.textContent = msg; erro.hidden = false; tocar('erro'); return; }
   erro.hidden = true;
   estado.config.metas = metas; estado.config.horarios = hor; estado.config.metaMensalPadrao = mensal;
-  estado.config.urlLead = url; estado.config.apiSite = api.replace(/\/+$/, ''); estado.config.siteUrl = site;
+  estado.config.urlLead = url; estado.config.apiSite = api.replace(/\/+$/, ''); estado.config.siteUrl = site; estado.config.cadencia = { ligacoes: cadN, efetivaSeg: cadS };
   estado.config.mostrarSegundos = $('#c-seg').checked; estado.config.sons = $('#c-som').checked; estado.config.confirmarExclusao = $('#c-conf').checked;
   salvarConfig(); aplicarConfigNaUI(); renderTudo();
   toast('Configurações salvas.');
@@ -3857,10 +4062,10 @@ async function apagarTudo() {
     ]
   });
   if (r !== true) return;
-  estado.auditorias = []; estado.operadores = operadoresPadrao(); estado.config = copiar(CONFIG_PADRAO); estado.baseLeads = [];
+  estado.auditorias = []; estado.operadores = operadoresPadrao(); estado.config = copiar(CONFIG_PADRAO); estado.baseLeads = []; estado.chamadas = [];
   estado.kanban = { importadoEm: 0, arquivo: '', leads: [] };
   estado.ultimoOperadorId = ''; estado.ultimoTipo = '';
-  salvarAuditorias(); salvarOperadores(); salvarConfig(); salvarBase(); salvarKanban(); salvarEstadoUI();
+  salvarAuditorias(); salvarOperadores(); salvarConfig(); salvarBase(); salvarKanban(); salvarChamadas(); salvarEstadoUI();
   Armazenamento.remover(CH.backup);
   aplicarConfigNaUI(); renderTudo(); toast('Todos os dados foram apagados.');
 }
