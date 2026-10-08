@@ -329,7 +329,13 @@ def montar_planilha(xlsx, transc, saida, todas_colunas=False):
     for row in pr.iter_rows():
         for c in row:
             c.alignment = Alignment(wrap_text=True, vertical="top")
-    out.save(saida)
+    try:
+        out.save(saida)
+    except PermissionError:
+        # arquivo aberto no Excel: salva com outro nome em vez de perder o trabalho
+        alt = os.path.splitext(saida)[0] + "_" + time.strftime("%H%M%S") + ".xlsx"
+        out.save(alt)
+        print("  (%s está aberto no Excel; salvei como %s)" % (saida, alt))
     return len(por_lead), len(por_lig)
 
 
@@ -385,7 +391,11 @@ def main():
     total_s = sum(v["dur"] for _, v in fila)
     print("%d ligações lidas · %d já transcritas · %d na fila (>= %d s de fala, cerca de %.1f h de conversa)" % (len(ligacoes), len(feitas), len(fila), a.min, total_s / 3600))
     if not fila:
-        print("Nada a fazer.")
+        print("Nada novo para transcrever: tudo o que tem áudio já está em %s. Refazendo só a planilha completa..." % a.saida)
+        if a.xlsx:
+            r = montar_planilha(a.xlsx, ler_transcricoes(a.saida), a.planilha, a.todas_colunas)
+            if r:
+                print("Planilha: %s (%d leads, %d ligações)." % (a.planilha, r[0], r[1]))
         return
 
     arquivos = indexar_pasta(a.pasta) if a.pasta else []
@@ -395,6 +405,13 @@ def main():
         print("%d áudios na pasta; %d deles casam com ligações da fila (as demais ligações ficam para quando você baixar mais)." % (len(arquivos), len(com_audio)))
         fila = com_audio[: a.max] if a.max else com_audio
         if not fila:
+            ja = [k for k, v in ligacoes.items() if k in feitas and achar_na_pasta(arquivos, k, v["rec"])]
+            if ja:
+                print("Nada novo: os %d áudios da pasta que casam com ligações já estão transcritos em %s. Baixe mais áudios e rode de novo." % (len(ja), a.saida))
+                r = montar_planilha(a.xlsx, ler_transcricoes(a.saida), a.planilha, a.todas_colunas) if a.xlsx else None
+                if r:
+                    print("Planilha atualizada: %s (%d leads, %d ligações)." % (a.planilha, r[0], r[1]))
+                return
             sys.exit("Nenhum áudio da pasta casa com as ligações. Confira se os nomes são os originais do 3C (aaaa_mm_dd_telefone-código.mp3).")
     if a.listar:
         faltam = [(k, v) for k, v in fila if not (a.pasta and achar_na_pasta(arquivos, k, v["rec"]))][: a.listar]
