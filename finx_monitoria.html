@@ -4173,7 +4173,7 @@ function sanitizarIA(o) {
   Object.keys(A).slice(0, 20000).forEach(function (k) {
     var a = A[k]; if (!a || typeof a !== 'object') return;
     var lista = function (v) { return (Array.isArray(v) ? v : []).slice(0, 12).map(function (t) { return iaTxt(t, 90); }).filter(Boolean); };
-    r.analises[iaTxt(k, 40)] = { comp: ['boa', 'media', 'ruim'].indexOf(a.comp) >= 0 ? a.comp : '', correto: ['sim', 'nao', 'duvida'].indexOf(a.correto) >= 0 ? a.correto : '', arg: ['sim', 'parcial', 'nao', 'na'].indexOf(a.arg) >= 0 ? a.arg : '', cad: ['sim', 'nao', 'na'].indexOf(a.cad) >= 0 ? a.cad : '', situ: lista(a.situ), porque: lista(a.porque), porqueTxt: iaTxt(a.porqueTxt, 400), motivoReal: iaTxt(a.motivoReal, 80),
+    r.analises[iaTxt(k, 40)] = { comp: ['boa', 'media', 'ruim'].indexOf(a.comp) >= 0 ? a.comp : '', correto: ['sim', 'nao', 'duvida'].indexOf(a.correto) >= 0 ? a.correto : '', arg: ['sim', 'parcial', 'nao', 'na'].indexOf(a.arg) >= 0 ? a.arg : '', situ: lista(a.situ), porque: lista(a.porque), porqueTxt: iaTxt(a.porqueTxt, 400), motivoReal: iaTxt(a.motivoReal, 80),
       evid: lista(a.evid), obs: iaTxt(a.obs, 600), parecer: String(a.parecer || '').slice(0, 4000), por: iaTxt(a.por, 80), em: Number.isFinite(a.em) ? a.em : 0 };
   });
   return r;
@@ -4310,13 +4310,13 @@ function iaLerParecer(texto) {
 }
 function iaAnalise(l) {
   var a = estado.ia.analises[l.codigoNorm];
-  if (!a) { a = estado.ia.analises[l.codigoNorm] = { comp: '', correto: '', arg: '', cad: '', situ: [], porque: [], porqueTxt: '', motivoReal: '', evid: [], obs: '', parecer: '', por: '', em: 0 }; }
+  if (!a) { a = estado.ia.analises[l.codigoNorm] = { comp: '', correto: '', arg: '', situ: [], porque: [], porqueTxt: '', motivoReal: '', evid: [], obs: '', parecer: '', por: '', em: 0 }; }
   return a;
 }
 /* Conformidade da IA, como no site: % de “Sim” entre os itens respondidos (parcial vale meio ponto; sem como avaliar / não se aplica ficam de fora) */
 function iaConformidade(a) {
   var pts = 0, n = 0;
-  [[a.arg, { sim: 1, parcial: 0.5, nao: 0 }], [a.cad, { sim: 1, nao: 0 }], [a.correto, { sim: 1, nao: 0 }]].forEach(function (x) { if (x[0] in x[1]) { pts += x[1][x[0]]; n++; } });
+  [[a.arg, { sim: 1, parcial: 0.5, nao: 0 }], [a.correto, { sim: 1, nao: 0 }]].forEach(function (x) { if (x[0] in x[1]) { pts += x[1][x[0]]; n++; } });
   return n ? Math.round(pts / n * 100) : null;
 }
 function iaGravar(l, a) { a.por = estado.ia.analista; a.em = Date.now(); salvarIA(); iaRenderLateral(); }
@@ -4353,13 +4353,13 @@ function iaStats() {
   return t;
 }
 function iaCSV() {
-  var cab = ['Data da análise', 'Analista', 'Lead', 'Telefone', 'Link Dryve', 'Data perdido', 'Motivo registrado', 'Detalhe do motivo', 'Origem', 'Motivo correto?', 'Seguiu a argumentação', 'Realizou a cadência', 'Situação da ligação', 'Conformidade da IA (%)', 'Por quê', 'Motivo sugerido', 'Evidências', 'Ligações IA', 'Maior fala IA (s)', 'Última qualificação IA', 'Comportamento da IA (analista)', 'Sinal do painel', 'Parecer da IA', 'Observação'];
+  var cab = ['Data da análise', 'Analista', 'Lead', 'Telefone', 'Link Dryve', 'Data perdido', 'Motivo registrado', 'Detalhe do motivo', 'Origem', 'Motivo correto?', 'Seguiu a argumentação', 'Situação da ligação', 'Conformidade da IA (%)', 'Por quê', 'Motivo sugerido', 'Evidências', 'Ligações IA', 'Maior fala IA (s)', 'Última qualificação IA', 'Comportamento da IA (analista)', 'Sinal do painel', 'Parecer da IA', 'Observação'];
   var linhas = [cab.join(';')];
   estado.ia.leads.forEach(function (l) {
     var a = estado.ia.analises[l.codigoNorm]; if (!iaStatus(a)) return;
     var ult = l.ligacoes.length ? l.ligacoes[l.ligacoes.length - 1].qual : '';
     linhas.push([a.em ? dataBR(dataISO(new Date(a.em))) : '', a.por, l.codigo, formatTel(l.tel), urlPadraoDryve(l.uuid), l.dataPerdido ? dataBR(l.dataPerdido) : '', l.motivo, l.detalhes, l.origem,
-      { sim: 'Sim', nao: 'Não', duvida: 'Sem como avaliar' }[a.correto], { sim: 'Sim', parcial: 'Parcialmente', nao: 'Não', na: 'Não se aplica' }[a.arg] || '', { sim: 'Sim', nao: 'Não', na: 'Não se aplica' }[a.cad] || '', a.situ.join(' | '), iaConformidade(a) === null ? '' : iaConformidade(a), a.porque.concat(a.porqueTxt ? [a.porqueTxt] : []).join(' | '), a.motivoReal, a.evid.join(' | '),
+      { sim: 'Sim', nao: 'Não', duvida: 'Sem como avaliar' }[a.correto], { sim: 'Sim', parcial: 'Parcialmente', nao: 'Não', na: 'Não se aplica' }[a.arg] || '', a.situ.join(' | '), iaConformidade(a) === null ? '' : iaConformidade(a), a.porque.concat(a.porqueTxt ? [a.porqueTxt] : []).join(' | '), a.motivoReal, a.evid.join(' | '),
       l.ligacoes.length, l.ligacoes.reduce(function (m, g) { return Math.max(m, g.fala); }, 0), ult, a.comp ? IA_COMP[a.comp].rot : '', iaNotaGeral(l) ? IA_COMP[iaNotaGeral(l)].rot : '', a.parecer.replace(/\s+/g, ' ').trim(), a.obs].map(campoCSV).join(';'));
   });
   return '\uFEFF' + linhas.join('\r\n') + '\r\n';
@@ -4478,7 +4478,6 @@ function iaRenderDetalhe() {
   var ligs = l.ligacoes.length;
   var checklist = el('div', { class: 'ia-ck' },
     linhaCk('A IA seguiu o processo de argumentação?', ligs ? 'Ouça a gravação: ela se apresentou, perguntou o motivo e tentou contornar?' : 'Sem ligação da IA registrada', 'arg', [['sim', 'Sim'], ['parcial', 'Parcialmente'], ['nao', 'Não'], ['na', 'Não se aplica']]),
-    linhaCk('A IA realizou a cadência?', ligs + ' ' + plural(ligs, 'ligação', 'ligações') + ' da IA neste lead (meta: ' + estado.config.cadencia.ligacoes + ')', 'cad', [['sim', 'Sim'], ['nao', 'Não'], ['na', 'Não se aplica']]),
     el('div', { class: 'ia-ck-lin' }, el('div', null, el('b', null, 'Motivo da perda'), el('small', null, 'Registrado no Dryve · não entra na conformidade')), el('b', { style: 'display:inline-block' }, l.motivo || '—')),
     linhaCk('Motivo correto?', 'O cliente realmente é ' + (l.motivo || 'o motivo registrado') + '?', 'correto', [['sim', 'Sim, está correto'], ['nao', 'Não, está incorreto'], ['duvida', 'Sem como avaliar']], function () { blocoNao.hidden = a.correto !== 'nao'; iaRenderLateral(); }),
     el('div', { class: 'ia-ck-lin', style: 'display:grid' }, el('div', null, el('b', null, 'O que aconteceu na ligação?'), el('small', null, 'Marque o que se aplica (rápido)')), opcoes('situ', IA_SITUACOES, a.situ)),
