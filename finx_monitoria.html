@@ -4163,6 +4163,7 @@ async function importarArquivoBase(arquivo) {
 function tipoDasLinhas(linhas) {
   var cab = (linhas[0] || []).map(colunaKey), tem = function (lista) { return lista.some(function (n) { return cab.indexOf(n) !== -1; }); };
   if (tem(['pedidosreferencecode', 'perdidosreferencecode']) && tem(['iaqualification'])) return 'iaperdidos';
+  if (tem(['lead']) && tem(['correto']) && tem(['confirmousermotoristadeapp', 'qualificacaodaiacorreta', 'comportamentodaia'])) return 'parecercopilot';
   if ((tem(['id']) && tem(['texto']) && tem(['duracaos'])) || (tem(['iddaligacao']) && tem(['transcricao']))) return 'transcricoes';
   if (tem(['qualificationname']) && tem(['recording']) && tem(['campaignname'])) return 'chamadasia';
   if (tem(['leadcode']) && tem(['createdat']) && tem(['duracaochamada'])) return 'chamadas';
@@ -4313,7 +4314,7 @@ function sanitizarIA(o) {
   Object.keys(A).slice(0, 20000).forEach(function (k) {
     var a = A[k]; if (!a || typeof a !== 'object') return;
     var lista = function (v) { return (Array.isArray(v) ? v : []).slice(0, 12).map(function (t) { return iaTxt(t, 90); }).filter(Boolean); };
-    r.analises[iaTxt(k, 40)] = { comp: ['boa', 'media', 'ruim'].indexOf(a.comp) >= 0 ? a.comp : '', correto: ['sim', 'nao', 'duvida'].indexOf(a.correto) >= 0 ? a.correto : '', arg: ['sim', 'parcial', 'nao', 'na'].indexOf(a.arg) >= 0 ? a.arg : '', via: a.via === 'transcricao' ? 'transcricao' : '', qualOk: ['sim', 'nao'].indexOf(a.qualOk) >= 0 ? a.qualOk : '', qualCerta: iaTxt(a.qualCerta, 60), qualIA: iaTxt(a.qualIA, 60), situ: lista(a.situ), porque: lista(a.porque), porqueTxt: iaTxt(a.porqueTxt, 400), motivoReal: iaTxt(a.motivoReal, 80),
+    r.analises[iaTxt(k, 40)] = { comp: ['boa', 'media', 'ruim'].indexOf(a.comp) >= 0 ? a.comp : '', correto: ['sim', 'nao', 'duvida'].indexOf(a.correto) >= 0 ? a.correto : '', arg: ['sim', 'parcial', 'nao', 'na'].indexOf(a.arg) >= 0 ? a.arg : '', via: a.via === 'transcricao' || a.via === 'copilot' ? a.via : '', qualOk: ['sim', 'nao'].indexOf(a.qualOk) >= 0 ? a.qualOk : '', qualCerta: iaTxt(a.qualCerta, 60), qualIA: iaTxt(a.qualIA, 60), situ: lista(a.situ), porque: lista(a.porque), porqueTxt: iaTxt(a.porqueTxt, 400), motivoReal: iaTxt(a.motivoReal, 80),
       evid: lista(a.evid), obs: iaTxt(a.obs, 600), parecer: String(a.parecer || '').slice(0, 4000), por: iaTxt(a.por, 80), em: Number.isFinite(a.em) ? a.em : 0 };
   });
   return r;
@@ -4469,6 +4470,35 @@ function importarChamadasIA(linhas) {
   return 'telefonia: ' + total + ' ligações lidas — ' + res.id + ' casadas pelo id da chamada' + (res.tel ? ', ' + res.tel + ' pelo telefone do lead (ligações que não vinham na planilha)' : '') + (res.sem ? ', ' + res.sem + ' de outros leads/campanhas (ignoradas)' : '') + (estado.ia.leads.length ? '' : '. Ainda não há leads: ficam guardadas e serão cruzadas quando você importar a planilha “agente IA perdidos por motivo”') + '.';
 }
 /* Transcrições geradas pelo transcrever.py (id da ligação; duracao_s; texto). Ficam só neste navegador. */
+/* Resposta do Copilot (CSV no formato do prompt): vira análise “via Copilot”. Nunca sobrescreve uma análise que você já fez à mão. */
+function importarParecerCopilot(linhas) {
+  var cab = linhas[0].map(colunaKey), ix = function (n) { return cab.indexOf(n); };
+  var C = { lead: ix('lead'), cor: ix('correto'), conf: ix('confirmousermotoristadeapp'), qok: ix('qualificacaodaiacorreta'), qsug: ix('qualificacaosugerida'), comp: ix('comportamentodaia'),
+    mot: ix('motivosugerido'), pq: ix('porque'), ev: ix('evidencia') };
+  var cel = function (r, k) { return C[k] >= 0 && r[C[k]] !== undefined ? String(r[C[k]]).trim() : ''; };
+  var mapa = new Map(); estado.ia.leads.forEach(function (l) { mapa.set(l.codigoNorm, l); });
+  var novas = 0, mantidas = 0, semLead = 0;
+  for (var i = 1; i < linhas.length; i++) {
+    var r = linhas[i], l = mapa.get(normLead(cel(r, 'lead')));
+    if (!normLead(cel(r, 'lead'))) continue;
+    if (!l) { semLead++; continue; }
+    var atual = estado.ia.analises[l.codigoNorm];
+    if (atual && iaStatus(atual) && atual.via !== 'copilot') { mantidas++; continue; }
+    var v = normBusca(cel(r, 'cor')), correto = /^sim/.test(v) ? 'sim' : /^nao/.test(v) ? 'nao' : /dado|duvid|sem/.test(v) ? 'duvida' : '';
+    if (!correto) continue;
+    var a = iaAnalise(l), comp = normBusca(cel(r, 'comp')), q = normBusca(cel(r, 'qok'));
+    a.correto = correto; a.via = 'copilot'; a.por = 'Copilot'; a.em = Date.now();
+    a.comp = /^boa/.test(comp) ? 'boa' : /^media/.test(comp) ? 'media' : /^ruim/.test(comp) ? 'ruim' : a.comp;
+    a.qualOk = /^sim/.test(q) ? 'sim' : /^nao/.test(q) ? 'nao' : a.qualOk; a.qualIA = iaQualPrincipal(l);
+    a.qualCerta = a.qualOk === 'nao' ? iaTxt(cel(r, 'qsug'), 60) : '';
+    a.motivoReal = correto === 'nao' ? iaTxt(cel(r, 'mot'), 80) : '';
+    a.porqueTxt = iaTxt(cel(r, 'pq'), 400); a.porque = []; a.obs = iaTxt(cel(r, 'ev') ? 'Evidência: ' + cel(r, 'ev') : '', 600);
+    a.evid = ['Parecer do Copilot (a partir da transcrição)'];
+    novas++;
+  }
+  salvarIA(); renderTudo();
+  return 'parecer do Copilot: ' + novas + ' ' + plural(novas, 'análise importada', 'análises importadas') + ' (via Copilot)' + (mantidas ? ', ' + mantidas + ' já analisadas por você (mantidas)' : '') + (semLead ? ', ' + semLead + ' leads que não estão na base' : '') + '.';
+}
 function importarTranscricoes(linhas) {
   var cab = linhas[0].map(colunaKey), ci = cab.indexOf('id') >= 0 ? cab.indexOf('id') : cab.indexOf('iddaligacao'), ct = cab.indexOf('texto') >= 0 ? cab.indexOf('texto') : cab.indexOf('transcricao'), lidas = 0;
   for (var i = 1; i < linhas.length; i++) {
@@ -4615,12 +4645,12 @@ function iaFiltrados() {
   }).sort(iaComparar);
 }
 function iaStats() {
-  var t = { total: estado.ia.leads.length, sim: 0, nao: 0, duvida: 0, man: 0, viaT: 0, qualErrada: 0, porque: {}, motivos: {}, comp: { boa: 0, media: 0, ruim: 0 }, auto: { total: 0, sim: 0, nao: 0, duvida: 0, comp: 0, igual: 0 } };
+  var t = { total: estado.ia.leads.length, sim: 0, nao: 0, duvida: 0, man: 0, viaT: 0, viaC: 0, qualErrada: 0, porque: {}, motivos: {}, comp: { boa: 0, media: 0, ruim: 0 }, auto: { total: 0, sim: 0, nao: 0, duvida: 0, comp: 0, igual: 0 } };
   estado.ia.leads.forEach(function (l) {
     var a = estado.ia.analises[l.codigoNorm], st = iaStatus(a), au = iaAutoAnalise(l);
     if (au) { t.auto.total++; t.auto[au.v]++; if (st === 'sim' || st === 'nao') { if (a.via !== 'transcricao' && au.v !== 'duvida') { t.auto.comp++; if (au.v === st) t.auto.igual++; } } }
     if (!st) return;
-    if (a.via === 'transcricao') t.viaT++; else t.man++;
+    if (a.via === 'transcricao') t.viaT++; else if (a.via === 'copilot') t.viaC++; else t.man++;
     if (a.qualOk === 'nao') t.qualErrada++;
     t[st]++;
     if (a.comp) t.comp[a.comp]++;
@@ -4635,7 +4665,7 @@ function iaCSV() {
   estado.ia.leads.forEach(function (l) {
     var a = estado.ia.analises[l.codigoNorm]; if (!iaStatus(a)) return;
     var ult = l.ligacoes.length ? l.ligacoes[l.ligacoes.length - 1].qual : '';
-    linhas.push([a.em ? dataBR(dataISO(new Date(a.em))) : '', a.por, l.codigo, formatTel(l.tel), urlPadraoDryve(l.uuid), l.dataPerdido ? dataBR(l.dataPerdido) : '', l.motivo, l.detalhes, l.origem, a.via === 'transcricao' ? 'Via transcrição' : 'Manual', a.qualIA || iaQualPrincipal(l), { sim: 'Sim', nao: 'Não' }[a.qualOk] || 'Sim', a.qualOk === 'nao' ? a.qualCerta : '',
+    linhas.push([a.em ? dataBR(dataISO(new Date(a.em))) : '', a.por, l.codigo, formatTel(l.tel), urlPadraoDryve(l.uuid), l.dataPerdido ? dataBR(l.dataPerdido) : '', l.motivo, l.detalhes, l.origem, a.via === 'transcricao' ? 'Via transcrição' : a.via === 'copilot' ? 'Via Copilot' : 'Manual', a.qualIA || iaQualPrincipal(l), { sim: 'Sim', nao: 'Não' }[a.qualOk] || 'Sim', a.qualOk === 'nao' ? a.qualCerta : '',
       { sim: 'Sim', nao: 'Não', duvida: 'Sem como avaliar' }[a.correto], { sim: 'Sim', parcial: 'Parcialmente', nao: 'Não', na: 'Não deu tempo (cliente desligou)' }[a.arg] || '', a.situ.join(' | '), iaConformidade(a) === null ? '' : iaConformidade(a), a.porque.concat(a.porqueTxt ? [a.porqueTxt] : []).join(' | '), a.motivoReal, a.evid.join(' | '),
       l.ligacoes.length, l.ligacoes.reduce(function (m, g) { return Math.max(m, g.fala); }, 0), ult, a.comp ? IA_COMP[a.comp].rot : '', iaNotaGeral(l) ? IA_COMP[iaNotaGeral(l)].rot : '', a.parecer.replace(/\s+/g, ' ').trim(), a.obs].map(campoCSV).join(';'));
   });
@@ -4657,7 +4687,7 @@ function iaCSVParaIA() {
   });
   return '\uFEFF' + linhas.join('\r\n') + '\r\n';
 }
-var IA_PROMPT_COPILOT = 'Você é auditor de qualidade comercial de uma empresa de assinatura de veículos. As ligações foram feitas pela IA de voz “Natasha”, que qualifica leads. Para CADA lead da planilha, valide se o MOTIVO REGISTRADO (“Motorista de App”) está correto com base na transcrição, e se a qualificação da IA está certa. Responda EXATAMENTE neste formato, uma linha por lead:\nLEAD: <número> | CORRETO: SIM / NÃO / SEM DADOS | CONFIRMOU SER MOTORISTA DE APP: SIM / NÃO / NÃO FALOU | QUALIFICAÇÃO DA IA CORRETA: SIM / NÃO (qual seria) | COMPORTAMENTO DA IA: BOA / MÉDIA / RUIM | POR QUÊ: <1 a 3 frases> | MOTIVO SUGERIDO: <só se NÃO> | EVIDÊNCIA: <trecho curto>\n\nREGRA: “Motorista de App” é correto quando o CLIENTE confirma que trabalha como motorista de aplicativo (Uber, 99 etc.) e é por isso que não segue com a assinatura. Não é correto quando o cliente nem chegou a falar disso (desligou logo, não atendeu, ligação caiu), demonstrou interesse ou pediu retorno, ou o motivo real é outro. ATENÇÃO: a transcrição não separa quem fala; a Natasha sempre fala primeiro e costuma perguntar “você é motorista de aplicativo?”, então a pergunta não vale como confirmação: só vale a resposta do cliente. Comece por uma tabela-resumo e depois liste os leads com dúvida.';
+var IA_PROMPT_COPILOT = "Você é auditor de qualidade comercial de uma empresa de assinatura de veículos (Dryve). A planilha tem leads marcados como PERDIDOS pelo motivo \"Motorista de App\", depois de ligações feitas pela IA de voz \"Natasha\". Para CADA lead da aba \"Por lead\", leia a transcrição e valide.\n\nCOMO LER A TRANSCRIÇÃO\n- É texto automático de uma conversa por telefone, SEM separar quem fala e com erros (\"Drive\", \"Braz\" = Dryve). Quem fala o quê precisa ser deduzido.\n- A NATASHA (IA) fala primeiro, em frases longas, bem formadas e roteirizadas: \"aqui é a Natasha da Dryve Assinatura de Veículos, com quem eu falo?\", \"Prazer, <nome>, falei certo?\", \"você já conhece assinatura de veículos?\", explica o carro por assinatura (mensalidade fixa com IPVA, licenciamento, manutenção e seguro; cartão de crédito), \"Faz sentido para você?\", e então pergunta: \"Antes de continuarmos, o uso do veículo seria para trabalhar com aplicativos de mobilidade, tipo Uber ou 99, ou para outra finalidade?\". Depois pergunta quilometragem, prazo (24/36/48 meses) e franquia (1.000/2.000/3.000 km), e encerra agradecendo o tempo. Também repete \"ainda está me ouvindo?\" quando o áudio falha.\n- O CLIENTE responde curto e informal (\"sim\", \"não\", \"outra finalidade\", \"uber\", \"é pra trabalho\").\n- A pergunta da Natasha sobre Uber/99 NUNCA conta como confirmação. Só vale a RESPOSTA do cliente.\n\nREGRA DO MOTIVO \"Motorista de App\"\n- CORRETO = SIM: o cliente confirma que usa ou usaria o carro para trabalhar com Uber, 99, InDrive etc. (ou diz que é motorista de aplicativo), e a perda é por isso.\n- CORRETO = NÃO: o cliente respondeu \"outra finalidade\", uso pessoal, família ou negócio próprio; ou nem chegou a responder (desligou, ligação ruim, ruído); ou demonstrou interesse ou pediu retorno; ou o motivo real é outro (preço, produto, já tem carro etc.). Nesse caso sugira o MOTIVO REAL (Sem interesse, Preço, Agendamento / Retorno, Cotando / pesquisando, Sem retorno, Já possui assinatura, Documentação, Outro).\n- CORRETO = SEM DADOS: áudio ininteligível, só a Natasha falando, ou a ligação caiu antes da pergunta.\n\nTAMBÉM AVALIE\n- QUALIFICAÇÃO DA IA: a coluna \"Qualificação da IA (principal)\" é coerente com a conversa? (SIM/NÃO; se NÃO, qual seria).\n- COMPORTAMENTO DA IA: BOA / MÉDIA / RUIM. Considere se apresentou o serviço, seguiu o roteiro de SDR (qualificar o lead), entendeu o cliente, não insistiu nem repetiu demais e tratou as falhas de áudio. Cite problemas (loops de \"ainda está me ouvindo?\", repetir o mesmo trecho, ignorar objeção).\n\nFORMATO DA RESPOSTA\nDevolva UM ÚNICO bloco CSV (separador ponto e vírgula, primeira linha com estes cabeçalhos exatos, sem texto antes nem depois, uma linha por lead):\nLead;Correto;Confirmou ser motorista de app;Qualificação da IA correta;Qualificação sugerida;Comportamento da IA;Motivo sugerido;Por quê;Evidência\n- Correto: SIM / NÃO / SEM DADOS. Confirmou ser motorista de app: SIM / NÃO / NÃO FALOU. Qualificação da IA correta: SIM / NÃO. Comportamento da IA: BOA / MÉDIA / RUIM.\n- Por quê: 1 a 2 frases. Evidência: trecho curto, entre aspas, copiado da fala do CLIENTE.\nDepois do bloco, em outra mensagem, resuma em 5 linhas: quantos corretos, incorretos e sem dados, e os padrões que mais se repetem.";
 function iaCSVAuto() {
   var cab = ['Lead', 'Telefone', 'Link Dryve', 'Data perdido', 'Motivo registrado', 'Veredito automático (transcrição)', 'Por quê sugerido', 'Motivo sugerido', 'Pistas', 'Transcrições', 'Maior fala IA (s)', 'Sua análise manual', 'Origem da sua análise', 'Coincide com a manual?', 'Trecho da transcrição'];
   var linhas = [cab.join(';')], rot = { sim: 'Provavelmente correto', nao: 'Provavelmente incorreto', duvida: 'A conferir' };
@@ -4677,7 +4707,7 @@ function iaResumoTexto() {
   return ['Validação de perdido (' + dataBR(dataISO(new Date())) + '):', 'Leads na base: ' + t.total + ' · analisados: ' + t.ana + ' · pendentes: ' + t.pend,
     'Motivo “Motorista de App” correto: ' + t.sim + ' (' + pct(t.sim) + ')', 'Incorreto: ' + t.nao + ' (' + pct(t.nao) + ')', 'Sem como avaliar: ' + t.duvida + ' (' + pct(t.duvida) + ')',
     'Comportamento da IA nas análises: boa ' + t.comp.boa + ' · média ' + t.comp.media + ' · ruim ' + t.comp.ruim, 'Principais razões do erro: ' + top(t.porque), 'Motivos sugeridos: ' + top(t.motivos),
-    '', 'Qualificação da IA marcada como errada: ' + t.qualErrada + ' de ' + t.ana + ' análises', 'Análises manuais: ' + t.man + ' · aceitas via transcrição: ' + t.viaT,
+    '', 'Qualificação da IA marcada como errada: ' + t.qualErrada + ' de ' + t.ana + ' análises', 'Análises manuais: ' + t.man + ' · aceitas via transcrição: ' + t.viaT + ' · importadas do Copilot: ' + t.viaC,
     t.auto.total ? 'Análise automática por transcrição (' + t.auto.total + ' leads): ' + t.auto.sim + ' provavelmente corretos · ' + t.auto.nao + ' incorretos · ' + t.auto.duvida + ' a conferir' + (t.auto.comp ? ' · coincide com a sua análise manual em ' + t.auto.igual + ' de ' + t.auto.comp + ' (' + fmtPct(t.auto.igual / t.auto.comp * 100) + ')' : '') : 'Análise por transcrição: nenhuma transcrição importada.'].join('\n');
 }
 function iaFilaAudios(min) {
@@ -4773,7 +4803,7 @@ function iaRenderResumo() {
   var t = iaStats(), pct = function (n) { return t.ana ? fmtPct(n / t.ana * 100) : '—'; };
   $('#ia-sub').textContent = estado.ia.importadoEm ? 'Base de ' + dataHoraBR(estado.ia.importadoEm) + (estado.ia.arquivo ? ' · ' + estado.ia.arquivo : '') : 'Nenhum arquivo importado';
   $('#ia-resumo').replaceChildren.apply($('#ia-resumo'), [
-    statEquipe('Leads na base', String(t.total)), statEquipe('Analisados (manual)', t.man + ' / ' + t.total, t.pend + ' pendentes' + (t.viaT ? ' · +' + t.viaT + ' via transcrição' : '')),
+    statEquipe('Leads na base', String(t.total)), statEquipe('Analisados (manual)', t.man + ' / ' + t.total, t.pend + ' pendentes' + (t.viaT ? ' · +' + t.viaT + ' via transcrição' : '') + (t.viaC ? ' · +' + t.viaC + ' via Copilot' : '')),
     statEquipe('Motivo correto', t.sim + ' (' + pct(t.sim) + ')'), statEquipe('Motivo incorreto', t.nao + ' (' + pct(t.nao) + ')', null, t.nao > 0), statEquipe('Sem como avaliar', t.duvida + ' (' + pct(t.duvida) + ')'),
     t.auto.total ? statEquipe('Por transcrição (auto)', t.auto.total + ' leads', t.auto.sim + ' corretos · ' + t.auto.nao + ' incorretos · ' + t.auto.duvida + ' a conferir') : null].filter(Boolean));
 }
@@ -5176,6 +5206,7 @@ async function processarArquivos(arquivos) {
     if (tipo === 'kanban') { linha('↻ ' + f.name + ' — kanban de leads'); await importarKanbanLinhas(linhas, f.name); }
     else if (tipo === 'auditorias') { linha('↻ ' + f.name + ' — auditorias do mês'); await importarBase('', linhas); }
     else if (tipo === 'iaperdidos') { linha('↻ ' + f.name + ' — ' + importarIAPerdidos(linhas, f.name)); }
+    else if (tipo === 'parecercopilot') { linha('↻ ' + f.name + ' — ' + importarParecerCopilot(linhas)); }
     else if (tipo === 'transcricoes') { linha('↻ ' + f.name + ' — ' + importarTranscricoes(linhas)); }
     else if (tipo === 'chamadasia') { linha('↻ ' + f.name + ' — ' + importarChamadasIA(linhas)); }
     else if (tipo === 'chamadas') { linha('↻ ' + f.name + ' — ' + await importarChamadas(linhas)); }
