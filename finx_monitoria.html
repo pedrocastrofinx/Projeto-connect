@@ -4163,7 +4163,7 @@ async function importarArquivoBase(arquivo) {
 function tipoDasLinhas(linhas) {
   var cab = (linhas[0] || []).map(colunaKey), tem = function (lista) { return lista.some(function (n) { return cab.indexOf(n) !== -1; }); };
   if (tem(['pedidosreferencecode', 'perdidosreferencecode']) && tem(['iaqualification'])) return 'iaperdidos';
-  if (tem(['origemdaanalise']) && tem(['motivocorreto']) && tem(['lead'])) return 'analisespainel';
+  if (tem(['lead']) && (tem(['vereditofinalvalidado']) || (tem(['origemdaanalise']) && tem(['motivocorreto'])))) return 'analisespainel';
   if (tem(['lead']) && tem(['correto']) && tem(['confirmousermotoristadeapp', 'qualificacaodaiacorreta', 'comportamentodaia'])) return 'parecercopilot';
   if ((tem(['id']) && tem(['texto']) && tem(['duracaos'])) || (tem(['iddaligacao']) && tem(['transcricao']))) return 'transcricoes';
   if (tem(['qualificationname']) && tem(['recording']) && tem(['campaignname'])) return 'chamadasia';
@@ -4523,8 +4523,8 @@ function importarParecerCopilot(linhas) {
 function importarAnalisesPainel(linhas) {
   var cab = linhas[0].map(colunaKey), ix = function () { for (var i = 0; i < arguments.length; i++) { var k = cab.indexOf(arguments[i]); if (k >= 0) return k; } return -1; };
   var pref = function (p) { return cab.findIndex(function (c) { return c.indexOf(p) === 0; }); };
-  var C = { lead: ix('lead'), orig: ix('origemdaanalise'), qia: ix('qualificacaodaia'), qok: ix('qualificacaodaiacorreta'), qcerta: ix('qualificacaocorretaseerrada'), cor: ix('motivocorreto'), arg: pref('iaapresentou'), sit: ix('situacaodaligacao'),
-    pq: ix('porque'), mot: ix('motivosugerido'), evid: ix('evidencias'), comp: ix('comportamentodaiaanalista'), obs: ix('observacao'), por: ix('analista'),
+  var C = { lead: ix('lead'), orig: ix('origemdaanalise'), qia: ix('qualificacaodaia', 'qualificacaodaiaprincipal'), qok: ix('qualificacaodaiacorreta', 'manualqualificacaodaiacorreta'), qcerta: ix('qualificacaocorretaseerrada', 'manualqualificacaocorretaseerrada'), cor: ix('motivocorreto', 'manualmotivocorreto'), arg: pref('iaapresentou'), sit: ix('situacaodaligacao', 'manualsituacaodaligacao'),
+    pq: ix('porque', 'manualporque'), mot: ix('motivosugerido', 'manualmotivosugerido'), evid: ix('evidencias'), comp: ix('comportamentodaiaanalista', 'manualcomportamentodaia'), obs: ix('observacao', 'manualobservacao'), por: ix('analista'),
     cCor: ix('copilotcorreto'), cConf: ix('copilotconfirmousermotoristadeapp'), cQok: ix('copilotqualificacaodaiacorreta'), cQs: ix('copilotqualificacaosugerida'), cComp: ix('copilotcomportamentodaia'), cMot: ix('copilotmotivosugerido'), cEv: ix('copilotevidencialiteraldocliente'), cPerc: ix('copilotpercepcaodaauditoria'),
     vV: ix('vereditofinalvalidado'), vC: ix('confianca'), vT: ix('comentariodavalidacao') };
   var cel = function (r, k) { return C[k] >= 0 && r[C[k]] !== undefined && r[C[k]] !== null ? String(r[C[k]]).trim() : ''; };
@@ -4541,8 +4541,10 @@ function importarAnalisesPainel(linhas) {
     }
     if (cel(r, 'vV')) { a.val = iaSanVal({ v: iaVeredito(cel(r, 'vV')), conf: cel(r, 'vC'), txt: cel(r, 'vT') }); comVal++; }
     if (tinha) { mantidas++; continue; }
-    var correto = iaVeredito(cel(r, 'cor')); if (!correto) continue;
-    var orig = normBusca(cel(r, 'orig')), via = /copilot/.test(orig) ? 'copilot' : /transcr/.test(orig) ? 'transcricao' : '';
+    var correto = iaVeredito(cel(r, 'cor')), soCop = false;
+    if (!correto && a.cop && a.cop.correto) { correto = a.cop.correto; soCop = true; }
+    if (!correto) continue;
+    var orig = normBusca(cel(r, 'orig')), via = soCop || /copilot/.test(orig) ? 'copilot' : /transcr/.test(orig) ? 'transcricao' : '';
     var q = lista(cel(r, 'pq')), conhecidos = q.filter(function (x) { return IA_PORQUES.indexOf(x) >= 0; }), livres = q.filter(function (x) { return IA_PORQUES.indexOf(x) < 0; });
     var ag = normBusca(cel(r, 'arg'));
     a.correto = correto; a.via = via; a.por = cel(r, 'por') || (via === 'copilot' ? 'Copilot' : ''); a.em = Date.now();
@@ -4550,6 +4552,7 @@ function importarAnalisesPainel(linhas) {
     a.qualOk = iaVeredito(cel(r, 'qok')) === 'sim' ? 'sim' : iaVeredito(cel(r, 'qok')) === 'nao' ? 'nao' : ''; a.qualCerta = iaTxt(cel(r, 'qcerta'), 60); a.qualIA = iaTxt(cel(r, 'qia'), 60);
     a.situ = lista(cel(r, 'sit')).slice(0, 12); a.porque = conhecidos; a.porqueTxt = iaTxt(livres.join(' | '), 400); a.motivoReal = iaTxt(cel(r, 'mot'), 80);
     a.evid = lista(cel(r, 'evid')).slice(0, 12); a.comp = iaCompTxt(cel(r, 'comp')); a.obs = iaTxt(cel(r, 'obs'), 600);
+    if (soCop) { var c0 = a.cop; a.comp = c0.comp || a.comp; a.qualOk = c0.qualOk || a.qualOk; a.qualCerta = a.qualOk === 'nao' ? c0.qualSug : ''; a.motivoReal = correto === 'nao' ? c0.motivo : ''; a.porqueTxt = c0.perc || c0.porque; a.obs = iaTxt(c0.evid ? 'Evidência: ' + c0.evid : '', 600); a.evid = ['Parecer do Copilot (a partir da transcrição)']; a.por = 'Copilot'; }
     novas++;
   }
   salvarIA(); renderTudo();
@@ -4865,7 +4868,7 @@ function iaRenderResumo() {
   var t = iaStats(), pct = function (n) { return t.ana ? fmtPct(n / t.ana * 100) : '—'; };
   $('#ia-sub').textContent = estado.ia.importadoEm ? 'Base de ' + dataHoraBR(estado.ia.importadoEm) + (estado.ia.arquivo ? ' · ' + estado.ia.arquivo : '') : 'Nenhum arquivo importado';
   $('#ia-resumo').replaceChildren.apply($('#ia-resumo'), [
-    statEquipe('Leads na base', String(t.total)), statEquipe('Analisados (manual)', t.man + ' / ' + t.total, t.pend + ' pendentes' + (t.viaT ? ' · +' + t.viaT + ' via transcrição' : '') + (t.viaC ? ' · +' + t.viaC + ' via Copilot' : '')),
+    statEquipe('Leads na base', String(t.total)), statEquipe('Analisados (total)', t.ana + ' / ' + t.total, t.man + ' manuais' + (t.viaC ? ' · ' + t.viaC + ' Copilot' : '') + (t.viaT ? ' · ' + t.viaT + ' via transcrição' : '') + ' · faltam ' + t.pend),
     statEquipe('Motivo correto', t.sim + ' (' + pct(t.sim) + ')'), statEquipe('Motivo incorreto', t.nao + ' (' + pct(t.nao) + ')', null, t.nao > 0), statEquipe('Sem como avaliar', t.duvida + ' (' + pct(t.duvida) + ')'),
     t.auto.total ? statEquipe('Por transcrição (auto)', t.auto.total + ' leads', t.auto.sim + ' corretos · ' + t.auto.nao + ' incorretos · ' + t.auto.duvida + ' a conferir') : null].filter(Boolean));
 }
@@ -5280,7 +5283,10 @@ async function processarArquivos(arquivos) {
     if (tipo === 'kanban') { linha('↻ ' + f.name + ' — kanban de leads'); await importarKanbanLinhas(linhas, f.name); }
     else if (tipo === 'auditorias') { linha('↻ ' + f.name + ' — auditorias do mês'); await importarBase('', linhas); }
     else if (tipo === 'iaperdidos') { linha('↻ ' + f.name + ' — ' + importarIAPerdidos(linhas, f.name)); }
-    else if (tipo === 'analisespainel') { linha('↻ ' + f.name + ' — ' + importarAnalisesPainel(linhas)); }
+    else if (tipo === 'analisespainel') {
+      linha('↻ ' + f.name + ' — ' + importarAnalisesPainel(linhas));
+      if (/\.xlsx$/i.test(f.name)) { try { var lt = await lerXlsx(f, 'Por ligação'); if (lt && lt.length > 1 && tipoDasLinhas(lt) === 'transcricoes') linha('↻ ' + f.name + ' (aba Por ligação) — ' + importarTranscricoes(lt)); } catch (e3) { /* planilha sem a aba de transcrições */ } }
+    }
     else if (tipo === 'parecercopilot') { linha('↻ ' + f.name + ' — ' + importarParecerCopilot(linhas)); }
     else if (tipo === 'transcricoes') { linha('↻ ' + f.name + ' — ' + importarTranscricoes(linhas)); }
     else if (tipo === 'chamadasia') { linha('↻ ' + f.name + ' — ' + importarChamadasIA(linhas)); }
