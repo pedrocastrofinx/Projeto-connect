@@ -288,6 +288,14 @@ input[type=checkbox],input[type=radio]{width:18px;height:18px;accent-color:var(-
 .op-card.st-vermelho{border-top-color:var(--vermelho)}
 .op-card.st-cinza{border-top-color:#9AA7BF;opacity:.82}
 .op-topo{display:flex;gap:11px;align-items:center}
+.op-topo .op-nome{flex:1;min-width:0}
+.btn-estrela{border:0;background:transparent;font-size:1.6rem;line-height:1;color:var(--muted);cursor:pointer;padding:2px 6px;border-radius:8px}
+.btn-estrela:hover{background:var(--amarelo-cl)}
+.btn-estrela.on{color:#F2A900}
+.op-card.em-foco{box-shadow:0 0 0 2px #F2A900,var(--sombra)}
+.foco-card{border:2px solid #F2A900;display:grid;gap:12px}
+.foco-lin{display:grid;gap:4px;background:var(--sup2);border:1.5px solid var(--linha);border-radius:12px;padding:10px 14px}
+.foco-lin.ok{border-color:var(--verde)}
 .avatar{flex:none;width:42px;height:42px;border-radius:50%;background:var(--azul-cl);color:var(--azul);display:grid;place-items:center;font-weight:800}
 .op-nome{min-width:0;display:flex;flex-direction:column;gap:3px}
 .op-nome strong{overflow-wrap:anywhere;line-height:1.2}
@@ -510,6 +518,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
     <section class="aba" id="aba-equipe" data-aba="equipe" aria-label="Cobertura da equipe" hidden>
       <div class="secao-titulo"><h2>Cobertura da equipe</h2><span id="eq-mes"></span></div>
       <div class="grid-resumo" id="eq-resumo"></div>
+      <div id="eq-foco" style="margin-top:16px"></div>
       <div id="eq-nivel" style="margin-top:16px"></div>
       <div id="eq-cad" style="margin-top:16px"></div>
       <div class="card filtros-card">
@@ -524,7 +533,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
               <option value="hoje">Auditados hoje</option>
               <option value="nao-hoje">Não auditados hoje</option>
               <option value="ativos">Ativos</option>
-              <option value="inativos">Inativos</option>
+              <option value="foco">⭐ Em foco</option><option value="inativos">Inativos</option>
             </select>
           </div>
           <div class="campo"><label for="eq-ordem">Ordenar por</label>
@@ -1060,7 +1069,8 @@ function sanitizarOperador(x) {
     id: typeof x.id === 'string' && x.id ? x.id.slice(0, 64) : novoId('op'),
     nome: nome, ativo: x.ativo !== false,
     metaMensal: inteiroEntre(x.metaMensal, 0, 999),
-    entrada: dataValida(x.entrada) ? x.entrada : null
+    entrada: dataValida(x.entrada) ? x.entrada : null,
+    foco: x.foco === true
   };
 }
 function sanitizarListas(auds, ops) {
@@ -1951,7 +1961,7 @@ function calcEquipe(refData) {
   var mes = refData.slice(0, 7), si = inicioSemana(refData), sf = somarDias(si, 6), hojeStr = refData;
   var mapa = new Map(), lista = [], totalMes = 0;
   estado.operadores.forEach(function (op) {
-    var s = { op: op, hoje: 0, semana: 0, mes: 0, tipos: { rotina: 0, documentacao: 0, perdido: 0 }, ultima: null, diasSem: null, part: 0, daBase: 0, meta: metaDe(op) };
+    var s = { op: op, hoje: 0, semana: 0, mes: 0, tipos: { rotina: 0, documentacao: 0, perdido: 0 }, hojeTipos: { rotina: 0, documentacao: 0, perdido: 0 }, ultima: null, diasSem: null, part: 0, daBase: 0, meta: metaDe(op) };
     mapa.set(op.id, s); lista.push(s);
   });
   estado.auditorias.forEach(function (a) {
@@ -1960,7 +1970,7 @@ function calcEquipe(refData) {
     var s = a.operadorId ? mapa.get(a.operadorId) : null;
     if (!s) return;
     if (!s.ultima || (a.data + ' ' + a.hora) > (s.ultima.data + ' ' + s.ultima.hora)) s.ultima = a;
-    if (a.data === hojeStr) s.hoje++;
+    if (a.data === hojeStr) { s.hoje++; s.hojeTipos[a.tipo]++; }
     if (a.data >= si && a.data <= sf) s.semana++;
     if (noMes) { s.mes++; s.tipos[a.tipo]++; }
   });
@@ -1975,7 +1985,7 @@ function calcEquipe(refData) {
     var noMes = b.data.slice(0, 7) === mes;
     if (noMes) totalMes++;
     if (!s.ultima || b.data + ' ' > s.ultima.data + ' ' + s.ultima.hora) s.ultima = { data: b.data, hora: '' };
-    if (b.data === hojeStr) s.hoje++;
+    if (b.data === hojeStr) { s.hoje++; s.hojeTipos[tipoDaPlanilha(b.formulario)]++; }
     if (b.data >= si && b.data <= sf) s.semana++;
     if (noMes) { s.mes++; s.daBase++; s.tipos[tipoDaPlanilha(b.formulario)]++; }
   });
@@ -2470,7 +2480,9 @@ function botaoUsar(rotulo, fn) { return el('button', { type: 'button', class: 'b
 function construirPrioridade(ctx) {
   var m = ctx.m, cat = categoriaPrioritaria(m);
   var ativos = ctx.eq.ativos.slice().sort(cmpPrioridadeOperador);
-  var sug = ativos[0], corpo = [];
+  var focoPend = focoDoDia(ctx.eq).filter(function (s) { return s.hojeTipos.rotina < alvoFoco(focoDoDia(ctx.eq).length); }).sort(function (a, b) { return (b.hojeTipos.rotina < a.hojeTipos.rotina ? 1 : b.hojeTipos.rotina > a.hojeTipos.rotina ? -1 : 0) || cmpPrioridadeOperador(a, b); });
+  var sug = focoPend[0] || ativos[0], corpo = [];
+  if (focoPend[0]) ativos = [focoPend[0]].concat(ativos.filter(function (s) { return s !== focoPend[0]; }));
   if (cat) {
     var x = m.tipos[cat];
     corpo.push(el('div', { class: 'prio-cat' }, TIPOS[cat].titulo));
@@ -2482,7 +2494,7 @@ function construirPrioridade(ctx) {
   }
   var opBloco;
   if (sug) {
-    var motivo = sug.mes === 0 ? 'ainda sem auditoria neste mês' : sug.mes + ' ' + plural(sug.mes, 'auditoria', 'auditorias') + ' no mês, última há ' + sug.diasSem + ' ' + plural(sug.diasSem, 'dia', 'dias');
+    var motivo = focoPend[0] ? '⭐ em foco: Rotina hoje ' + sug.hojeTipos.rotina + '/' + alvoFoco(focoDoDia(ctx.eq).length) + (sug.mes === 0 ? ', ainda sem auditoria no mês' : ', ' + sug.mes + ' no mês') : sug.mes === 0 ? 'ainda sem auditoria neste mês' : sug.mes + ' ' + plural(sug.mes, 'auditoria', 'auditorias') + ' no mês, última há ' + sug.diasSem + ' ' + plural(sug.diasSem, 'dia', 'dias');
     var outros = ativos.slice(1, 3).map(function (s) { return s.op.nome + ' (' + s.mes + ')'; });
     opBloco = el('div', { class: 'prio-op' },
       el('div', { class: 'rotulo' }, 'OPERADOR SUGERIDO'),
@@ -3026,6 +3038,7 @@ function filtrarEquipe(eq) {
   else if (f.filtro === 'nao-hoje') l = l.filter(function (s) { return s.op.ativo && s.hoje === 0; });
   else if (f.filtro === 'ativos') l = l.filter(function (s) { return s.op.ativo; });
   else if (f.filtro === 'inativos') l = l.filter(function (s) { return !s.op.ativo; });
+  else if (f.filtro === 'foco') l = l.filter(function (s) { return s.op.foco; });
   var dir = f.dir === 'asc' ? 1 : -1;
   var chave = {
     nome: function (s) { return s.op.nome; },
@@ -3049,13 +3062,14 @@ function cardOperador(s, eq) {
   var op = s.op, st = statusOperador(s);
   var concentra = op.ativo && eq.totalMes >= 8 && eq.ativos.length > 1 && s.part >= 2 * (100 / eq.ativos.length);
   var ultimaTxt = s.ultima ? dataBR(s.ultima.data) + (s.ultima.hora ? ' ' + s.ultima.hora.slice(0, 5) : '') + ' (' + (s.diasSem === 0 ? 'hoje' : 'há ' + s.diasSem + ' ' + plural(s.diasSem, 'dia', 'dias')) + ')' : 'Nunca auditado';
-  return el('article', { class: 'op-card st-' + st.classe, dataset: { id: op.id } },
+  return el('article', { class: 'op-card st-' + st.classe + (op.foco ? ' em-foco' : ''), dataset: { id: op.id } },
     el('div', { class: 'op-topo' },
       el('span', { class: 'avatar', 'aria-hidden': 'true' }, iniciais(op.nome)),
       el('div', { class: 'op-nome' }, el('strong', null, op.nome),
         el('span', null, tag(st.rotulo, st.classe === 'cinza' ? 'cinza' : st.classe), ' ',
           concentra ? tag('CONCENTRA AUDITORIAS', 'amarelo', 'Participação muito acima da média da equipe') : null, ' ',
-          op.ativo && ehNovato(op, eq.refData) ? tag('NOVATO', 'amarelo', 'Entrou há ' + diasDeCasa(op.entrada, eq.refData) + ' dias') : null))),
+          op.ativo && ehNovato(op, eq.refData) ? tag('NOVATO', 'amarelo', 'Entrou há ' + diasDeCasa(op.entrada, eq.refData) + ' dias') : null)),
+      op.ativo ? el('button', { type: 'button', class: 'btn-estrela' + (op.foco ? ' on' : ''), dataset: { acao: 'foco', id: op.id }, 'aria-pressed': op.foco ? 'true' : 'false', title: op.foco ? 'Tirar do foco do dia' : 'Colocar em foco no dia', 'aria-label': (op.foco ? 'Tirar do foco: ' : 'Focar: ') + op.nome }, op.foco ? '★' : '☆') : null),
     el('div', { class: 'op-nums' },
       el('div', null, el('b', null, String(s.hoje)), el('span', null, 'Hoje')),
       el('div', null, el('b', null, String(s.semana)), el('span', null, 'Semana')),
@@ -3072,6 +3086,46 @@ function cardOperador(s, eq) {
       el('button', { type: 'button', class: 'btn btn-linha btn-peq', dataset: { acao: 'editar', id: op.id }, 'aria-label': 'Editar ' + op.nome }, '✎ Editar'),
       el('button', { type: 'button', class: 'btn btn-linha btn-peq', dataset: { acao: 'alternar', id: op.id } }, op.ativo ? 'Desativar' : 'Reativar'),
       el('button', { type: 'button', class: 'btn btn-perigo-linha btn-peq', dataset: { acao: 'excluir', id: op.id }, 'aria-label': 'Excluir ' + op.nome }, '🗑 Excluir')));
+}
+/* ⭐ Foco do dia: closers escolhidos para dividir a meta diária de Rotina (ex.: 30 ÷ 3 closers = 10 cada) */
+function focoDoDia(eq) { return eq.ativos.filter(function (s) { return s.op.foco; }); }
+function alvoFoco(n) { return n > 0 ? Math.ceil(estado.config.metas.rotina / n) : 0; }
+function alternarFoco(id) {
+  var op = estado.operadores.find(function (o) { return o.id === id; }); if (!op) return;
+  op.foco = !op.foco; salvarOperadores(); renderTudo();
+  toast(op.nome + (op.foco ? ' entrou no foco do dia.' : ' saiu do foco do dia.'));
+}
+function sugerirFoco() {
+  var eq = calcEquipe(dataISO(new Date())), fila = eq.ativos.slice().sort(cmpPrioridadeOperador).slice(0, 3);
+  estado.operadores.forEach(function (o) { o.foco = false; });
+  fila.forEach(function (s) { s.op.foco = true; });
+  salvarOperadores(); renderTudo();
+  toast('Foco: ' + fila.map(function (s) { return s.op.nome.split(' ')[0]; }).join(', ') + ' (quem tem menos auditorias, novatos primeiro).');
+}
+function limparFoco() { estado.operadores.forEach(function (o) { o.foco = false; }); salvarOperadores(); renderTudo(); toast('Foco limpo.'); }
+function construirFoco(eq) {
+  var foco = focoDoDia(eq), M = estado.config.metas.rotina, n = foco.length, alvo = alvoFoco(n);
+  var cab = el('div', { class: 'card-cab', style: 'margin:0' }, el('h3', null, '⭐ Foco do dia · Rotina'),
+    el('div', { class: 'acoes' },
+      el('button', { type: 'button', class: 'btn btn-sec btn-peq', onclick: sugerirFoco }, '⭐ Sugerir 3 do plano'),
+      n ? el('button', { type: 'button', class: 'btn btn-linha btn-peq', onclick: limparFoco }, 'Limpar foco') : null));
+  if (!n) return el('article', { class: 'card foco-card' }, cab,
+    el('p', { class: 'dica', style: 'margin:0' }, 'Clique na ☆ do closer para colocá-lo em foco. A meta de Rotina do dia (' + M + ') é dividida entre os closers em foco: com 3, cada um faz ' + alvoFoco(3) + '. A sugestão escolhe quem tem menos auditorias, novatos primeiro.'));
+  var feitas = 0;
+  var lin = foco.slice().sort(cmpPrioridadeOperador).map(function (s) {
+    var f = s.hojeTipos.rotina; feitas += Math.min(f, alvo);
+    var falta = Math.max(0, alvo - f);
+    return el('div', { class: 'foco-lin' + (falta === 0 ? ' ok' : '') },
+      el('div', { style: 'display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline' },
+        el('b', null, s.op.nome, ' ', s.mes === 0 ? tag('SEM AUDITORIA NO MÊS', 'vermelho') : null, ' ', ehNovato(s.op, eq.refData) ? tag('NOVATO', 'amarelo') : null),
+        el('span', null, falta === 0 ? '✓ meta de Rotina do dia feita (' + f + '/' + alvo + ')' : 'Rotina hoje ' + f + '/' + alvo + ' · faltam ' + falta)),
+      barra(alvo ? f / alvo * 100 : 100, 'fina'),
+      el('button', { type: 'button', class: 'btn btn-primario btn-peq', style: 'justify-self:start', onclick: function () { mostrarAba('registrar'); definirOperadorForm(s.op.id); } }, '✚ Registrar para ' + s.op.nome.split(' ')[0]));
+  });
+  var aviso = n < 3 ? el('p', { class: 'dica', style: 'margin:0;color:var(--amarelo-esc)' }, 'Com ' + n + ' em foco, cada um precisa de ' + alvo + ' de Rotina. Com 3 closers seriam ' + alvoFoco(3) + ' cada.') : null;
+  return el('article', { class: 'card foco-card' }, cab,
+    el('p', { style: 'margin:0' }, 'Meta de Rotina do dia: ', el('b', null, String(M)), ' ÷ ', el('b', null, n + ' ' + plural(n, 'closer', 'closers')), ' = ', el('b', null, alvo + ' cada'), ' · feitas no foco: ', el('b', null, feitas + '/' + M)),
+    aviso, lin);
 }
 function construirNivelamento(agora, eq) {
   var n = calcNivelamento(agora, eq), r = eq.resumo, hojeStr = dataISO(agora), meta = estado.config.metaMensalPadrao;
@@ -3161,6 +3215,7 @@ function construirCadencia(agora) {
 }
 function renderEquipe() {
   var agora = new Date(), eq = calcEquipe(dataISO(agora)), r = eq.resumo;
+  $('#eq-foco').replaceChildren(construirFoco(eq));
   $('#eq-nivel').replaceChildren(construirNivelamento(agora, eq));
   $('#eq-cad').replaceChildren(construirCadencia(agora));
   $('#eq-mes').textContent = maiusc(MESES[agora.getMonth()]) + ' de ' + agora.getFullYear();
@@ -4931,6 +4986,7 @@ function ligarEventos() {
     var id = b.dataset.id, ac = b.dataset.acao;
     if (ac === 'registrar') { mostrarAba('registrar'); definirOperadorForm(id); }
     else if (ac === 'editar') editarOperador(id);
+    else if (ac === 'foco') alternarFoco(id);
     else if (ac === 'alternar') alternarOperador(id);
     else if (ac === 'excluir') excluirOperador(id);
   });
