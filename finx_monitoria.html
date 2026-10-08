@@ -4272,7 +4272,7 @@ function iaNotaGeral(l) {
   return n.indexOf('boa') >= 0 ? 'boa' : n.indexOf('media') >= 0 ? 'media' : 'ruim';
 }
 function semaforo(nota) { return nota ? el('span', { class: 'sema sema-' + nota, title: 'Comportamento da IA: ' + IA_COMP[nota].rot, 'aria-label': 'Comportamento da IA: ' + IA_COMP[nota].rot }) : null; }
-function iaVazio() { return { leads: [], analises: {}, analista: '', regra: IA_REGRA_PADRAO, importadoEm: 0, arquivo: '', autoCopiar: true, tele: {}, transc: {}, audioBase: 'https://app.3c.plus', baixados: {} }; }
+function iaVazio() { return { leads: [], analises: {}, analista: '', regra: IA_REGRA_PADRAO, importadoEm: 0, arquivo: '', autoCopiar: true, tele: {}, transc: {}, audioBase: 'https://app.3c.plus', baixados: {}, semAudio: {} }; }
 function formatTel(t) {
   t = String(t || '').replace(/\D/g, '');
   return t.length === 11 ? '(' + t.slice(0, 2) + ') ' + t.slice(2, 7) + '-' + t.slice(7) : t.length === 10 ? '(' + t.slice(0, 2) + ') ' + t.slice(2, 6) + '-' + t.slice(6) : t;
@@ -4294,6 +4294,7 @@ function sanitizarIA(o) {
   r.analista = iaTxt(o.analista, 80); r.regra = iaTxt(o.regra, 1500) || IA_REGRA_PADRAO;
   r.autoCopiar = typeof o.autoCopiar === 'boolean' ? o.autoCopiar : true;
   if (/^https?:\/\/[^\s/]+(:\d+)?$/i.test(String(o.audioBase || '').replace(/\/+$/, ''))) r.audioBase = String(o.audioBase).replace(/\/+$/, '');
+  if (o.semAudio && typeof o.semAudio === 'object' && !Array.isArray(o.semAudio)) Object.keys(o.semAudio).slice(0, 5000).forEach(function (k) { if (o.semAudio[k]) r.semAudio[iaTxt(k, 40)] = 1; });
   if (o.baixados && typeof o.baixados === 'object' && !Array.isArray(o.baixados)) Object.keys(o.baixados).slice(0, 5000).forEach(function (k) { if (o.baixados[k]) r.baixados[iaTxt(k, 40)] = 1; });
   if (o.transc && typeof o.transc === 'object' && !Array.isArray(o.transc)) {
     Object.keys(o.transc).slice(0, 3000).forEach(function (k) { var t = String(o.transc[k] || '').slice(0, 4000); if (t) r.transc[iaTxt(k, 40)] = t; });
@@ -4383,6 +4384,17 @@ function iaAbrirDownload(g) {
 }
 var iaAbaRef = null, iaAbaTimer = 0;
 function iaFecharAba() { try { if (iaAbaRef && !iaAbaRef.closed) iaAbaRef.close(); } catch (e) { /* o navegador pode não deixar fechar */ } iaAbaRef = null; }
+/* Confere se o 3C TEM a gravação antes de abrir/baixar (um <audio> carrega os metadados; 404/erro = não existe). null = não deu para saber. */
+function iaAudioExiste(g) {
+  return new Promise(function (resolve) {
+    var a = new Audio(), fim = false;
+    function f(v) { if (fim) return; fim = true; try { a.removeAttribute('src'); a.load(); } catch (e) { /* ok */ } resolve(v); }
+    a.preload = 'metadata';
+    a.addEventListener('loadedmetadata', function () { f(true); }); a.addEventListener('canplay', function () { f(true); }); a.addEventListener('error', function () { f(false); });
+    setTimeout(function () { f(null); }, 8000);
+    a.src = urlGravacao(g.id);
+  });
+}
 function iaBaixarPorNavegador(g) {
   return new Promise(function (resolve, reject) {
     var f = document.createElement('iframe'), pronto = false;
@@ -4777,13 +4789,13 @@ function iaResumoTexto() {
 }
 function iaFilaAudios(min) {
   var itens = [];
-  estado.ia.leads.forEach(function (l) { l.ligacoes.forEach(function (g) { if (g.id && g.fala >= min && !estado.ia.baixados[g.id] && !estado.ia.transc[g.id] && !iaAudioLocal(g)) itens.push(g); }); });
+  estado.ia.leads.forEach(function (l) { l.ligacoes.forEach(function (g) { if (g.id && g.fala >= min && !estado.ia.baixados[g.id] && !estado.ia.semAudio[g.id] && !estado.ia.transc[g.id] && !iaAudioLocal(g)) itens.push(g); }); });
   return itens.sort(function (x, y) { return (x.data || '') !== (y.data || '') ? ((y.data || '') < (x.data || '') ? -1 : 1) : y.fala - x.fala; });
 }
 function iaAudioInfo() {
   var info = $('#au-info'); if (!info) return;
   var min = Math.max(0, +$('#au-min').value || 0), fila = iaFilaAudios(min), ja = Object.keys(estado.ia.baixados).length;
-  info.textContent = fila.length + ' ' + plural(fila.length, 'ligação', 'ligações') + ' com fala ≥ ' + min + ' s ainda sem áudio baixado (hoje primeiro, mais longas primeiro)' + (ja ? ' · ' + ja + ' já baixadas' : '') + (Object.keys(estado.ia.transc).length ? ' · ' + Object.keys(estado.ia.transc).length + ' já transcritas (puladas)' : '');
+  info.textContent = fila.length + ' ' + plural(fila.length, 'ligação', 'ligações') + ' com fala ≥ ' + min + ' s ainda sem áudio baixado (hoje primeiro, mais longas primeiro)' + (ja ? ' · ' + ja + ' já baixadas' : '') + (Object.keys(estado.ia.transc).length ? ' · ' + Object.keys(estado.ia.transc).length + ' já transcritas (puladas)' : '') + (Object.keys(estado.ia.semAudio).length ? ' · ' + Object.keys(estado.ia.semAudio).length + ' sem gravação no 3C (puladas)' : '');
 }
 function iaRodarLote() {
   if (iaLote.rodando) return;
@@ -4794,27 +4806,45 @@ function iaRodarLote() {
   var feitos = 0, pulados = 0, i = 0, modoNav = !iaToken;
   function nota(t) { log.insertBefore(el('li', null, t), log.firstChild); }
   function fim(msg) { clearTimeout(iaAbaTimer); setTimeout(iaFecharAba, 3000); iaLote.rodando = false; iaLote.manual = null; $('#au-proxima').hidden = true; btn.disabled = false; parar.hidden = true; nota(msg); iaAudioInfo(); iaRenderLista(); }
+  var semSeguidos = 0;
+  function marcarSem(g) { estado.ia.semAudio[g.id] = 1; salvarIA(); pulados++; semSeguidos++; nota('⛔ ' + (g.rec ? g.rec.replace(/\//g, '_') : g.id) + ': o 3C não tem a gravação (404). Pulei.'); }
+  function semLogin() { return feitos === 0 && semSeguidos >= 3; }
+  var MSG_LOGIN = 'Parei: as 3 primeiras gravações não vieram. Confira se você está logado no 3C neste navegador (ou se o endereço do 3C acima está certo) e tente de novo.';
   function pausarManual() {
-    var pb = $('#au-proxima'); pb.hidden = false; pb.textContent = '⬇ Baixar próxima (' + (fila.length - i) + ' restantes)';
+    var pb = $('#au-proxima'); pb.hidden = false;
     nota('O navegador bloqueou abrir várias abas sozinho. Opções: (1) clique no ícone de pop-up na barra de endereço e escolha “Sempre permitir” e depois ▶ Baixar lote de novo; ou (2) clique em “Baixar próxima” para cada arquivo (um clique por download).');
-    iaLote.manual = function () {
-      if (i >= fila.length) { pb.hidden = true; fim('Pronto: ' + feitos + ' downloads pedidos (confira a pasta Downloads).'); return; }
-      var gm = fila[i]; var w = iaAbrirDownload(gm);
-      if (!w) { toast('O navegador ainda está bloqueando pop-ups: permita para este arquivo (ícone na barra de endereço).', { tipo: 'aviso' }); return; }
-      i++; estado.ia.baixados[gm.id] = 1; feitos++; salvarIA(); bi.style.width = Math.round(i / fila.length * 100) + '%';
-      nota(i + '/' + fila.length + ' ⬇ download pedido (' + (gm.rec ? gm.rec.replace(/\//g, '_') : gm.id) + ')');
-      pb.textContent = i >= fila.length ? '✓ Terminar' : '⬇ Baixar próxima (' + (fila.length - i) + ' restantes)'; iaAudioInfo();
-    };
+    function preparar() {
+      iaLote.manual = null;
+      if (iaLote.parar) { fim('Parado. ' + feitos + ' downloads pedidos.'); return; }
+      if (i >= fila.length) { pb.hidden = true; fim('Pronto: ' + feitos + ' downloads pedidos' + (pulados ? ', ' + pulados + ' sem gravação no 3C' : '') + ' (confira a pasta Downloads).'); return; }
+      pb.disabled = true; pb.textContent = 'Conferindo a próxima gravação…';
+      var g = fila[i];
+      iaAudioExiste(g).then(function (ex) {
+        if (ex === false) { marcarSem(g); i++; bi.style.width = Math.round(i / fila.length * 100) + '%'; if (semLogin()) { fim(MSG_LOGIN); return; } preparar(); return; }
+        semSeguidos = 0; pb.disabled = false; pb.textContent = '⬇ Baixar próxima (' + (fila.length - i) + ' restantes)';
+        iaLote.manual = function () {
+          var w = iaAbrirDownload(g);
+          if (!w) { toast('O navegador ainda está bloqueando pop-ups: permita para este arquivo (ícone na barra de endereço).', { tipo: 'aviso' }); return; }
+          iaLote.manual = null; i++; estado.ia.baixados[g.id] = 1; feitos++; salvarIA(); bi.style.width = Math.round(i / fila.length * 100) + '%';
+          nota(i + '/' + fila.length + ' ⬇ download pedido (' + (g.rec ? g.rec.replace(/\//g, '_') : g.id) + ')'); iaAudioInfo(); preparar();
+        };
+      });
+    }
+    preparar();
   }
   function proximo() {
     if (iaLote.parar) { fim('Parado. ' + feitos + ' baixadas.'); return; }
-    if (i >= fila.length) { fim('Pronto: ' + feitos + (modoNav ? ' pedidos de download enviados (confira a pasta Downloads; o painel não consegue confirmar cada arquivo)' : ' baixadas') + (pulados ? ', ' + pulados + ' sem gravação' : '') + '. Coloque os arquivos na pasta de áudios e rode o transcrever.py.'); return; }
+    if (i >= fila.length) { fim('Pronto: ' + feitos + (modoNav ? ' pedidos de download enviados (confira a pasta Downloads; o painel não consegue confirmar cada arquivo)' : ' baixadas') + (pulados ? ', ' + pulados + ' sem gravação no 3C' : '') + '. Coloque os arquivos na pasta de áudios e rode o transcrever.py.'); return; }
     var g = fila[i++]; bi.style.width = Math.round(i / fila.length * 100) + '%';
     function viaNavegador() {
-      var w = iaAbrirDownload(g);
-      if (!w) { i--; bi.style.width = Math.round(i / fila.length * 100) + '%'; pausarManual(); return; }
-      estado.ia.baixados[g.id] = 1; feitos++; salvarIA(); nota(i + '/' + fila.length + ' ⬇ download pedido (' + (g.rec ? g.rec.replace(/\//g, '_') : g.id) + ')');
-      setTimeout(proximo, 2500);
+      iaAudioExiste(g).then(function (ex) {
+        if (ex === false) { marcarSem(g); if (semLogin()) { fim(MSG_LOGIN); return; } setTimeout(proximo, 300); return; }
+        semSeguidos = 0;
+        var w = iaAbrirDownload(g);
+        if (!w) { i--; bi.style.width = Math.round(i / fila.length * 100) + '%'; pausarManual(); return; }
+        estado.ia.baixados[g.id] = 1; feitos++; salvarIA(); nota(i + '/' + fila.length + ' ⬇ download pedido (' + (g.rec ? g.rec.replace(/\//g, '_') : g.id) + ')');
+        setTimeout(proximo, 2500);
+      });
     }
     if (modoNav) { viaNavegador(); return; }
     iaBuscarAudio(g).then(function (b) {
@@ -5012,8 +5042,13 @@ function iaRenderDetalhe() {
   function baixarAudio(g) {
     if (estado.ia.transc[g.id]) { toast('Esse áudio já foi transcrito (📝): não precisa baixar de novo.', { tipo: 'aviso' }); return; }
     if (!iaToken) {
-      if (iaAbrirDownload(g)) { estado.ia.baixados[g.id] = 1; salvarIA(); toast('Download pedido ao 3C: veja a pasta Downloads.'); return; }
-      iaBaixarPorNavegador(g).then(function () { estado.ia.baixados[g.id] = 1; salvarIA(); toast('Download pedido ao 3C: veja a pasta Downloads.'); }, function (e2) { toast(e2.message, { tipo: 'erro' }); }); return; }
+      iaAudioExiste(g).then(function (ex) {
+        if (ex === false) { estado.ia.semAudio[g.id] = 1; salvarIA(); iaRenderDetalhe(); toast('O 3C não tem a gravação desta ligação (404): não dá para baixar nem tocar.', { tipo: 'aviso' }); return; }
+        if (iaAbrirDownload(g)) { estado.ia.baixados[g.id] = 1; salvarIA(); toast('Download pedido ao 3C: veja a pasta Downloads.'); return; }
+        iaBaixarPorNavegador(g).then(function () { estado.ia.baixados[g.id] = 1; salvarIA(); toast('Download pedido ao 3C: veja a pasta Downloads.'); }, function (e2) { toast(e2.message, { tipo: 'erro' }); });
+      });
+      return;
+    }
     iaBuscarAudio(g).then(function (b) {
       iaSalvarBlob(b, iaNomeAudio(g, b.type)); estado.ia.baixados[g.id] = 1; salvarIA(); toast('Baixado: ' + iaNomeAudio(g, b.type));
     }, function (e) {
@@ -5079,7 +5114,7 @@ function iaRenderDetalhe() {
         el('tbody', null, l.ligacoes.map(function (g) {
           return el('tr', null, el('td', { class: 'num' }, g.data ? dataBR(g.data).slice(0, 5) + ' ' + g.hora : '—'), el('td', null, g.qual && g.qual !== '-' ? g.qual : '—'), el('td', { class: 'num' }, fmtSeg(g.fala)), el('td', null, g.amd && g.amd !== '-' ? g.amd : '—'), el('td', null, g.causa || '—'), el('td', null, g.status || '—'),
             el('td', null, semaforo(iaNotaLigacao(g)), IA_COMP[iaNotaLigacao(g)].rot),
-            el('td', { style: 'white-space:nowrap' }, estado.ia.transc[g.id] ? '📝 ' : '', iaAudioLocal(g) ? '📁 ' : estado.ia.baixados[g.id] ? '✔ ' : '',
+            el('td', { style: 'white-space:nowrap' }, estado.ia.transc[g.id] ? '📝 ' : '', iaAudioLocal(g) ? '📁 ' : estado.ia.semAudio[g.id] ? '⛔ ' : estado.ia.baixados[g.id] ? '✔ ' : '',
               g.id ? [el('button', { type: 'button', class: 'btn-fone', title: 'Ouvir esta ligação aqui', 'aria-label': 'Ouvir a ligação', onclick: function () { ouvirAudio(g); } }, '🎧'),
                 el('button', { type: 'button', class: 'btn-fone', title: 'Baixar o áudio (nome igual ao do 3C)', 'aria-label': 'Baixar o áudio', onclick: function () { baixarAudio(g); } }, '⬇')] : ''));
         })))) : null,
@@ -5148,7 +5183,7 @@ function ligarEventosIA() {
   $('#au-lote').addEventListener('click', iaRodarLote);
   $('#au-pasta').addEventListener('click', function () { $('#au-pasta-in').click(); });
   $('#au-pasta-in').addEventListener('change', function (e) { var fs = Array.from(e.target.files); e.target.value = ''; if (!fs.length) return; var r = iaIndexarAudios(fs); toast(r.novos + ' áudios encontrados na pasta; ' + r.casam + ' casam com ligações dos leads (📁).'); iaRenderLateral(); iaRenderDetalhe(); });
-  $('#au-esquecer').addEventListener('click', function () { estado.ia.baixados = {}; salvarIA(); iaAudioInfo(); iaRenderLista(); toast('Lista de baixadas zerada.'); });
+  $('#au-esquecer').addEventListener('click', function () { estado.ia.baixados = {}; estado.ia.semAudio = {}; salvarIA(); iaAudioInfo(); iaRenderLista(); toast('Lista de baixadas zerada.'); });
   $('#au-proxima').addEventListener('click', function () { if (iaLote.manual) iaLote.manual(); });
   $('#au-parar').addEventListener('click', function () { iaLote.parar = true; });
   $('#ia-ordem').addEventListener('change', function (e) { estado.ui.ia.ordem = e.target.value; renderIA(); });

@@ -207,6 +207,35 @@ def transcrever(modelo, caminho, dica=False):
     return " ".join(s.text.strip() for s in segmentos).strip()
 
 
+def limpar_sem_pergunta(saida, min_fala=60):
+    """Tira do transcricoes.csv as ligações longas em que a pergunta do Uber/99 NÃO apareceu (possível fala perdida pelo modelo rápido),
+    para serem transcritas de novo com um modelo melhor. Guarda um backup antes."""
+    if not os.path.exists(saida):
+        return 0
+    with open(saida, encoding="utf-8-sig", newline="") as f:
+        rows = list(csv.DictReader(f, delimiter=";"))
+    manter, tirar = [], 0
+    for r in rows:
+        try:
+            dur = int(float(r.get("duracao_s") or 0))
+        except ValueError:
+            dur = 0
+        t = (r.get("texto") or "").lower()
+        if dur >= min_fala and not re.search(r"mobilidade|uber|\b99\b", t):
+            tirar += 1
+        else:
+            manter.append(r)
+    if tirar:
+        import shutil
+        shutil.copyfile(saida, os.path.splitext(saida)[0] + "_backup.csv")
+        with open(saida, "w", encoding="utf-8-sig", newline="") as f:
+            w = csv.writer(f, delimiter=";", quoting=csv.QUOTE_ALL)
+            w.writerow(["id", "duracao_s", "texto"])
+            for r in manter:
+                w.writerow([r["id"], r.get("duracao_s", ""), r.get("texto", "")])
+    return tirar
+
+
 def ja_feitas(saida):
     if not os.path.exists(saida):
         return set()
@@ -360,6 +389,7 @@ def main():
     ap.add_argument("--so-planilha", action="store_true", help="não transcreve: só monta a planilha a partir do --saida já existente")
     ap.add_argument("--todas-colunas", action="store_true", help="inclui na planilha final todas as colunas da planilha agente IA perdidos (menos nome/CPF do cliente)")
     ap.add_argument("--dica", action="store_true", help="ajuda o programa a acertar nomes como Dryve Assinaturas, Uber, 99 (teste com o testar_audio.py --dica antes)")
+    ap.add_argument("--refazer-sem-pergunta", action="store_true", help="refaz (com o --modelo escolhido) as transcrições de 60 s ou mais em que a pergunta do Uber/99 não apareceu; guarda backup")
     ap.add_argument("--simular", action="store_true", help="não transcreve de verdade (teste do fluxo)")
     a = ap.parse_args()
 
@@ -387,6 +417,9 @@ def main():
             ant = ligacoes.get(k, {})
             ligacoes[k] = {"dur": max(v["dur"], ant.get("dur", 0)), "rec": v["rec"] or ant.get("rec", ""), "num": v["num"] or ant.get("num", ""), "quando": v["quando"] or ant.get("quando", "")}
 
+    if a.refazer_sem_pergunta:
+        n = limpar_sem_pergunta(a.saida)
+        print("%d transcrições longas sem a pergunta do Uber/99 serão refeitas (backup em %s)." % (n, os.path.splitext(a.saida)[0] + "_backup.csv"))
     feitas = ja_feitas(a.saida)
     fila = sorted(((k, v) for k, v in ligacoes.items() if v["dur"] >= a.min and k not in feitas), key=(lambda kv: (-int(dia_iso(kv[1].get("quando")).replace("-", "") or 0), -kv[1]["dur"])) if a.ordem == "dia" else (lambda kv: -kv[1]["dur"]))
     if a.max and not (a.pasta and not a.listar):
