@@ -4353,13 +4353,13 @@ function iaStats() {
   return t;
 }
 function iaCSV() {
-  var cab = ['Data da análise', 'Analista', 'Lead', 'Telefone', 'Link Dryve', 'Data perdido', 'Motivo registrado', 'Detalhe do motivo', 'Origem', 'Motivo correto?', 'Seguiu a argumentação', 'Situação da ligação', 'Conformidade da IA (%)', 'Por quê', 'Motivo sugerido', 'Evidências', 'Ligações IA', 'Maior fala IA (s)', 'Última qualificação IA', 'Comportamento da IA (analista)', 'Sinal do painel', 'Parecer da IA', 'Observação'];
+  var cab = ['Data da análise', 'Analista', 'Lead', 'Telefone', 'Link Dryve', 'Data perdido', 'Motivo registrado', 'Detalhe do motivo', 'Origem', 'Motivo correto?', 'IA apresentou o serviço e qualificou (SDR)', 'Situação da ligação', 'Conformidade da IA (%)', 'Por quê', 'Motivo sugerido', 'Evidências', 'Ligações IA', 'Maior fala IA (s)', 'Última qualificação IA', 'Comportamento da IA (analista)', 'Sinal do painel', 'Parecer da IA', 'Observação'];
   var linhas = [cab.join(';')];
   estado.ia.leads.forEach(function (l) {
     var a = estado.ia.analises[l.codigoNorm]; if (!iaStatus(a)) return;
     var ult = l.ligacoes.length ? l.ligacoes[l.ligacoes.length - 1].qual : '';
     linhas.push([a.em ? dataBR(dataISO(new Date(a.em))) : '', a.por, l.codigo, formatTel(l.tel), urlPadraoDryve(l.uuid), l.dataPerdido ? dataBR(l.dataPerdido) : '', l.motivo, l.detalhes, l.origem,
-      { sim: 'Sim', nao: 'Não', duvida: 'Sem como avaliar' }[a.correto], { sim: 'Sim', parcial: 'Parcialmente', nao: 'Não', na: 'Não se aplica' }[a.arg] || '', a.situ.join(' | '), iaConformidade(a) === null ? '' : iaConformidade(a), a.porque.concat(a.porqueTxt ? [a.porqueTxt] : []).join(' | '), a.motivoReal, a.evid.join(' | '),
+      { sim: 'Sim', nao: 'Não', duvida: 'Sem como avaliar' }[a.correto], { sim: 'Sim', parcial: 'Parcialmente', nao: 'Não', na: 'Não deu tempo (cliente desligou)' }[a.arg] || '', a.situ.join(' | '), iaConformidade(a) === null ? '' : iaConformidade(a), a.porque.concat(a.porqueTxt ? [a.porqueTxt] : []).join(' | '), a.motivoReal, a.evid.join(' | '),
       l.ligacoes.length, l.ligacoes.reduce(function (m, g) { return Math.max(m, g.fala); }, 0), ult, a.comp ? IA_COMP[a.comp].rot : '', iaNotaGeral(l) ? IA_COMP[iaNotaGeral(l)].rot : '', a.parecer.replace(/\s+/g, ' ').trim(), a.obs].map(campoCSV).join(';'));
   });
   return '\uFEFF' + linhas.join('\r\n') + '\r\n';
@@ -4477,7 +4477,7 @@ function iaRenderDetalhe() {
   }
   var ligs = l.ligacoes.length;
   var checklist = el('div', { class: 'ia-ck' },
-    linhaCk('A IA seguiu o processo de argumentação?', ligs ? 'Ouça a gravação: ela se apresentou, perguntou o motivo e tentou contornar?' : 'Sem ligação da IA registrada', 'arg', [['sim', 'Sim'], ['parcial', 'Parcialmente'], ['nao', 'Não'], ['na', 'Não se aplica']]),
+    linhaCk('A IA apresentou o serviço e seguiu o processo de SDR (qualificar o lead)?', ligs ? 'Ouça a gravação: ela se apresentou, explicou o serviço e fez as perguntas de qualificação?' : 'Sem ligação da IA registrada', 'arg', [['sim', 'Sim'], ['parcial', 'Parcialmente'], ['nao', 'Não'], ['na', 'Não deu tempo (cliente desligou)']]),
     el('div', { class: 'ia-ck-lin' }, el('div', null, el('b', null, 'Motivo da perda'), el('small', null, 'Registrado no Dryve · não entra na conformidade')), el('b', { style: 'display:inline-block' }, l.motivo || '—')),
     linhaCk('Motivo correto?', 'O cliente realmente é ' + (l.motivo || 'o motivo registrado') + '?', 'correto', [['sim', 'Sim, está correto'], ['nao', 'Não, está incorreto'], ['duvida', 'Sem como avaliar']], function () { blocoNao.hidden = a.correto !== 'nao'; iaRenderLateral(); }),
     el('div', { class: 'ia-ck-lin', style: 'display:grid' }, el('div', null, el('b', null, 'O que aconteceu na ligação?'), el('small', null, 'Marque o que se aplica (rápido)')), opcoes('situ', IA_SITUACOES, a.situ)),
