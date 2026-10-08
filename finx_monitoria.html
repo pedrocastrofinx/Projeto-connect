@@ -1615,13 +1615,16 @@ async function extrairZip(buf, ent) {
   return new Uint8Array(await new Response(fluxo).arrayBuffer());
 }
 function indiceColuna(letras) { var n = 0; for (var i = 0; i < letras.length; i++) n = n * 26 + letras.charCodeAt(i) - 64; return n - 1; }
-async function lerXlsx(arquivo) {
+async function lerXlsx(arquivo, nomeAba) {
   var buf = await arquivo.arrayBuffer(), ent = listarZip(buf), dec = new TextDecoder('utf-8');
   async function texto(nome) { return ent[nome] ? dec.decode(await extrairZip(buf, ent[nome])) : null; }
   var caminho = 'xl/worksheets/sheet1.xml', wb = await texto('xl/workbook.xml'), rels = await texto('xl/_rels/workbook.xml.rels');
   var atr = function (tag, nome) { var m = new RegExp('\\b' + nome + '="([^"]*)"').exec(tag); return m ? m[1] : null; };
   if (wb && rels) {
-    var sh = /<sheet\b[^>]*>/.exec(wb), rid = sh ? atr(sh[0], 'r:id') : null;
+    var sh = null;
+    if (nomeAba) (wb.match(/<sheet\b[^>]*>/g) || []).forEach(function (t) { if (xmlDesescapar(atr(t, 'name') || '') === nomeAba) sh = [t]; });
+    if (!sh) sh = /<sheet\b[^>]*>/.exec(wb);
+    var rid = sh ? atr(sh[0], 'r:id') : null;
     (rels.match(/<Relationship\b[^>]*>/g) || []).forEach(function (r) {
       if (rid && atr(r, 'Id') === rid && atr(r, 'Target')) { var t = atr(r, 'Target'); caminho = t.charAt(0) === '/' ? t.slice(1) : 'xl/' + t; }
     });
@@ -4139,7 +4142,12 @@ async function lerLinhasArquivo(arquivo) {
   var m = new Uint8Array(await arquivo.slice(0, 4).arrayBuffer());
   if (m[0] === 0xD0 && m[1] === 0xCF && m[2] === 0x11 && m[3] === 0xE0) throw new Error('Formato antigo (.xls): abra no Excel e salve como .xlsx ou CSV.');
   if (m[0] === 0x50 && m[1] === 0x4B) {
-    try { return await lerXlsx(arquivo); } catch (e) { throw new Error('Não consegui ler o .xlsx. Abra no Excel e salve como CSV.'); }
+    try {
+      var l1 = await lerXlsx(arquivo);
+      /* planilha completa do transcrever.py: as ligações ficam na aba “Por ligação” */
+      if (!tipoDasLinhas(l1)) { try { var l2 = await lerXlsx(arquivo, 'Por ligação'); if (l2 && l2.length > 1 && tipoDasLinhas(l2)) return l2; } catch (e2) { /* sem essa aba */ } }
+      return l1;
+    } catch (e) { throw new Error('Não consegui ler o .xlsx. Abra no Excel e salve como CSV.'); }
   }
   var texto = await lerArquivo(arquivo, 'UTF-8');
   if (texto.indexOf('\uFFFD') !== -1) texto = await lerArquivo(arquivo, 'windows-1252');
@@ -4155,7 +4163,7 @@ async function importarArquivoBase(arquivo) {
 function tipoDasLinhas(linhas) {
   var cab = (linhas[0] || []).map(colunaKey), tem = function (lista) { return lista.some(function (n) { return cab.indexOf(n) !== -1; }); };
   if (tem(['pedidosreferencecode', 'perdidosreferencecode']) && tem(['iaqualification'])) return 'iaperdidos';
-  if (tem(['id']) && tem(['texto']) && tem(['duracaos'])) return 'transcricoes';
+  if ((tem(['id']) && tem(['texto']) && tem(['duracaos'])) || (tem(['iddaligacao']) && tem(['transcricao']))) return 'transcricoes';
   if (tem(['qualificationname']) && tem(['recording']) && tem(['campaignname'])) return 'chamadasia';
   if (tem(['leadcode']) && tem(['createdat']) && tem(['duracaochamada'])) return 'chamadas';
   if (tem(['referencecode']) || (tem(['etapadoboard']) && tem(['closer']))) return 'kanban';
@@ -4462,7 +4470,7 @@ function importarChamadasIA(linhas) {
 }
 /* Transcrições geradas pelo transcrever.py (id da ligação; duracao_s; texto). Ficam só neste navegador. */
 function importarTranscricoes(linhas) {
-  var cab = linhas[0].map(colunaKey), ci = cab.indexOf('id'), ct = cab.indexOf('texto'), lidas = 0;
+  var cab = linhas[0].map(colunaKey), ci = cab.indexOf('id') >= 0 ? cab.indexOf('id') : cab.indexOf('iddaligacao'), ct = cab.indexOf('texto') >= 0 ? cab.indexOf('texto') : cab.indexOf('transcricao'), lidas = 0;
   for (var i = 1; i < linhas.length; i++) {
     var id = iaTxt(linhas[i][ci], 40), t = String(linhas[i][ct] || '').replace(/\s+/g, ' ').trim().slice(0, 4000);
     if (id && t) { estado.ia.transc[id] = t; lidas++; }
@@ -4633,6 +4641,23 @@ function iaCSV() {
   });
   return '\uFEFF' + linhas.join('\r\n') + '\r\n';
 }
+/* Planilha para jogar no Copilot (ou outra IA): uma linha por lead, com as informações do lead, a sua análise e a transcrição de todas as ligações */
+function iaCSVParaIA() {
+  var cab = ['Lead', 'Telefone', 'Link Dryve', 'Motivo registrado', 'Detalhe do motivo', 'Etapa', 'Origem', 'Data do lead', 'Data perdido', 'Ligações do lead', 'Ligações transcritas', 'Maior fala', 'Qualificação da IA (principal)', 'Sua análise: motivo correto?', 'Sua análise: origem', 'Sua análise: qualificação da IA correta?', 'Veredito automático (transcrição)', 'Pistas automáticas', 'Transcrição (todas as ligações do lead)'];
+  var linhas = [cab.join(';')], rot = { sim: 'Provavelmente correto', nao: 'Provavelmente incorreto', duvida: 'A conferir' };
+  estado.ia.leads.forEach(function (l) {
+    var ts = iaTranscDoLead(l); if (!ts.length) return;
+    var a = estado.ia.analises[l.codigoNorm], st = iaStatus(a), au = iaAutoAnalise(l);
+    var texto = ts.slice().sort(function (x, y) { return ((x.g.data || '') + x.g.hora) < ((y.g.data || '') + y.g.hora) ? -1 : 1; }).map(function (x) {
+      return '[' + (x.g.data ? dataBR(x.g.data) + ' ' + x.g.hora : 'ligação') + ' · fala ' + fmtSeg(x.g.fala) + ' · qualificação: ' + (iaVazioTxt(x.g.qual) ? '-' : x.g.qual) + ' · atendeu: ' + (x.g.amd && x.g.amd !== '-' ? x.g.amd : '-') + ' · desligamento: ' + (x.g.causa || '-') + ']\n' + x.t;
+    }).join('\n\n');
+    linhas.push([l.codigo, formatTel(l.tel), urlPadraoDryve(l.uuid), l.motivo, l.detalhes, l.etapa, l.origem, l.dataLead ? dataBR(l.dataLead) : '', l.dataPerdido ? dataBR(l.dataPerdido) : '', l.ligacoes.length, ts.length, fmtSeg(iaMaiorFala(l)), iaQualPrincipal(l),
+      st ? { sim: 'Sim', nao: 'Não', duvida: 'Sem como avaliar' }[st] : '', st ? (a.via === 'transcricao' ? 'Via transcrição' : 'Manual') : '', a && a.qualOk ? { sim: 'Sim', nao: 'Não' }[a.qualOk] + (a.qualOk === 'nao' && a.qualCerta ? ' → ' + a.qualCerta : '') : '',
+      au ? rot[au.v] : '', au ? au.pistas.join(' | ') : '', texto].map(campoCSV).join(';'));
+  });
+  return '\uFEFF' + linhas.join('\r\n') + '\r\n';
+}
+var IA_PROMPT_COPILOT = 'Você é auditor de qualidade comercial de uma empresa de assinatura de veículos. As ligações foram feitas pela IA de voz “Natasha”, que qualifica leads. Para CADA lead da planilha, valide se o MOTIVO REGISTRADO (“Motorista de App”) está correto com base na transcrição, e se a qualificação da IA está certa. Responda EXATAMENTE neste formato, uma linha por lead:\nLEAD: <número> | CORRETO: SIM / NÃO / SEM DADOS | CONFIRMOU SER MOTORISTA DE APP: SIM / NÃO / NÃO FALOU | QUALIFICAÇÃO DA IA CORRETA: SIM / NÃO (qual seria) | COMPORTAMENTO DA IA: BOA / MÉDIA / RUIM | POR QUÊ: <1 a 3 frases> | MOTIVO SUGERIDO: <só se NÃO> | EVIDÊNCIA: <trecho curto>\n\nREGRA: “Motorista de App” é correto quando o CLIENTE confirma que trabalha como motorista de aplicativo (Uber, 99 etc.) e é por isso que não segue com a assinatura. Não é correto quando o cliente nem chegou a falar disso (desligou logo, não atendeu, ligação caiu), demonstrou interesse ou pediu retorno, ou o motivo real é outro. ATENÇÃO: a transcrição não separa quem fala; a Natasha sempre fala primeiro e costuma perguntar “você é motorista de aplicativo?”, então a pergunta não vale como confirmação: só vale a resposta do cliente. Comece por uma tabela-resumo e depois liste os leads com dúvida.';
 function iaCSVAuto() {
   var cab = ['Lead', 'Telefone', 'Link Dryve', 'Data perdido', 'Motivo registrado', 'Veredito automático (transcrição)', 'Por quê sugerido', 'Motivo sugerido', 'Pistas', 'Transcrições', 'Maior fala IA (s)', 'Sua análise manual', 'Origem da sua análise', 'Coincide com a manual?', 'Trecho da transcrição'];
   var linhas = [cab.join(';')], rot = { sim: 'Provavelmente correto', nao: 'Provavelmente incorreto', duvida: 'A conferir' };
@@ -4663,7 +4688,7 @@ function iaFilaAudios(min) {
 function iaAudioInfo() {
   var info = $('#au-info'); if (!info) return;
   var min = Math.max(0, +$('#au-min').value || 0), fila = iaFilaAudios(min), ja = Object.keys(estado.ia.baixados).length;
-  info.textContent = fila.length + ' ' + plural(fila.length, 'ligação', 'ligações') + ' com fala ≥ ' + min + ' s ainda sem áudio baixado (hoje primeiro, mais longas primeiro)' + (ja ? ' · ' + ja + ' já baixadas' : '');
+  info.textContent = fila.length + ' ' + plural(fila.length, 'ligação', 'ligações') + ' com fala ≥ ' + min + ' s ainda sem áudio baixado (hoje primeiro, mais longas primeiro)' + (ja ? ' · ' + ja + ' já baixadas' : '') + (Object.keys(estado.ia.transc).length ? ' · ' + Object.keys(estado.ia.transc).length + ' já transcritas (puladas)' : '');
 }
 function iaRodarLote() {
   if (iaLote.rodando) return;
@@ -4775,7 +4800,9 @@ function iaRenderRelatorio() {
       el('div', { class: 'rotulo' }, 'ANÁLISE POR TRANSCRIÇÃO · automática, separada das análises manuais'),
       el('div', null, el('b', null, t.auto.total + ' leads com transcrição: '), t.auto.sim + ' provavelmente corretos · ' + t.auto.nao + ' provavelmente incorretos · ' + t.auto.duvida + ' a conferir'),
       el('div', { class: 'dica' }, t.auto.comp ? 'Comparando com as suas ' + t.auto.comp + ' análises manuais onde os dois têm veredito: coincidem em ' + t.auto.igual + ' (' + fmtPct(t.auto.igual / t.auto.comp * 100) + ').' : 'Ainda não há análises manuais suficientes para comparar.'),
-      el('div', { class: 'acoes' }, el('button', { type: 'button', class: 'btn btn-primario', onclick: function () { baixar('finx_analise_por_transcricao_' + dataISO(new Date()) + '.csv', iaCSVAuto(), 'text/csv;charset=utf-8'); toast('Análise por transcrição exportada (' + t.auto.total + ' leads).'); } }, '⭳ Exportar análise por transcrição (CSV)'),
+      el('div', { class: 'acoes' }, el('button', { type: 'button', class: 'btn btn-sec', onclick: function () { baixar('finx_transcricoes_para_ia_' + dataISO(new Date()) + '.csv', iaCSVParaIA(), 'text/csv;charset=utf-8'); toast('Planilha para a IA exportada (' + t.auto.total + ' leads). Abre no Excel.'); } }, '⭳ Planilha com transcrição para o Copilot'),
+        el('button', { type: 'button', class: 'btn btn-linha', onclick: function () { copiarTexto(IA_PROMPT_COPILOT).then(function (ok) { toast(ok ? 'Prompt para o Copilot copiado.' : 'Não consegui copiar.', { tipo: ok ? 'ok' : 'erro' }); }); } }, '⧉ Copiar prompt para o Copilot'),
+        el('button', { type: 'button', class: 'btn btn-primario', onclick: function () { baixar('finx_analise_por_transcricao_' + dataISO(new Date()) + '.csv', iaCSVAuto(), 'text/csv;charset=utf-8'); toast('Análise por transcrição exportada (' + t.auto.total + ' leads).'); } }, '⭳ Exportar análise por transcrição (CSV)'),
         el('button', { type: 'button', class: 'btn btn-linha', onclick: function () { estado.ui.ia.filtro = 'transc'; renderIA(); } }, 'Ver só os leads com transcrição'))) : null,
     el('pre', { class: 'relatorio', style: 'margin:0' }, iaResumoTexto()),
     el('div', { class: 'acoes' },
@@ -4863,6 +4890,7 @@ function iaRenderDetalhe() {
   }
   function ouvirAudio(g) {
     playerBox.hidden = false;
+    if (estado.ia.transc[g.id]) toast('Esse áudio já foi transcrito (📝): o texto está logo abaixo.', { tipo: 'aviso' });
     var local = iaAudioLocal(g); if (local) { tocarLocal(g, local); return; }
     if (!iaToken) { tocarDireto(g); return; } playerTxt.textContent = 'Carregando o áudio de ' + (g.data ? dataBR(g.data).slice(0, 5) + ' ' + g.hora : 'ligação') + '…';
     iaBuscarAudio(g).then(function (b) {
@@ -4875,6 +4903,7 @@ function iaRenderDetalhe() {
     });
   }
   function baixarAudio(g) {
+    if (estado.ia.transc[g.id]) { toast('Esse áudio já foi transcrito (📝): não precisa baixar de novo.', { tipo: 'aviso' }); return; }
     if (!iaToken) {
       if (iaAbrirDownload(g)) { estado.ia.baixados[g.id] = 1; salvarIA(); toast('Download pedido ao 3C: veja a pasta Downloads.'); return; }
       iaBaixarPorNavegador(g).then(function () { estado.ia.baixados[g.id] = 1; salvarIA(); toast('Download pedido ao 3C: veja a pasta Downloads.'); }, function (e2) { toast(e2.message, { tipo: 'erro' }); }); return; }
