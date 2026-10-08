@@ -72,6 +72,7 @@ def ler_csv(caminho):
         return -1
 
     ci, cf, cr = col("id"), col("speakingtime"), col("recordname")
+    cn, cd = col("number"), col("calldate")
     if ci < 0:
         sys.exit("O CSV não tem a coluna _id (esperado: exportação do Relatório de Ligações do 3C Plus).")
     out = {}
@@ -81,6 +82,8 @@ def ler_csv(caminho):
         out[r[ci].strip()] = {
             "dur": segundos(r[cf]) if cf >= 0 and cf < len(r) else 0,
             "rec": r[cr].strip() if cr >= 0 and cr < len(r) else "",
+            "num": re.sub(r"\D", "", r[cn])[-11:] if cn >= 0 and cn < len(r) else "",
+            "quando": r[cd].strip() if cd >= 0 and cd < len(r) else "",
         }
     return out
 
@@ -98,6 +101,7 @@ def ler_xlsx(caminho):
     cab = [chave(c) for c in next(linhas)]
     ix = lambda n: cab.index(n) if n in cab else -1
     ci, cf, cr = ix("iaid"), ix("iaspeakingtime"), ix("iarecordname")
+    cn, cd = ix("ianumber"), ix("iacalldate")
     if ci < 0:
         return {}
     out = {}
@@ -105,10 +109,12 @@ def ler_xlsx(caminho):
         ids = [x.strip() for x in str(r[ci] or "").split("|")]
         fs = [x.strip() for x in str(r[cf] if cf >= 0 and r[cf] is not None else "").split("|")]
         rs = [x.strip() for x in str(r[cr] if cr >= 0 and r[cr] is not None else "").split("|")]
+        ns = [re.sub(r"\D", "", x)[-11:] for x in str(r[cn] if cn >= 0 and r[cn] is not None else "").split("|")]
+        ds = [x.strip() for x in str(r[cd] if cd >= 0 and r[cd] is not None else "").split("|")]
         for k, i in enumerate(ids):
             if not i:
                 continue
-            out[i] = {"dur": segundos(fs[k]) if k < len(fs) else 0, "rec": rs[k] if k < len(rs) else ""}
+            out[i] = {"dur": segundos(fs[k]) if k < len(fs) else 0, "rec": rs[k] if k < len(rs) else "", "num": ns[k] if k < len(ns) else "", "quando": ds[k] if k < len(ds) else ""}
     return out
 
 
@@ -190,6 +196,7 @@ def main():
     ap.add_argument("--modelo", default="small")
     ap.add_argument("--saida", default="transcricoes.csv")
     ap.add_argument("--audios", default="gravacoes_baixadas", help="onde guardar os áudios baixados")
+    ap.add_argument("--listar", type=int, default=0, metavar="N", help="não transcreve: lista as N ligações mais longas que AINDA NÃO têm áudio na --pasta (telefone, data e duração), para você baixar no 3C; salva em faltam_baixar.csv")
     ap.add_argument("--simular", action="store_true", help="não transcreve de verdade (teste do fluxo)")
     a = ap.parse_args()
 
@@ -208,7 +215,8 @@ def main():
         ligacoes.update(ler_xlsx(a.xlsx))
     if a.csv:
         for k, v in ler_csv(a.csv).items():
-            ligacoes[k] = {"dur": max(v["dur"], ligacoes.get(k, {}).get("dur", 0)), "rec": v["rec"] or ligacoes.get(k, {}).get("rec", "")}
+            ant = ligacoes.get(k, {})
+            ligacoes[k] = {"dur": max(v["dur"], ant.get("dur", 0)), "rec": v["rec"] or ant.get("rec", ""), "num": v["num"] or ant.get("num", ""), "quando": v["quando"] or ant.get("quando", "")}
 
     feitas = ja_feitas(a.saida)
     fila = sorted(((k, v) for k, v in ligacoes.items() if v["dur"] >= a.min and k not in feitas), key=lambda kv: -kv[1]["dur"])
@@ -221,6 +229,18 @@ def main():
         return
 
     arquivos = indexar_pasta(a.pasta) if a.pasta else []
+    if a.listar:
+        faltam = [(k, v) for k, v in fila if not (a.pasta and achar_na_pasta(arquivos, k, v["rec"]))][: a.listar]
+        print("\nPara baixar no 3C (filtre pelo telefone, ouça se quiser e clique na setinha de download), da mais longa para a mais curta:")
+        with open("faltam_baixar.csv", "w", encoding="utf-8-sig", newline="") as f:
+            w = csv.writer(f, delimiter=";")
+            w.writerow(["ordem", "telefone", "data_hora", "fala", "id"])
+            for n, (k, v) in enumerate(faltam, 1):
+                fala = "%d:%02d" % (v["dur"] // 60, v["dur"] % 60)
+                w.writerow([n, v.get("num", ""), v.get("quando", ""), fala, k])
+                print("  %3d. %s  %s  fala %s" % (n, v.get("num", "?"), v.get("quando", ""), fala))
+        print("\nLista salva em faltam_baixar.csv. Já com áudio na pasta: %d de %d." % (len(fila) - len([1 for k, v in fila if not (a.pasta and achar_na_pasta(arquivos, k, v["rec"]))]), len(fila)))
+        return
     if a.token:
         os.makedirs(a.audios, exist_ok=True)
     modelo = None if a.simular else carregar_modelo(a.modelo)
