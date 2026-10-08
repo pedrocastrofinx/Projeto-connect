@@ -697,6 +697,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
           </div>
           <div class="acoes">
             <button type="button" class="btn btn-primario" id="au-lote">⬇ Baixar lote</button>
+            <button type="button" class="btn btn-primario" id="au-curtas" hidden title="Põe 0 em Fala mínima e baixa também as ligações curtas que ainda faltam">⬇ Baixar também as curtas</button>
             <button type="button" class="btn btn-primario" id="au-proxima" hidden>⬇ Baixar próxima</button>
             <button type="button" class="btn btn-linha" id="au-parar" hidden>■ Parar</button>
             <button type="button" class="btn btn-sec" id="au-pasta" title="Escolha a pasta onde estão os áudios baixados (ex.: Downloads ou C:\finx\audios). Também dá para arrastar os .mp3 para esta página.">📂 Carregar pasta de áudios</button>
@@ -4837,6 +4838,9 @@ function iaFilaAudios(min) {
 function iaAudioInfo() {
   var info = $('#au-info'); if (!info) return;
   var min = Math.max(0, +$('#au-min').value || 0), fila = iaFilaAudios(min), ja = Object.keys(estado.ia.baixados).length;
+  var prox = min > 1 ? 1 : 0, curtas = min > 0 && !fila.length ? iaFilaAudios(prox).length : 0, bc = $('#au-curtas');
+  if (bc) { bc.hidden = !curtas; bc.dataset.min = prox; bc.textContent = prox ? '⬇ Baixar as ' + curtas + ' com fala de 1 a ' + (min - 1) + ' s' : '⬇ Baixar as ' + curtas + ' sem fala'; }
+  if (curtas) { info.textContent = 'Todas as ligações com fala ≥ ' + min + ' s já foram baixadas. ' + (prox ? 'Faltam ' + curtas + ' mais curtas (fala de 1 a ' + (min - 1) + ' s): clique no botão ao lado.' : 'Faltam ' + curtas + ' ligações sem nenhuma fala (ninguém falou; em geral a gravação é só silêncio ou nem existe): só baixe se quiser mesmo assim.') + (ja ? ' · ' + ja + ' já baixadas' : '') + (Object.keys(estado.ia.transc).length ? ' · ' + Object.keys(estado.ia.transc).length + ' já transcritas (puladas)' : ''); return; }
   info.textContent = fila.length + ' ' + plural(fila.length, 'ligação', 'ligações') + ' com fala ≥ ' + min + ' s ainda sem áudio baixado (hoje primeiro, mais longas primeiro)' + (ja ? ' · ' + ja + ' já baixadas' : '') + (Object.keys(estado.ia.transc).length ? ' · ' + Object.keys(estado.ia.transc).length + ' já transcritas (puladas)' : '') + (Object.keys(estado.ia.semAudio).length ? ' · ' + Object.keys(estado.ia.semAudio).length + ' sem gravação no 3C (puladas)' : '');
 }
 function iaRodarLote() {
@@ -5365,6 +5369,7 @@ function ligarEventosIA() {
   $('#au-token').addEventListener('input', function (e) { iaToken = e.target.value.trim(); });
   $('#au-min').addEventListener('input', iaAudioInfo);
   $('#au-lote').addEventListener('click', iaRodarLote);
+  $('#au-curtas').addEventListener('click', function () { var m = +$('#au-curtas').dataset.min || 0, n = iaFilaAudios(m).length; $('#au-min').value = m; $('#au-n').value = Math.min(500, Math.max(1, n)); iaAudioInfo(); iaRodarLote(); });
   $('#au-pasta').addEventListener('click', function () { $('#au-pasta-in').click(); });
   $('#au-pasta-in').addEventListener('change', function (e) { var fs = Array.from(e.target.files); e.target.value = ''; if (!fs.length) return; var r = iaIndexarAudios(fs); toast(r.novos + ' áudios encontrados na pasta; ' + r.casam + ' casam com ligações dos leads (📁).'); iaRenderLateral(); iaRenderDetalhe(); iaAvisoPendentes(); });
   $('#au-esquecer').addEventListener('click', function () { estado.ia.baixados = {}; estado.ia.semAudio = {}; salvarIA(); iaAudioInfo(); iaRenderLista(); toast('Lista de baixadas zerada.'); });
