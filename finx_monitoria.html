@@ -179,6 +179,15 @@ input[type=checkbox],input[type=radio]{width:18px;height:18px;accent-color:var(-
 .ia-sinal{border-radius:12px;padding:10px 14px;font-weight:600;font-size:.92rem}
 .ia-sinal.ok{background:var(--azul-cl);color:var(--azul-esc)}
 .ia-sinal.aviso{background:var(--amarelo-cl);color:var(--amarelo-esc)}
+.ia-ck{display:grid;gap:8px}
+.ia-ck-lin{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:#F7FAFF;border:1.5px solid #D5E1F7;border-radius:12px;padding:10px 14px}
+.ia-ck-lin>div:first-child{flex:1 1 160px;min-width:0}
+.ia-ck-lin b{display:block;font-size:.95rem}
+.ia-ck-lin small{color:var(--texto-suave,#5b6b8a);font-size:.78rem}
+.ia-ck-lin select{flex:0 0 210px;max-width:100%;padding:8px 10px;border-radius:9px;border:1.5px solid #C5D3EE;background:#fff;font:inherit;font-weight:600}
+.ia-ck-lin.ok{border-color:#2e9e5b}.ia-ck-lin.ruim{border-color:var(--vermelho)}
+.ia-conf{display:inline-flex;gap:8px;align-items:center;border-radius:99px;padding:4px 12px;font-weight:800;border:1.5px solid #D5E1F7}
+.ia-conf.alta{color:#1e7a45;border-color:#2e9e5b}.ia-conf.media{color:#9a6b00;border-color:#e0a800}.ia-conf.baixa{color:var(--vermelho);border-color:var(--vermelho)}
 .ia-opcoes{display:flex;flex-wrap:wrap;gap:8px}
 .ia-opcoes label{display:inline-flex;align-items:center;gap:8px;background:#F7FAFF;border:1.5px solid #D5E1F7;border-radius:11px;padding:8px 12px;font-weight:600;cursor:pointer}
 .ia-opcoes label:has(input:checked){background:var(--azul);border-color:var(--azul);color:#fff}
@@ -592,6 +601,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
             </select></div>
           <div class="campo"><label for="ia-busca">Buscar código do lead</label><input type="search" id="ia-busca" autocomplete="off" placeholder="Ex.: 3380608"></div>
           <div class="campo"><label for="ia-analista">Analista (aparece no relatório)</label><input type="text" id="ia-analista" maxlength="80" autocomplete="off" placeholder="Seu nome"></div>
+          <div class="campo"><label class="interruptor" for="ia-auto" style="margin-top:20px"><input type="checkbox" id="ia-auto"> Copiar o telefone do próximo lead sozinho</label></div>
         </div>
         <details class="pl-ajustes"><summary>Regra do motivo (vai no prompt da IA)</summary>
           <div class="campo" style="margin-top:8px"><label for="ia-regra">Quando o motivo “Motorista de App” é correto?</label><textarea id="ia-regra" rows="4" maxlength="1500"></textarea></div>
@@ -4051,8 +4061,8 @@ function construirChecklist(leadNorm, tipo) {
 
 /* ================= Análise IA · validação de perdido =================
    Importa o export "agente IA perdidos por motivo" (e, opcionalmente, o CSV de chamadas da telefonia).
-   Só guarda: código, uuid do lead no Dryve, motivo, etapa, origem, datas e as ligações da IA (data, qualificação, fala, situação).
-   Nome, telefone e CPF do cliente NÃO são guardados. */
+   Guarda: código, uuid do lead no Dryve, telefone (para filtrar no relatório da telefonia), motivo, etapa, origem, datas e as ligações da IA
+   (data, qualificação, fala, situação, detecção, causa do desligamento). Nome e CPF do cliente NÃO são guardados. */
 var IA_PORQUES = ['Cliente não é motorista de aplicativo', 'Cliente tem interesse / pediu retorno', 'O motivo real é outro', 'Cliente desligou antes de falar o motivo', 'Ligação caiu / sem contato', 'Telefone errado / outra pessoa', 'A IA classificou errado', 'Lead duplicado / já atendido'];
 var IA_EVIDENCIAS = ['Ouvi a gravação', 'Li o parecer da IA', 'Conferi o histórico no Dryve', 'Cliente confirmou que é motorista de app', 'Cliente negou ser motorista de app'];
 var IA_MOTIVOS = ['Agendamento / Retorno', 'Sem interesse', 'Sem retorno', 'Já possui assinatura', 'Fechou em outra empresa', 'Cotando / pesquisando', 'Telefone errado', 'Sem crédito', 'Documentação', 'Preço', 'Outro'];
@@ -4087,13 +4097,18 @@ function iaNotaGeral(l) {
   return n.indexOf('boa') >= 0 ? 'boa' : n.indexOf('media') >= 0 ? 'media' : 'ruim';
 }
 function semaforo(nota) { return nota ? el('span', { class: 'sema sema-' + nota, title: 'Comportamento da IA: ' + IA_COMP[nota].rot, 'aria-label': 'Comportamento da IA: ' + IA_COMP[nota].rot }) : null; }
-function iaVazio() { return { leads: [], analises: {}, analista: '', regra: IA_REGRA_PADRAO, importadoEm: 0, arquivo: '' }; }
+function iaVazio() { return { leads: [], analises: {}, analista: '', regra: IA_REGRA_PADRAO, importadoEm: 0, arquivo: '', autoCopiar: true }; }
+function formatTel(t) {
+  t = String(t || '').replace(/\D/g, '');
+  return t.length === 11 ? '(' + t.slice(0, 2) + ') ' + t.slice(2, 7) + '-' + t.slice(7) : t.length === 10 ? '(' + t.slice(0, 2) + ') ' + t.slice(2, 6) + '-' + t.slice(6) : t;
+}
 function salvarIA() { return salvarChave(CH.ia, estado.ia); }
 function iaTxt(v, n) { return limparTexto(v).slice(0, n); }
 function sanitizarIA(o) {
   var r = iaVazio();
   if (!o || typeof o !== 'object') return r;
   r.analista = iaTxt(o.analista, 80); r.regra = iaTxt(o.regra, 1500) || IA_REGRA_PADRAO;
+  r.autoCopiar = typeof o.autoCopiar === 'boolean' ? o.autoCopiar : true;
   r.importadoEm = Number.isFinite(o.importadoEm) ? o.importadoEm : 0; r.arquivo = iaTxt(o.arquivo, 120);
   var vistos = new Set();
   (Array.isArray(o.leads) ? o.leads : []).slice(0, 20000).forEach(function (x) {
@@ -4103,10 +4118,10 @@ function sanitizarIA(o) {
     vistos.add(n);
     var u = UUID_RE.exec(String(x.uuid || ''));
     r.leads.push({
-      codigo: cod, codigoNorm: n, uuid: u ? u[0].toLowerCase() : '', motivo: iaTxt(x.motivo, 60), detalhes: iaTxt(x.detalhes, 120), etapa: iaTxt(x.etapa, 60), origem: iaTxt(x.origem, 60),
+      codigo: cod, codigoNorm: n, uuid: u ? u[0].toLowerCase() : '', tel: String(x.tel || '').replace(/\D/g, '').slice(-11), motivo: iaTxt(x.motivo, 60), detalhes: iaTxt(x.detalhes, 120), etapa: iaTxt(x.etapa, 60), origem: iaTxt(x.origem, 60),
       dataLead: dataValida(x.dataLead) ? x.dataLead : null, dataPerdido: dataValida(x.dataPerdido) ? x.dataPerdido : null,
       ligacoes: (Array.isArray(x.ligacoes) ? x.ligacoes : []).slice(0, 60).map(function (c) {
-        return c && typeof c === 'object' ? { id: iaTxt(c.id, 40), data: dataValida(c.data) ? c.data : null, hora: /^\d{2}:\d{2}$/.test(String(c.hora)) ? c.hora : '', qual: iaTxt(c.qual, 60), fala: Math.max(0, Math.min(86400, Math.round(Number(c.fala) || 0))), status: iaTxt(c.status, 30) } : null;
+        return c && typeof c === 'object' ? { id: iaTxt(c.id, 40), data: dataValida(c.data) ? c.data : null, hora: /^\d{2}:\d{2}$/.test(String(c.hora)) ? c.hora : '', qual: iaTxt(c.qual, 60), amd: iaTxt(c.amd, 30), causa: iaTxt(c.causa, 60), fala: Math.max(0, Math.min(86400, Math.round(Number(c.fala) || 0))), status: iaTxt(c.status, 30) } : null;
       }).filter(Boolean)
     });
   });
@@ -4114,7 +4129,7 @@ function sanitizarIA(o) {
   Object.keys(A).slice(0, 20000).forEach(function (k) {
     var a = A[k]; if (!a || typeof a !== 'object') return;
     var lista = function (v) { return (Array.isArray(v) ? v : []).slice(0, 12).map(function (t) { return iaTxt(t, 90); }).filter(Boolean); };
-    r.analises[iaTxt(k, 40)] = { comp: ['boa', 'media', 'ruim'].indexOf(a.comp) >= 0 ? a.comp : '', correto: ['sim', 'nao', 'duvida'].indexOf(a.correto) >= 0 ? a.correto : '', porque: lista(a.porque), porqueTxt: iaTxt(a.porqueTxt, 400), motivoReal: iaTxt(a.motivoReal, 80),
+    r.analises[iaTxt(k, 40)] = { comp: ['boa', 'media', 'ruim'].indexOf(a.comp) >= 0 ? a.comp : '', correto: ['sim', 'nao', 'duvida'].indexOf(a.correto) >= 0 ? a.correto : '', arg: ['sim', 'parcial', 'nao', 'na'].indexOf(a.arg) >= 0 ? a.arg : '', cad: ['sim', 'nao', 'na'].indexOf(a.cad) >= 0 ? a.cad : '', indic: ['sim', 'nao'].indexOf(a.indic) >= 0 ? a.indic : '', porque: lista(a.porque), porqueTxt: iaTxt(a.porqueTxt, 400), motivoReal: iaTxt(a.motivoReal, 80),
       evid: lista(a.evid), obs: iaTxt(a.obs, 600), parecer: String(a.parecer || '').slice(0, 4000), por: iaTxt(a.por, 80), em: Number.isFinite(a.em) ? a.em : 0 };
   });
   return r;
@@ -4128,20 +4143,20 @@ function analisarIAPerdidos(linhas) {
   var C = { cod: ix('pedidosreferencecode') >= 0 ? ix('pedidosreferencecode') : ix('perdidosreferencecode'), uuid: ix('pedidosid'), motivo: ix('pedidoslostreasondescription') >= 0 ? ix('pedidoslostreasondescription') : ix('perdidoslostreasondescription'),
     det: ix('pedidoslostdetails') >= 0 ? ix('pedidoslostdetails') : ix('perdidoslostdetails'), etapa: ix('pedidosboardstepname') >= 0 ? ix('pedidosboardstepname') : ix('perdidosboardstepname'),
     origem: ix('pedidosorigem') >= 0 ? ix('pedidosorigem') : ix('perdidosorigem'), dLead: ix('pedidosdatalead'), dPerd: ix('perdidosdataperdido') >= 0 ? ix('perdidosdataperdido') : ix('pedidosdataperdido'),
-    id: ix('iaid'), data: ix('iacalldate'), qual: ix('iaqualification'), fala: ix('iaspeakingtime'), st: ix('iareadablestatustext') };
+    tel: ix('telefone') >= 0 ? ix('telefone') : ix('pedidosleadphone'), amd: ix('iareadableamdstatustext'), causa: ix('iareadablehangupcausetext'), id: ix('iaid'), data: ix('iacalldate'), qual: ix('iaqualification'), fala: ix('iaspeakingtime'), st: ix('iareadablestatustext') };
   if (C.cod < 0 || C.motivo < 0) return { erro: 'Não achei as colunas do lead (reference_code e lost_reason_description).' };
   var itens = [], invalidos = 0, cel = function (l, k) { return C[k] >= 0 && l[C[k]] !== undefined ? l[C[k]] : ''; };
   for (var i = 1; i < linhas.length; i++) {
     var l = linhas[i], cod = iaTxt(cel(l, 'cod'), 40);
     if (!normLead(cod)) { invalidos++; continue; }
-    var ids = partesLista(cel(l, 'id')), datas = partesLista(cel(l, 'data')), quals = partesLista(cel(l, 'qual')), falas = partesLista(cel(l, 'fala')), sts = partesLista(cel(l, 'st'));
+    var amds = partesLista(cel(l, 'amd')), causas = partesLista(cel(l, 'causa')), ids = partesLista(cel(l, 'id')), datas = partesLista(cel(l, 'data')), quals = partesLista(cel(l, 'qual')), falas = partesLista(cel(l, 'fala')), sts = partesLista(cel(l, 'st'));
     var n = Math.max(ids.length, datas.length), lig = [];
     for (var k = 0; k < n; k++) {
       var dh = parseDataHora(datas[k] || '');
-      lig.push({ id: ids[k] || '', data: dh ? dh.data : null, hora: dh ? dh.hora : '', qual: quals[k] !== undefined ? quals[k] : '', fala: parseDuracao(falas[k] || ''), status: sts.length === 1 ? sts[0] : (sts[k] || '') });
+      lig.push({ id: ids[k] || '', data: dh ? dh.data : null, hora: dh ? dh.hora : '', qual: quals[k] !== undefined ? quals[k] : '', amd: amds.length === 1 ? amds[0] : (amds[k] || ''), causa: causas.length === 1 ? causas[0] : (causas[k] || ''), fala: parseDuracao(falas[k] || ''), status: sts.length === 1 ? sts[0] : (sts[k] || '') });
     }
     lig.sort(function (a, b) { return ((a.data || '') + a.hora) < ((b.data || '') + b.hora) ? -1 : 1; });
-    itens.push({ codigo: cod, uuid: String(cel(l, 'uuid')), motivo: cel(l, 'motivo'), detalhes: cel(l, 'det'), etapa: cel(l, 'etapa'), origem: cel(l, 'origem'),
+    itens.push({ codigo: cod, uuid: String(cel(l, 'uuid')), tel: String(cel(l, 'tel')), motivo: cel(l, 'motivo'), detalhes: cel(l, 'det'), etapa: cel(l, 'etapa'), origem: cel(l, 'origem'),
       dataLead: parseDataKanban(cel(l, 'dLead')), dataPerdido: parseDataKanban(cel(l, 'dPerd')), ligacoes: lig });
   }
   return { itens: itens, invalidos: invalidos };
@@ -4156,11 +4171,12 @@ function importarIAPerdidos(linhas, nome) {
   estado.ia.leads = Array.from(mapa.values()); estado.ia.importadoEm = Date.now(); estado.ia.arquivo = iaTxt(nome, 120);
   salvarIA(); renderTudo();
   var comLig = novo.leads.filter(function (l) { return l.ligacoes.length; }).length;
-  return 'análise IA: ' + novo.leads.length + ' leads (' + novos + ' novos), ' + comLig + ' com ligações da IA' + (res.invalidos ? '; ' + res.invalidos + ' linhas sem código' : '') + '. Nome, telefone e CPF não são guardados.';
+  var comTel = novo.leads.filter(function (l) { return l.tel; }).length;
+  return 'análise IA: ' + novo.leads.length + ' leads (' + novos + ' novos), ' + comLig + ' com ligações da IA, ' + comTel + ' com telefone' + (res.invalidos ? '; ' + res.invalidos + ' linhas sem código' : '') + '. Nome e CPF não são guardados.';
 }
 /* CSV da telefonia (3C Plus): completa qualificação/fala das ligações que já existem nos leads, casando pelo id da chamada */
 function importarChamadasIA(linhas) {
-  var cab = linhas[0].map(colunaKey), ix = function (n) { return cab.indexOf(n); }, c = { id: ix('id'), qual: ix('qualificationname'), fala: ix('speakingtime'), st: ix('readablestatustext') };
+  var cab = linhas[0].map(colunaKey), ix = function (n) { return cab.indexOf(n); }, c = { id: ix('id'), qual: ix('qualificationname'), fala: ix('speakingtime'), st: ix('readablestatustext'), amd: ix('readableamdstatustext'), causa: ix('readablehangupcausetext') };
   if (c.id < 0) return 'CSV da telefonia sem a coluna _id.';
   var porId = new Map();
   estado.ia.leads.forEach(function (l) { l.ligacoes.forEach(function (g) { if (g.id) porId.set(g.id, g); }); });
@@ -4172,6 +4188,8 @@ function importarChamadasIA(linhas) {
     if (!g.qual && c.qual >= 0) g.qual = iaTxt(r[c.qual], 60);
     if (!g.fala && c.fala >= 0) g.fala = parseDuracao(r[c.fala]);
     if (!g.status && c.st >= 0) g.status = iaTxt(r[c.st], 30);
+    if (!g.amd && c.amd >= 0) g.amd = iaTxt(r[c.amd], 30);
+    if (!g.causa && c.causa >= 0) g.causa = iaTxt(r[c.causa], 60);
   }
   salvarIA(); renderTudo();
   return 'telefonia: ' + casadas + ' de ' + total + ' ligações casadas com os leads' + (estado.ia.leads.length ? '' : ' (importe antes o arquivo “agente IA perdidos por motivo”)') + '.';
@@ -4221,8 +4239,14 @@ function iaLerParecer(texto) {
 }
 function iaAnalise(l) {
   var a = estado.ia.analises[l.codigoNorm];
-  if (!a) { a = estado.ia.analises[l.codigoNorm] = { comp: '', correto: '', porque: [], porqueTxt: '', motivoReal: '', evid: [], obs: '', parecer: '', por: '', em: 0 }; }
+  if (!a) { a = estado.ia.analises[l.codigoNorm] = { comp: '', correto: '', arg: '', cad: '', indic: '', porque: [], porqueTxt: '', motivoReal: '', evid: [], obs: '', parecer: '', por: '', em: 0 }; }
   return a;
+}
+/* Conformidade da IA, como no site: % de “Sim” entre os itens respondidos (parcial vale meio ponto; sem como avaliar / não se aplica ficam de fora) */
+function iaConformidade(a) {
+  var pts = 0, n = 0;
+  [[a.arg, { sim: 1, parcial: 0.5, nao: 0 }], [a.cad, { sim: 1, nao: 0 }], [a.correto, { sim: 1, nao: 0 }]].forEach(function (x) { if (x[0] in x[1]) { pts += x[1][x[0]]; n++; } });
+  return n ? Math.round(pts / n * 100) : null;
 }
 function iaGravar(l, a) { a.por = estado.ia.analista; a.em = Date.now(); salvarIA(); iaRenderLateral(); }
 function iaFiltrados() {
@@ -4249,13 +4273,13 @@ function iaStats() {
   return t;
 }
 function iaCSV() {
-  var cab = ['Data da análise', 'Analista', 'Lead', 'Link Dryve', 'Data perdido', 'Motivo registrado', 'Detalhe do motivo', 'Origem', 'Motivo correto?', 'Por quê', 'Motivo sugerido', 'Evidências', 'Ligações IA', 'Maior fala IA (s)', 'Última qualificação IA', 'Comportamento da IA (analista)', 'Sinal do painel', 'Parecer da IA', 'Observação'];
+  var cab = ['Data da análise', 'Analista', 'Lead', 'Telefone', 'Link Dryve', 'Data perdido', 'Motivo registrado', 'Detalhe do motivo', 'Origem', 'Motivo correto?', 'Seguiu a argumentação', 'Realizou a cadência', 'Houve indicação', 'Conformidade da IA (%)', 'Por quê', 'Motivo sugerido', 'Evidências', 'Ligações IA', 'Maior fala IA (s)', 'Última qualificação IA', 'Comportamento da IA (analista)', 'Sinal do painel', 'Parecer da IA', 'Observação'];
   var linhas = [cab.join(';')];
   estado.ia.leads.forEach(function (l) {
     var a = estado.ia.analises[l.codigoNorm]; if (!iaStatus(a)) return;
     var ult = l.ligacoes.length ? l.ligacoes[l.ligacoes.length - 1].qual : '';
-    linhas.push([a.em ? dataBR(dataISO(new Date(a.em))) : '', a.por, l.codigo, urlPadraoDryve(l.uuid), l.dataPerdido ? dataBR(l.dataPerdido) : '', l.motivo, l.detalhes, l.origem,
-      { sim: 'Sim', nao: 'Não', duvida: 'Sem como avaliar' }[a.correto], a.porque.concat(a.porqueTxt ? [a.porqueTxt] : []).join(' | '), a.motivoReal, a.evid.join(' | '),
+    linhas.push([a.em ? dataBR(dataISO(new Date(a.em))) : '', a.por, l.codigo, formatTel(l.tel), urlPadraoDryve(l.uuid), l.dataPerdido ? dataBR(l.dataPerdido) : '', l.motivo, l.detalhes, l.origem,
+      { sim: 'Sim', nao: 'Não', duvida: 'Sem como avaliar' }[a.correto], { sim: 'Sim', parcial: 'Parcialmente', nao: 'Não', na: 'Não se aplica' }[a.arg] || '', { sim: 'Sim', nao: 'Não', na: 'Não se aplica' }[a.cad] || '', { sim: 'Sim', nao: 'Não' }[a.indic] || '', iaConformidade(a) === null ? '' : iaConformidade(a), a.porque.concat(a.porqueTxt ? [a.porqueTxt] : []).join(' | '), a.motivoReal, a.evid.join(' | '),
       l.ligacoes.length, l.ligacoes.reduce(function (m, g) { return Math.max(m, g.fala); }, 0), ult, a.comp ? IA_COMP[a.comp].rot : '', iaNotaGeral(l) ? IA_COMP[iaNotaGeral(l)].rot : '', a.parecer.replace(/\s+/g, ' ').trim(), a.obs].map(campoCSV).join(';'));
   });
   return '\uFEFF' + linhas.join('\r\n') + '\r\n';
@@ -4283,6 +4307,7 @@ function iaRenderLista() {
     var st = iaStatus(estado.ia.analises[l.codigoNorm]), ult = l.ligacoes.length ? l.ligacoes[l.ligacoes.length - 1].qual : '';
     return el('button', { type: 'button', class: 'ia-item' + (u.sel === l.codigoNorm ? ' sel' : ''), dataset: { cod: l.codigoNorm } },
       el('b', null, semaforo(iaNotaGeral(l)), l.codigo, ' ', tag(IA_ROTULO[st], IA_COR[st])),
+      el('span', null, formatTel(l.tel) || 'sem telefone'),
       el('span', null, l.ligacoes.length + ' ' + plural(l.ligacoes.length, 'ligação IA', 'ligações IA') + (ult && ult !== '-' ? ' · ' + ult : '') + (l.dataPerdido ? ' · perdido ' + dataBR(l.dataPerdido).slice(0, 5) : '')));
   }));
 }
@@ -4310,11 +4335,6 @@ function iaRenderDetalhe() {
       return el('label', null, inp, t);
     }));
   }
-  var radios = el('div', { class: 'ia-opcoes', role: 'radiogroup', 'aria-label': 'O motivo está correto?' }, [['sim', 'Sim, está correto', ''], ['nao', 'Não, está incorreto', 'nao'], ['duvida', 'Sem como avaliar', '']].map(function (o) {
-    var inp = el('input', { type: 'radio', name: 'ia-correto', value: o[0] }); inp.checked = a.correto === o[0];
-    inp.addEventListener('change', function () { a.correto = o[0]; iaGravar(l, a); blocoNao.hidden = a.correto !== 'nao'; });
-    return el('label', { class: o[2] }, inp, o[1]);
-  }));
   var porqueTxt = el('textarea', { rows: '2', maxlength: '400', placeholder: 'Explique em uma frase por que está errado' }); porqueTxt.value = a.porqueTxt;
   porqueTxt.addEventListener('input', function () { a.porqueTxt = porqueTxt.value; iaGravar(l, a); });
   var motivo = el('input', { type: 'text', maxlength: '80', list: 'ia-motivos', placeholder: 'Qual seria o motivo correto?', autocomplete: 'off' }); motivo.value = a.motivoReal;
@@ -4329,20 +4349,34 @@ function iaRenderDetalhe() {
     inp.addEventListener('change', function () { a.comp = o[0]; iaGravar(l, a); });
     return el('label', null, inp, semaforo(o[0]), o[1]);
   });
-  var compBox = el('div', { style: 'display:grid;gap:8px' },
-    el('div', { class: 'rotulo' }, 'COMPORTAMENTO DA IA (NATASHA) NA LIGAÇÃO'),
-    el('div', { class: 'ia-opcoes', role: 'radiogroup', 'aria-label': 'Comportamento da IA na ligação' }, compInputs),
-    el('p', { class: 'dica', style: 'margin:0;display:flex;gap:8px;flex-wrap:wrap;align-items:center' },
-      sug ? ['Sinal do painel: ', semaforo(sug), el('b', null, IA_COMP[sug].rot), ' — ' + IA_COMP[sug].txt + '.'] : 'Sem ligações da IA para avaliar: marque manualmente, se precisar.',
-      sug && a.comp !== sug ? el('button', { type: 'button', class: 'btn btn-sec btn-peq', onclick: function () { a.comp = sug; iaGravar(l, a); iaRenderDetalhe(); } }, 'Usar o sinal do painel') : null),
-    el('p', { class: 'dica', style: 'margin:0' }, 'Verde: ' + IA_COMP.boa.txt + '. Amarelo: ' + IA_COMP.media.txt + '. Vermelho: ' + IA_COMP.ruim.txt + '.'));
   var blocoNao = el('div', { style: 'display:grid;gap:10px', hidden: a.correto !== 'nao' },
     el('div', { class: 'rotulo' }, 'POR QUE NÃO ESTÁ CORRETO?'), opcoes('porque', IA_PORQUES, a.porque), porqueTxt,
     el('div', { class: 'campo' }, el('label', null, 'Motivo correto (sugerido)'), motivo));
+  var confChip = el('span', { class: 'ia-conf' });
+  function atualizarConf() { var c = iaConformidade(a); confChip.className = 'ia-conf' + (c === null ? '' : c >= 80 ? ' alta' : c >= 50 ? ' media' : ' baixa'); confChip.textContent = 'CONFORMIDADE ' + (c === null ? '—' : c + '%'); }
+  function linhaCk(rot, dica, campo, opts, onMudou) {
+    var sel = el('select', { 'aria-label': rot }, [el('option', { value: '' }, 'Selecione…')].concat(opts.map(function (o) { return el('option', { value: o[0] }, o[1]); })));
+    sel.value = a[campo] || '';
+    var lin = el('div', { class: 'ia-ck-lin' }, el('div', null, el('b', null, rot), dica ? el('small', null, dica) : null), sel);
+    function cor() { lin.classList.toggle('ok', sel.value === 'sim'); lin.classList.toggle('ruim', sel.value === 'nao'); }
+    sel.addEventListener('change', function () { a[campo] = sel.value; cor(); iaGravar(l, a); atualizarConf(); if (onMudou) onMudou(); });
+    cor(); return lin;
+  }
+  var ligs = l.ligacoes.length;
+  var checklist = el('div', { class: 'ia-ck' },
+    linhaCk('A IA seguiu o processo de argumentação?', ligs ? 'Ouça a gravação: ela se apresentou, perguntou o motivo e tentou contornar?' : 'Sem ligação da IA registrada', 'arg', [['sim', 'Sim'], ['parcial', 'Parcialmente'], ['nao', 'Não'], ['na', 'Não se aplica']]),
+    linhaCk('A IA realizou a cadência?', ligs + ' ' + plural(ligs, 'ligação', 'ligações') + ' da IA neste lead (meta: ' + estado.config.cadencia.ligacoes + ')', 'cad', [['sim', 'Sim'], ['nao', 'Não'], ['na', 'Não se aplica']]),
+    el('div', { class: 'ia-ck-lin' }, el('div', null, el('b', null, 'Motivo da perda'), el('small', null, 'Registrado no Dryve · não entra na conformidade')), el('b', { style: 'display:inline-block' }, l.motivo || '—')),
+    linhaCk('Motivo correto?', 'O cliente realmente é ' + (l.motivo || 'o motivo registrado') + '?', 'correto', [['sim', 'Sim, está correto'], ['nao', 'Não, está incorreto'], ['duvida', 'Sem como avaliar']], function () { blocoNao.hidden = a.correto !== 'nao'; iaRenderLateral(); }),
+    linhaCk('Houve indicação?', 'O cliente indicou alguém / pediu para falar com outra pessoa', 'indic', [['sim', 'Sim'], ['nao', 'Não']]),
+    el('div', { class: 'ia-ck-lin' }, el('div', null, el('b', null, 'Comportamento da IA na ligação'), el('small', null, sug ? 'Sinal do painel: ' + IA_COMP[sug].rot + ' — ' + IA_COMP[sug].txt : 'Sem ligações da IA para avaliar')),
+      el('div', { class: 'ia-opcoes', role: 'radiogroup', 'aria-label': 'Comportamento da IA na ligação' }, compInputs)));
+  atualizarConf();
   function proximo() {
     var lista = iaFiltrados(), i = lista.findIndex(function (x) { return x.codigoNorm === l.codigoNorm; });
     var prox = estado.ia.leads.filter(function (x) { return !iaStatus(estado.ia.analises[x.codigoNorm]) && x.codigoNorm !== l.codigoNorm; })[0];
     u.sel = prox ? prox.codigoNorm : l.codigoNorm; iaRenderDetalhe(); iaRenderLateral();
+    if (prox && estado.ia.autoCopiar && prox.tel) copiarTexto(formatTel(prox.tel)).then(function () { toast('Próximo telefone copiado: ' + formatTel(prox.tel)); });
     if (!prox) toast('Todos os leads foram analisados. 🎉');
   }
   function aplicarRapida(i) {
@@ -4360,23 +4394,24 @@ function iaRenderDetalhe() {
   cont.replaceChildren(el('div', { class: 'ia-det' },
     el('article', { class: 'card', style: 'display:grid;gap:12px' },
       el('div', { style: 'display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start' },
-        el('div', null, el('div', { class: 'rotulo' }, 'LEAD'), el('div', { class: 'ia-cod' }, l.codigo)),
+        el('div', null, el('div', { class: 'rotulo' }, 'TELEFONE · filtre no relatório de ligações'), el('div', { class: 'ia-cod' }, formatTel(l.tel) || 'sem telefone'), el('div', { class: 'dica' }, 'Lead ' + l.codigo)),
         el('div', { class: 'acoes' },
-          l.uuid ? el('a', { class: 'btn btn-primario', href: urlPadraoDryve(l.uuid), target: '_blank', rel: 'noopener noreferrer', title: 'Abre o lead no Dryve Pro (nova aba)' }, '↗ Abrir no Dryve') : el('button', { type: 'button', class: 'btn btn-linha', disabled: true }, 'Sem link do Dryve'),
+          el('button', { type: 'button', class: 'btn btn-primario', disabled: !l.tel, onclick: function () { copiarTexto(formatTel(l.tel)).then(function () { toast('Telefone copiado: ' + formatTel(l.tel)); }); } }, '⧉ Copiar telefone'),
+          l.uuid ? el('a', { class: 'btn btn-linha', href: urlPadraoDryve(l.uuid), target: '_blank', rel: 'noopener noreferrer', title: 'Abre o lead no Dryve Pro (nova aba)' }, '↗ Abrir no Dryve') : el('button', { type: 'button', class: 'btn btn-linha', disabled: true }, 'Sem link do Dryve'),
           el('button', { type: 'button', class: 'btn btn-linha', onclick: function () { copiarTexto(l.codigo).then(function () { toast('Código copiado.'); }); } }, '⧉ Código'))),
       el('div', { class: 'ck-fatos' }, ['Motivo registrado: ' + l.motivo, l.detalhes ? 'Detalhe: ' + l.detalhes : '', l.etapa ? 'Etapa: ' + l.etapa : '', l.origem ? 'Origem: ' + l.origem : '', l.dataLead ? 'Lead criado ' + dataBR(l.dataLead) : '', l.dataPerdido ? 'Perdido em ' + dataBR(l.dataPerdido) : ''].filter(Boolean).map(function (t) { return el('span', null, t); })),
       el('div', { class: 'ia-sinal ' + sinal.tom }, sinal.txt),
-      l.ligacoes.length ? el('div', { class: 'tabela-wrap', style: 'max-height:260px' }, el('table', { style: 'min-width:520px' },
-        el('thead', null, el('tr', null, ['Quando', 'Qualificação da IA', 'Fala', 'Situação', 'IA', 'Gravação'].map(function (t) { return el('th', { scope: 'col' }, el('span', null, t)); }))),
+      l.ligacoes.length ? el('div', { class: 'tabela-wrap', style: 'max-height:260px' }, el('table', { style: 'min-width:760px' },
+        el('thead', null, el('tr', null, ['Quando', 'Qualificação da IA', 'Fala', 'Atendeu', 'Desligamento', 'Situação', 'IA', 'Gravação'].map(function (t) { return el('th', { scope: 'col' }, el('span', null, t)); }))),
         el('tbody', null, l.ligacoes.map(function (g) {
-          return el('tr', null, el('td', { class: 'num' }, g.data ? dataBR(g.data).slice(0, 5) + ' ' + g.hora : '—'), el('td', null, g.qual && g.qual !== '-' ? g.qual : '—'), el('td', { class: 'num' }, fmtSeg(g.fala)), el('td', null, g.status || '—'),
+          return el('tr', null, el('td', { class: 'num' }, g.data ? dataBR(g.data).slice(0, 5) + ' ' + g.hora : '—'), el('td', null, g.qual && g.qual !== '-' ? g.qual : '—'), el('td', { class: 'num' }, fmtSeg(g.fala)), el('td', null, g.amd && g.amd !== '-' ? g.amd : '—'), el('td', null, g.causa || '—'), el('td', null, g.status || '—'),
             el('td', null, semaforo(iaNotaLigacao(g)), IA_COMP[iaNotaLigacao(g)].rot),
             el('td', null, g.id ? el('a', { class: 'link-mini', href: urlGravacao(g.id), target: '_blank', rel: 'noopener noreferrer', title: 'Abrir a gravação (precisa estar logado na telefonia)' }, '🎧') : ''));
         })))) : null,
       l.ligacoes.length ? el('p', { class: 'dica', style: 'margin:0' }, l.ligacoes.length + ' ' + plural(l.ligacoes.length, 'ligação', 'ligações') + ' da IA · maior fala ' + fmtSeg(maior)) : null),
     el('article', { class: 'card', style: 'display:grid;gap:14px' },
-      el('div', { class: 'card-cab', style: 'margin:0' }, el('h3', null, 'Checklist · o motivo está correto?'), a.correto ? tag(IA_ROTULO[a.correto], IA_COR[a.correto]) : null),
-      rapidasBox, el('div', { class: 'rotulo' }, 'CHECKLIST COMPLETO'), compBox, radios, blocoNao,
+      el('div', { class: 'card-cab', style: 'margin:0' }, el('h3', null, 'Auditoria de Perdido · IA Natasha'), el('div', { class: 'acoes' }, confChip, a.correto ? tag(IA_ROTULO[a.correto], IA_COR[a.correto]) : null)),
+      rapidasBox, el('div', { class: 'rotulo' }, 'CHECKLIST COMPLETO'), checklist, blocoNao,
       el('div', { style: 'display:grid;gap:8px' }, el('div', { class: 'rotulo' }, 'O QUE VOCÊ CONFERIU'), opcoes('evid', IA_EVIDENCIAS, a.evid)),
       el('div', { class: 'campo' }, el('label', null, 'Observação'), obs),
       el('div', { style: 'display:grid;gap:8px;border-top:1px dashed var(--borda);padding-top:12px' },
@@ -4400,7 +4435,7 @@ function iaRenderDetalhe() {
 }
 function renderIA() {
   var u = estado.ui.ia;
-  $('#ia-filtro').value = u.filtro; $('#ia-busca').value = u.busca; $('#ia-analista').value = estado.ia.analista; $('#ia-regra').value = estado.ia.regra;
+  $('#ia-filtro').value = u.filtro; $('#ia-busca').value = u.busca; $('#ia-analista').value = estado.ia.analista; $('#ia-auto').checked = estado.ia.autoCopiar; $('#ia-regra').value = estado.ia.regra;
   if (!document.getElementById('ia-motivos')) document.body.appendChild(el('datalist', { id: 'ia-motivos' }, IA_MOTIVOS.map(function (m) { return el('option', { value: m }); })));
   var lista = iaFiltrados();
   if (!u.sel || !estado.ia.leads.some(function (x) { return x.codigoNorm === u.sel; })) u.sel = lista.length ? lista[0].codigoNorm : '';
@@ -4415,6 +4450,7 @@ function ligarEventosIA() {
   });
   $('#ia-filtro').addEventListener('change', function (e) { estado.ui.ia.filtro = e.target.value; iaRenderLista(); });
   $('#ia-busca').addEventListener('input', function (e) { estado.ui.ia.busca = e.target.value; iaRenderLista(); });
+  $('#ia-auto').addEventListener('change', function (e) { estado.ia.autoCopiar = e.target.checked; salvarIA(); });
   $('#ia-analista').addEventListener('input', function (e) { estado.ia.analista = iaTxt(e.target.value, 80); salvarIA(); });
   $('#ia-regra').addEventListener('input', function (e) { estado.ia.regra = iaTxt(e.target.value, 1500) || IA_REGRA_PADRAO; salvarIA(); });
   $('#ia-lista').addEventListener('click', function (e) {
