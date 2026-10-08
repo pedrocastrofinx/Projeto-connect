@@ -16,7 +16,7 @@ Uso — com uma pasta de áudios que você já baixou (o nome do arquivo deve co
     python transcrever.py --csv telefonia.csv --pasta C:\\gravacoes
 
 Opções úteis:
-    --min 10        só ligações com 10 s de fala ou mais (padrão). Mais curtas quase sempre são o cliente desligando.
+    --min 1         (padrão) todas as ligações com alguma fala. Use --min 10 para só as de 10 s ou mais; --min 0 para absolutamente todas.
     --max 50        faz só as 50 maiores (bom para testar)
     --modelo small  tiny | base | small | medium | large-v3 (small é o equilíbrio; medium é melhor e mais lento)
     --saida transcricoes.csv
@@ -208,7 +208,7 @@ def main():
     ap.add_argument("--base", help="domínio do 3C da sua empresa (ex.: https://finx.3c.plus); por padrão tenta app.3c.plus e finx.3c.plus")
     ap.add_argument("--pasta", help="pasta com áudios já baixados")
     ap.add_argument("--ordem", choices=["dia", "fala"], default="dia", help="dia (padrão): hoje primeiro, depois ontem, anteontem…; dentro de cada dia, as ligações mais longas primeiro. fala: só pela duração, de todos os dias")
-    ap.add_argument("--min", type=int, default=10, help="mínimo de segundos de fala (padrão 10)")
+    ap.add_argument("--min", type=int, default=1, help="mínimo de segundos de fala (padrão 1 = todas as ligações em que alguém falou; use --min 10 para só as mais longas, ou --min 0 para absolutamente todas, inclusive as sem conversa)")
     ap.add_argument("--max", type=int, default=0, help="limitar a quantidade (0 = todas)")
     ap.add_argument("--modelo", default="small")
     ap.add_argument("--saida", default="transcricoes.csv")
