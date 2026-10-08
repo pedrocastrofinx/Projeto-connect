@@ -149,9 +149,15 @@ input[type=checkbox],input[type=radio]{width:18px;height:18px;accent-color:var(-
 .dropzone:hover,.dropzone.sobre{border-color:var(--azul);background:#D8E6FF}
 .pl-ajustes summary{cursor:pointer;font-weight:700;color:var(--azul-esc)}
 .aviso-lead.azul{background:var(--azul-cl);color:var(--azul-esc);border-color:var(--azul-med)}
+.pl-ajustes.ck{background:#fff;color:var(--texto);border:1px solid var(--borda);border-radius:14px;padding:12px 14px;text-align:left}
+.ck summary{color:var(--azul-esc)}
+.ck-fatos{display:flex;flex-wrap:wrap;gap:6px}
+.ck-fatos span{background:var(--azul-cl);color:var(--azul-esc);border-radius:99px;padding:3px 10px;font-size:.8rem;font-weight:600}
+.ck .rotulo{color:var(--muted)}
+.ck .dica{color:var(--muted)}
 .ck-lista{display:grid;gap:6px}
 .ck-item{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:#F7FAFF;border:1px solid #E1E9F8;border-radius:10px;padding:8px 12px}
-.ck-nome{font-weight:700;display:flex;flex-direction:column}
+.ck-nome{font-weight:700;display:flex;flex-direction:column;color:var(--azul-esc)}
 .ck-nome small{font-weight:600;color:var(--muted);font-size:.72rem}
 .ck-val{font-weight:700;color:var(--azul-esc);text-align:right}
 .ck-man{color:var(--muted);font-size:.85rem}
@@ -280,6 +286,10 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
 .proxima-cod{font-size:2.1rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
 .proxima-det{display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center;font-size:.95rem}
 .proxima .tag{background:rgba(255,255,255,.18);color:#fff}
+.proxima .ck .tag-azul{background:var(--azul-cl);color:var(--azul)}
+.proxima .ck .tag-amarelo{background:var(--amarelo-cl);color:var(--amarelo-esc)}
+.proxima .ck .tag-vermelho{background:var(--vermelho-cl);color:var(--vermelho-esc)}
+.proxima .ck .tag-cinza{background:#EEF1F6;color:#4A5A78}
 .proxima .dica{color:rgba(255,255,255,.8)}
 .proxima .btn-linha{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.4);color:#fff}
 .proxima .btn-linha:hover:not([disabled]){background:rgba(255,255,255,.26)}
@@ -1179,6 +1189,31 @@ function sanitizarChamada(x) {
   var seg = Number(x.seg); if (!isFinite(seg) || seg < 0) seg = 0;
   return { lead: lead, leadNorm: ln, user: usuario, data: x.data, hora: /^([01]\d|2[0-3]):[0-5]\d$/.test(String(x.hora)) ? x.hora : '00:00', seg: Math.min(86400, Math.round(seg)) };
 }
+var CHAMADAS_DIAS = 62; /* histórico guardado: ~2 meses */
+function limiteChamadas() { return somarDias(dataISO(new Date()), -CHAMADAS_DIAS); }
+/* Formato compacto para o localStorage e o backup (22 mil ligações cabem em ~1 MB) */
+function compactarChamadas(lista) {
+  var us = [], idx = new Map();
+  var rows = lista.map(function (c) {
+    var u = idx.get(c.user);
+    if (u === undefined) { u = us.length; us.push(c.user); idx.set(c.user, u); }
+    return [u, c.lead, +c.data.replace(/-/g, ''), +c.hora.slice(0, 2) * 60 + +c.hora.slice(3), c.seg];
+  });
+  return { v: 2, u: us, r: rows };
+}
+function descompactarChamadas(o) {
+  if (Array.isArray(o)) return sanitizarChamadas(o);
+  if (!o || o.v !== 2 || !Array.isArray(o.u) || !Array.isArray(o.r)) return [];
+  var out = [];
+  o.r.forEach(function (r) {
+    if (!Array.isArray(r)) return;
+    var d = String(r[2]), m = Number(r[3]) || 0;
+    if (d.length !== 8) return;
+    var c = sanitizarChamada({ lead: r[1], user: o.u[r[0]], data: d.slice(0, 4) + '-' + d.slice(4, 6) + '-' + d.slice(6), hora: pad(Math.floor(m / 60) % 24) + ':' + pad(m % 60), seg: r[4] });
+    if (c) out.push(c);
+  });
+  return out;
+}
 function chaveChamada(c) { return [normBusca(c.user), c.leadNorm, c.data, c.hora, c.seg].join('|'); }
 function sanitizarChamadas(lista) {
   var mapa = new Map();
@@ -1210,7 +1245,7 @@ function analisarChamadas(linhas) {
   function achar(nomes) { for (var i = 0; i < nomes.length; i++) { var k = cab.indexOf(nomes[i]); if (k >= 0) return k; } return -1; }
   var col = { lead: achar(['leadcode', 'codigolead']), quando: achar(['createdat', 'datahora', 'data']), dur: achar(['duracaochamada', 'duracao']), user: achar(['username', 'usuario', 'operador']) };
   if (col.lead < 0 || col.quando < 0 || col.dur < 0 || col.user < 0) return { erro: 'Cabeçalho das ligações não reconhecido (esperado: lead_code, created_at, duracao_chamada, user_name).' };
-  var mesIni = primeiroDiaMes(dataISO(new Date())), itens = [], invalidos = 0, antigas = 0;
+  var mesIni = limiteChamadas(), itens = [], invalidos = 0, antigas = 0;
   for (var i = 1; i < linhas.length; i++) {
     var l = linhas[i], q = parseDataHora(l[col.quando]);
     if (!q) { invalidos++; continue; }
@@ -1221,7 +1256,7 @@ function analisarChamadas(linhas) {
   return { itens: itens, invalidos: invalidos, antigas: antigas };
 }
 function mesclarChamadas(itens) {
-  var mesIni = primeiroDiaMes(dataISO(new Date())), mapa = new Map();
+  var mesIni = limiteChamadas(), mapa = new Map();
   estado.chamadas.concat(itens).forEach(function (c) { if (c.data >= mesIni) mapa.set(chaveChamada(c), c); });
   estado.chamadas = Array.from(mapa.values());
 }
@@ -1245,11 +1280,17 @@ function diasComChamadas() {
   return Object.keys(d).sort().reverse();
 }
 /* Por operador: ligações, leads ligados, quantos cumpriram a cadência (N ligações no dia) e quantos tiveram ligação efetiva */
-function calcCadencia(dia) {
-  var cfg = estado.config.cadencia, resolver = criarResolvedor(), agg = new Map(), porOp = new Map();
+function faixaCadencia(modo) {
+  var hoje = dataISO(new Date()), mi = primeiroDiaMes(hoje);
+  if (modo === 'mes') return [mi, ultimoDiaMes(hoje)];
+  if (modo === 'mesant') { var fim = somarDias(mi, -1); return [primeiroDiaMes(fim), fim]; }
+  return [modo, modo];
+}
+function calcCadencia(modo) {
+  var faixa = faixaCadencia(modo), cfg = estado.config.cadencia, resolver = criarResolvedor(), agg = new Map(), porOp = new Map();
   estado.operadores.forEach(function (o) { porOp.set(o.id, { op: o, ligacoes: 0, efetivas: 0, leadDias: 0, cad: 0, efLeads: 0 }); });
   estado.chamadas.forEach(function (c) {
-    if (dia && c.data !== dia) return;
+    if (c.data < faixa[0] || c.data > faixa[1]) return;
     var o = resolver(c.user); if (!o) return;
     var k = o.id + '|' + c.leadNorm + '|' + c.data, a = agg.get(k);
     if (!a) { a = { op: o.id, n: 0, ef: 0 }; agg.set(k, a); }
@@ -1275,8 +1316,9 @@ function ligacoesDoLead(leadNorm) {
   });
   var dias = Array.from(porDia.values()).sort(function (a, b) { return a.data < b.data ? 1 : -1; });
   if (!dias.length) return null;
+  var total = dias.reduce(function (t, d) { return t + d.n; }, 0);
   var melhor = dias.reduce(function (a, d) { return d.n > a.n ? d : a; }, dias[0]);
-  return { ultimo: dias[0], melhor: melhor, dias: dias.length, temEfetiva: dias.some(function (d) { return d.ef > 0; }) };
+  return { lista: dias, total: total, ultimo: dias[0], melhor: melhor, dias: dias.length, temEfetiva: dias.some(function (d) { return d.ef > 0; }) };
 }
 
 function contarMescla(itens) {
@@ -1484,9 +1526,9 @@ function carregarTudo() {
   if (rb.valor) estado.baseLeads = sanitizarBase(rb.valor).itens;
   else if (rb.novo) { estado.baseLeads = sanitizarBase(analisarBase(BASE_SEMENTE).itens).itens; salvarBase(); }
 
-  var rch = carregarJSON(CH.chamadas, Array.isArray);
+  var rch = carregarJSON(CH.chamadas, function (v) { return Array.isArray(v) || (v && v.v === 2); });
   if (rch.corrompido) problemas.push('ligações');
-  if (rch.valor) estado.chamadas = sanitizarChamadas(rch.valor);
+  if (rch.valor) estado.chamadas = descompactarChamadas(rch.valor);
 
   var rk = carregarJSON(CH.kanban, function (v) { return v && typeof v === 'object' && Array.isArray(v.leads); });
   if (rk.corrompido) problemas.push('kanban');
@@ -1516,7 +1558,7 @@ function salvarChave(chave, valor) {
 }
 function salvarAuditorias() { estado.rev++; return salvarChave(CH.aud, estado.auditorias); }
 function salvarOperadores() { estado.rev++; return salvarChave(CH.op, estado.operadores); }
-function salvarChamadas() { estado.rev++; return salvarChave(CH.chamadas, estado.chamadas); }
+function salvarChamadas() { estado.rev++; return salvarChave(CH.chamadas, compactarChamadas(estado.chamadas)); }
 function salvarBase() { estado.rev++; return salvarChave(CH.base, estado.baseLeads); }
 function salvarKanban() { return salvarChave(CH.kanban, estado.kanban); }
 function salvarConfig() { return salvarChave(CH.cfg, estado.config); }
@@ -2940,12 +2982,12 @@ function construirCadencia(agora) {
     return el('article', { class: 'card' }, el('div', { class: 'card-cab', style: 'margin:0 0 8px' }, el('h3', null, 'Ligações e cadência')),
       el('div', { class: 'vazio' }, 'Sem dados de ligações. Em Ajustes → “Atualizar os dados”, arraste o arquivo “Chamadas no WhatsApp” (Exportador do site).'));
   }
-  var dia = u.dia === 'mes' ? null : (dias.indexOf(u.dia) >= 0 ? u.dia : dias[0]);
+  var modo = u.dia === 'mes' || u.dia === 'mesant' ? u.dia : (dias.indexOf(u.dia) >= 0 ? u.dia : dias[0]), dia = modo === 'mes' || modo === 'mesant' ? null : modo;
   var sel = el('select', { id: 'cad-dia', 'aria-label': 'Período das ligações' },
-    dias.map(function (d, i) { return opcao(d, (i === 0 ? 'Último dia: ' : '') + DIAS_SEMANA[parseData(d).getDay()].split('-')[0] + ' ' + dataBR(d).slice(0, 5), dia === d); }),
-    opcao('mes', 'Mês todo', dia === null));
+    dias.slice(0, 14).map(function (d, i) { return opcao(d, (i === 0 ? 'Último dia: ' : '') + DIAS_SEMANA[parseData(d).getDay()].split('-')[0] + ' ' + dataBR(d).slice(0, 5), modo === d); }),
+    opcao('mes', 'Mês atual', modo === 'mes'), opcao('mesant', 'Mês passado', modo === 'mesant'));
   sel.addEventListener('change', function () { u.dia = sel.value; renderEquipe(); });
-  var porOp = calcCadencia(dia), linhas = [], tot = { lig: 0, ld: 0, cad: 0, ef: 0, naoLigou: 0 };
+  var porOp = calcCadencia(modo), linhas = [], tot = { lig: 0, ld: 0, cad: 0, ef: 0, naoLigou: 0 };
   estado.operadores.filter(function (o) { return o.ativo; }).forEach(function (o) {
     var s = porOp.get(o.id); linhas.push(s);
     tot.lig += s.ligacoes; tot.ld += s.leadDias; tot.cad += s.cad; tot.ef += s.efLeads; if (!s.ligacoes) tot.naoLigou++;
@@ -3582,7 +3624,7 @@ function montarBackup() {
   estado.operadores.forEach(function (o) { if (o.metaMensal !== null) individuais[o.id] = o.metaMensal; });
   return {
     app: 'finx_monitoria', versao: VERSAO, geradoEm: new Date().toISOString(),
-    auditorias: estado.auditorias, operadores: estado.operadores, baseLeads: estado.baseLeads, kanban: estado.kanban, chamadas: estado.chamadas,
+    auditorias: estado.auditorias, operadores: estado.operadores, baseLeads: estado.baseLeads, kanban: estado.kanban, chamadas: compactarChamadas(estado.chamadas),
     metas: estado.config.metas, horarios: estado.config.horarios,
     metasMensais: { padrao: estado.config.metaMensalPadrao, individuais: individuais },
     configuracoes: estado.config
@@ -3611,7 +3653,7 @@ function validarBackup(obj) {
   }
   var baseLeads = Array.isArray(obj.baseLeads) ? sanitizarBase(obj.baseLeads).itens : undefined;
   var kanban = obj.kanban && typeof obj.kanban === 'object' && Array.isArray(obj.kanban.leads) ? sanitizarKanban(obj.kanban) : undefined;
-  var chamadas = Array.isArray(obj.chamadas) ? sanitizarChamadas(obj.chamadas) : undefined;
+  var chamadas = obj.chamadas ? descompactarChamadas(obj.chamadas) : undefined;
   return { listas: listas, config: cfg, baseLeads: baseLeads, kanban: kanban, chamadas: chamadas, geradoEm: typeof obj.geradoEm === 'string' ? obj.geradoEm : '' };
 }
 async function restaurarBackup(arquivo) {
@@ -3771,7 +3813,7 @@ async function importarChamadas(linhas) {
   mesclarChamadas(res.itens); salvarChamadas(); renderTudo();
   var resolver = criarResolvedor(), equipe = res.itens.filter(function (c) { return resolver(c.user); }).length, dias = diasComChamadas();
   toast(res.itens.length + ' ligações importadas (' + equipe + ' da equipe).');
-  return 'ligações: ' + res.itens.length + ' do mês (' + equipe + ' dos operadores cadastrados' + (dias.length ? ', ' + dataBR(dias[dias.length - 1]).slice(0, 5) + ' a ' + dataBR(dias[0]).slice(0, 5) : '') + ')' + (res.antigas ? '; ' + res.antigas + ' de meses anteriores ignoradas' : '') + '. Nome e telefone dos clientes não são guardados.';
+  return 'ligações: ' + res.itens.length + ' no período (' + equipe + ' dos operadores cadastrados' + (dias.length ? ', ' + dataBR(dias[dias.length - 1]).slice(0, 5) + ' a ' + dataBR(dias[0]).slice(0, 5) : '') + ')' + (res.antigas ? '; ' + res.antigas + ' anteriores a ' + dataBR(limiteChamadas()).slice(0, 5) + ' ignoradas' : '') + '. Nome e telefone dos clientes não são guardados.';
 }
 async function importarBase(texto, linhas) {
   var res;
@@ -3908,22 +3950,33 @@ function construirChecklist(leadNorm, tipo) {
   if (!leadNorm) return null;
   var cl = tipo === 'perdido' ? CHECKLISTS.perdido : CHECKLISTS.geral, cf = estado.config.cadencia;
   var l = estado.kanban.leads.find(function (x) { return x.codigoNorm === leadNorm; }) || null, lg = ligacoesDoLead(leadNorm);
-  var cadTxt = !lg ? 'sem ligações registradas neste mês'
+  var cadTxt = !lg ? 'sem ligações registradas'
     : lg.melhor.n >= cf.ligacoes ? 'SIM — ' + lg.melhor.n + ' ligações em ' + dataBR(lg.melhor.data).slice(0, 5)
     : 'NÃO — no máximo ' + lg.melhor.n + ' de ' + cf.ligacoes + ' ligações num dia (' + dataBR(lg.melhor.data).slice(0, 5) + ')';
-  var efTxt = !lg ? '' : lg.temEfetiva ? 'com ligação efetiva (' + fmtSeg(estado.config.cadencia.efetivaSeg) + '+)' : 'SEM ligação efetiva';
   var auto = { fase: l ? l.etapa : 'importe o kanban para ver a fase', motivo: l ? (l.motivo || 'sem motivo informado') : 'importe o kanban para ver o motivo', cadencia: cadTxt };
   var fatos = [];
   if (l) {
-    fatos.push(['Closer', l.closer || '—'], ['Etapa no kanban', l.etapa], ['Temperatura', l.temp || '—'], ['Discagens', String(l.disc)]);
-    if (LOCACAO_APROVADA.indexOf(l.locacao) !== -1) fatos.push(['Crédito', 'aprovado']);
-    if (l.dPerdido) fatos.push(['Perdido em', dataBR(l.dPerdido)]);
+    fatos.push('Closer: ' + (l.closer || '—'), 'Etapa: ' + l.etapa, 'Temperatura: ' + (l.temp || '—'), 'Discagens: ' + l.disc);
+    if (LOCACAO_APROVADA.indexOf(l.locacao) !== -1) fatos.push('Crédito aprovado');
+    if (l.dPerdido) fatos.push('Perdido em ' + dataBR(l.dPerdido));
   }
-  fatos.push(['Ligações', lg ? dataBR(lg.ultimo.data).slice(0, 5) + ': ' + lg.ultimo.n + (lg.ultimo.n >= cf.ligacoes ? ' (cadência ok)' : ' (cadência não cumprida)') + ' · ' + efTxt : 'nenhuma neste mês']);
+  var historico = lg ? el('div', null,
+    el('div', { class: 'rotulo', style: 'margin-bottom:6px' }, 'HISTÓRICO DE LIGAÇÕES · ' + lg.total + ' ' + plural(lg.total, 'ligação', 'ligações') + ' em ' + lg.dias + ' ' + plural(lg.dias, 'dia', 'dias')),
+    el('div', { class: 'ck-lista' }, lg.lista.slice(0, 10).map(function (d) {
+      var okCad = d.n >= cf.ligacoes;
+      return el('div', { class: 'ck-item' },
+        el('span', { class: 'ck-nome' }, DIAS_SEMANA[parseData(d.data).getDay()].split('-')[0] + ' ' + dataBR(d.data).slice(0, 5), el('small', null, Array.from(d.quem).join(', '))),
+        el('span', { class: 'ck-val' }, d.n + ' ' + plural(d.n, 'ligação', 'ligações') + ' ',
+          tag(okCad ? 'CADÊNCIA OK' : 'CADÊNCIA ' + d.n + '/' + cf.ligacoes, okCad ? 'azul' : 'vermelho'), ' ',
+          tag(d.ef ? 'EFETIVA ' + fmtSeg(d.maior) : 'SEM EFETIVA (máx. ' + fmtSeg(d.maior) + ')', d.ef ? 'azul' : 'amarelo')));
+    })),
+    lg.lista.length > 10 ? el('p', { class: 'dica', style: 'margin:6px 0 0' }, '… e mais ' + (lg.lista.length - 10) + ' dias anteriores.') : null)
+    : el('p', { class: 'dica', style: 'margin:0' }, 'Nenhuma ligação deste lead nas chamadas importadas (últimos ' + CHAMADAS_DIAS + ' dias).');
   var det = el('details', { class: 'pl-ajustes ck' },
     el('summary', null, '✅ Guia do checklist · ' + cl.titulo),
-    el('div', { style: 'display:grid;gap:10px;margin-top:10px' },
-      el('dl', { class: 'kv', style: 'margin:0' }, fatos.map(function (f) { return el('div', null, el('dt', null, f[0]), el('dd', null, f[1])); })),
+    el('div', { style: 'display:grid;gap:12px;margin-top:10px' },
+      fatos.length ? el('div', { class: 'ck-fatos' }, fatos.map(function (f) { return el('span', null, f); })) : null,
+      historico,
       el('div', { class: 'ck-lista' }, cl.itens.map(function (it) {
         return el('div', { class: 'ck-item' },
           el('span', { class: 'ck-nome' }, it.n, it.susp ? el('small', null, 'lista suspensa · não entra na conformidade') : null),
