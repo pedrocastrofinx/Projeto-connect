@@ -118,6 +118,22 @@ def ler_xlsx(caminho):
     return out
 
 
+def dia_iso(quando):
+    """'07/10/2026 14:16:03' ou '2026-10-07 11:21:59' -> '2026-10-07' (vazio se não entender)."""
+    m = re.match(r"^(\d{2})/(\d{2})/(\d{4})", str(quando or "").strip())
+    if m:
+        return "%s-%s-%s" % (m[3], m[2], m[1])
+    m = re.match(r"^(\d{4}-\d{2}-\d{2})", str(quando or "").strip())
+    return m[1] if m else ""
+
+
+def quando_br(quando):
+    """Mostra sempre dd/mm/aaaa hh:mm:ss, venha a data como vier."""
+    q = str(quando or "").strip()
+    m = re.match(r"^(\d{4})-(\d{2})-(\d{2})(.*)$", q)
+    return "%s/%s/%s%s" % (m[3], m[2], m[1], m[4]) if m else q
+
+
 def indexar_pasta(pasta):
     arquivos = []
     for raiz, _, nomes in os.walk(pasta):
@@ -191,6 +207,7 @@ def main():
     ap.add_argument("--token", help="o SEU token de API do 3C Plus, para baixar as gravações")
     ap.add_argument("--base", help="domínio do 3C da sua empresa (ex.: https://finx.3c.plus); por padrão tenta app.3c.plus e finx.3c.plus")
     ap.add_argument("--pasta", help="pasta com áudios já baixados")
+    ap.add_argument("--ordem", choices=["dia", "fala"], default="dia", help="dia (padrão): hoje primeiro, depois ontem, anteontem…; dentro de cada dia, as ligações mais longas primeiro. fala: só pela duração, de todos os dias")
     ap.add_argument("--min", type=int, default=10, help="mínimo de segundos de fala (padrão 10)")
     ap.add_argument("--max", type=int, default=0, help="limitar a quantidade (0 = todas)")
     ap.add_argument("--modelo", default="small")
@@ -207,7 +224,7 @@ def main():
             sys.exit("Arquivo não encontrado: %s" % arq)
     if a.pasta and not os.path.isdir(a.pasta):
         sys.exit("Pasta não encontrada: %s" % a.pasta)
-    if not a.token and not a.pasta and not a.simular:
+    if not a.token and not a.pasta and not a.simular and not a.listar:
         sys.exit("Informe --token (baixar do 3C Plus) ou --pasta (áudios já baixados).")
 
     ligacoes = {}
@@ -219,7 +236,7 @@ def main():
             ligacoes[k] = {"dur": max(v["dur"], ant.get("dur", 0)), "rec": v["rec"] or ant.get("rec", ""), "num": v["num"] or ant.get("num", ""), "quando": v["quando"] or ant.get("quando", "")}
 
     feitas = ja_feitas(a.saida)
-    fila = sorted(((k, v) for k, v in ligacoes.items() if v["dur"] >= a.min and k not in feitas), key=lambda kv: -kv[1]["dur"])
+    fila = sorted(((k, v) for k, v in ligacoes.items() if v["dur"] >= a.min and k not in feitas), key=(lambda kv: (-int(dia_iso(kv[1].get("quando")).replace("-", "") or 0), -kv[1]["dur"])) if a.ordem == "dia" else (lambda kv: -kv[1]["dur"]))
     if a.max:
         fila = fila[: a.max]
     total_s = sum(v["dur"] for _, v in fila)
@@ -231,14 +248,14 @@ def main():
     arquivos = indexar_pasta(a.pasta) if a.pasta else []
     if a.listar:
         faltam = [(k, v) for k, v in fila if not (a.pasta and achar_na_pasta(arquivos, k, v["rec"]))][: a.listar]
-        print("\nPara baixar no 3C (filtre pelo telefone, ouça se quiser e clique na setinha de download), da mais longa para a mais curta:")
+        print("\nPara baixar no 3C (filtre pelo telefone e clique na setinha de download). Ordem: %s" % ("hoje primeiro, depois ontem, anteontem…; em cada dia, as mais longas primeiro" if a.ordem == "dia" else "das mais longas para as mais curtas"))
         with open("faltam_baixar.csv", "w", encoding="utf-8-sig", newline="") as f:
             w = csv.writer(f, delimiter=";")
             w.writerow(["ordem", "telefone", "data_hora", "fala", "id"])
             for n, (k, v) in enumerate(faltam, 1):
                 fala = "%d:%02d" % (v["dur"] // 60, v["dur"] % 60)
-                w.writerow([n, v.get("num", ""), v.get("quando", ""), fala, k])
-                print("  %3d. %s  %s  fala %s" % (n, v.get("num", "?"), v.get("quando", ""), fala))
+                w.writerow([n, v.get("num", ""), quando_br(v.get("quando", "")), fala, k])
+                print("  %3d. %s  %s  fala %s" % (n, v.get("num", "?"), quando_br(v.get("quando", "")), fala))
         print("\nLista salva em faltam_baixar.csv. Já com áudio na pasta: %d de %d." % (len(fila) - len([1 for k, v in fila if not (a.pasta and achar_na_pasta(arquivos, k, v["rec"]))]), len(fila)))
         return
     if a.token:

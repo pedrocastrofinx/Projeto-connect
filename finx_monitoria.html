@@ -650,7 +650,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
               <option value="duvida">Sem como avaliar</option><option value="transc">Com transcrição (análise automática)</option><option value="todos">Todos</option>
             </select></div>
           <div class="campo"><label for="ia-ordem">Ordem da fila</label>
-            <select id="ia-ordem"><option value="fala">Ligações mais longas primeiro</option><option value="data">Mais recentes primeiro</option></select></div>
+            <select id="ia-ordem"><option value="dia">Hoje primeiro, depois ontem…; no dia, as mais longas</option><option value="fala">Mais longas de todos os dias</option><option value="data">Mais recentes primeiro</option></select></div>
           <div class="campo"><label for="ia-busca">Buscar código do lead</label><input type="search" id="ia-busca" autocomplete="off" placeholder="Ex.: 3380608"></div>
           <div class="campo"><label for="ia-analista">Analista (aparece no relatório)</label><input type="text" id="ia-analista" maxlength="80" autocomplete="off" placeholder="Seu nome"></div>
           <div class="campo"><label class="interruptor" for="ia-auto" style="margin-top:20px"><input type="checkbox" id="ia-auto"> Copiar o telefone do próximo lead sozinho</label></div>
@@ -974,7 +974,7 @@ var estado = {
     equipe: { busca: '', filtro: 'todos', ordem: 'nome', dir: 'asc' },
     hist: { q: '', ini: '', fim: '', op: '', tipo: '', lead: '', soRep: false, ordem: 'tempo', dir: 'desc', pag: 1, tam: 25 },
     plano: { dia: '', tipo: '', closer: '', ajustes: false, pulados: [] },
-    cad: { dia: 'auto' }, checkAberto: true, ia: { filtro: 'pend', ordem: 'fala', busca: '', sel: '' },
+    cad: { dia: 'auto' }, checkAberto: true, ia: { filtro: 'pend', ordem: 'dia', busca: '', sel: '' },
     relData: '', relMes: 0, relAno: 0
   }
 };
@@ -4478,7 +4478,13 @@ function iaConformidade(a) {
 function iaGravar(l, a, via) { a.via = via || ''; a.por = estado.ia.analista; a.em = Date.now(); salvarIA(); iaRenderLateral(); }
 /* Prioridade da fila: ligações de maior duração (tempo de fala) primeiro — é onde há mais conteúdo para validar o motivo */
 function iaMaiorFala(l) { return l.ligacoes.reduce(function (m, g) { return Math.max(m, g.fala || 0); }, 0); }
+/* dia (AAAA-MM-DD) da ligação mais longa do lead: a fila “dia a dia” começa por hoje, depois ontem, anteontem… */
+function iaDiaMaiorFala(l) {
+  var m = null; l.ligacoes.forEach(function (g) { if (!m || g.fala > m.fala) m = g; });
+  return m && m.data ? m.data : '';
+}
 function iaComparar(a, b) {
+  if (estado.ui.ia.ordem === 'dia') { var dd = iaDiaMaiorFala(b), da = iaDiaMaiorFala(a); if (dd !== da) return dd < da ? -1 : 1; }
   if (estado.ui.ia.ordem !== 'data') { var d = iaMaiorFala(b) - iaMaiorFala(a); if (d) return d; }
   return (b.dataPerdido || '') < (a.dataPerdido || '') ? -1 : (b.dataPerdido || '') > (a.dataPerdido || '') ? 1 : (a.codigoNorm < b.codigoNorm ? -1 : 1);
 }
@@ -4572,7 +4578,7 @@ function iaRenderInicio() {
   }
   var pct = Math.round(t.ana / t.total * 100);
   box.replaceChildren(
-    el('div', { style: 'display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline' }, el('b', null, t.ana + ' de ' + t.total + ' auditorias feitas'), el('span', { class: 'dica' }, t.pend ? 'faltam ' + t.pend + (estado.ui.ia.ordem !== 'data' ? ' · fila: ligações mais longas primeiro' : '') : 'tudo preenchido 🎉')),
+    el('div', { style: 'display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline' }, el('b', null, t.ana + ' de ' + t.total + ' auditorias feitas'), el('span', { class: 'dica' }, t.pend ? 'faltam ' + t.pend + (estado.ui.ia.ordem === 'dia' ? ' · fila: hoje primeiro, depois ontem…; no dia, as mais longas' : estado.ui.ia.ordem === 'fala' ? ' · fila: ligações mais longas primeiro' : '') : 'tudo preenchido 🎉')),
     el('div', { class: 'barra' + (t.pend ? '' : ' completa') }, el('i', { style: 'width:' + pct + '%' })),
     el('div', { class: 'dica' }, iaCobertura()),
     el('div', { class: 'acoes' },
