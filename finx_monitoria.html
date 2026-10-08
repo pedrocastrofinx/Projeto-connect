@@ -220,6 +220,8 @@ input[type=checkbox],input[type=radio]{width:18px;height:18px;accent-color:var(-
 .ck-rep{display:block;color:var(--amarelo-esc)}
 .ia-player{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:var(--sup2);border:1.5px solid var(--linha);border-radius:12px;padding:8px 12px}
 .ia-player audio{flex:1 1 280px;min-width:0;max-width:100%}
+.ia-player-ctl{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.btn-vel.on{background:var(--azul);border-color:var(--azul);color:#fff}
 .btn-fone{border:0;background:transparent;font-size:1.15rem;cursor:pointer;padding:2px 6px;border-radius:8px}
 .btn-fone:hover{background:var(--azul-cl)}
 .ia-ck{display:grid;gap:8px}
@@ -656,7 +658,10 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
           </div>
           <div class="acoes">
             <button type="button" class="btn btn-primario" id="au-lote">⬇ Baixar lote</button>
+            <button type="button" class="btn btn-primario" id="au-proxima" hidden>⬇ Baixar próxima</button>
             <button type="button" class="btn btn-linha" id="au-parar" hidden>■ Parar</button>
+            <button type="button" class="btn btn-sec" id="au-pasta" title="Escolha a pasta onde estão os áudios baixados (ex.: Downloads ou C:\finx\audios). Também dá para arrastar os .mp3 para esta página.">📂 Carregar pasta de áudios</button>
+            <button type="button" class="btn btn-linha btn-peq" id="au-esquecer" title="Se algum download não chegou, zere a lista para o painel oferecê-los de novo">↺ Esquecer as já baixadas</button>
             <span class="dica" id="au-info"></span>
           </div>
           <div class="barra" id="au-barra" hidden><i style="width:0%"></i></div>
@@ -811,6 +816,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
 <input type="file" id="file-csv" accept=".csv,text/csv" hidden>
 <input type="file" id="file-json" accept=".json,application/json" hidden>
 <input type="file" id="file-base" accept=".xlsx,.csv,.tsv,.txt,text/csv,text/plain" hidden>
+<input type="file" id="au-pasta-in" webkitdirectory multiple hidden>
 <input type="file" id="file-multi" accept=".xlsx,.csv,.tsv,.txt,text/csv,text/plain" multiple hidden>
 <input type="file" id="file-kanban" accept=".xlsx,.csv,.tsv,.txt,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
 
@@ -4220,6 +4226,7 @@ function construirChecklist(leadNorm, tipo) {
    (data, qualificação, fala, situação, detecção, causa do desligamento). Nome e CPF do cliente NÃO são guardados. */
 var IA_PORQUES = ['Cliente não é motorista de aplicativo', 'Cliente tem interesse / pediu retorno', 'O motivo real é outro', 'Cliente desligou antes de falar o motivo', 'Ligação caiu / sem contato', 'Cliente não respondeu', 'Cliente não estava escutando', 'Telefone errado / outra pessoa', 'A IA classificou errado', 'Lead duplicado / já atendido'];
 var IA_SITUACOES = ['Desligou na apresentação da IA', 'Cliente não respondeu', 'Queda de ligação', 'Cliente não estava escutando', 'Cliente desligou na hora', 'Caixa postal / não atendeu', 'Barulho / áudio ruim'];
+var IA_QUALIFICACOES = ['Agendamento / Retorno', 'Sem interesse', 'Sem contato / Ligação caiu', 'CLIENTE DESLIGOU', 'Motorista de aplicativo', 'PROPOSTA ENVIADA', 'FECHOU EM OUTRA EMPRESA', 'JÁ POSSUI ASSINATURA', 'RENDA INSUFICIENTE', 'COTANDO/ PESQUISANDO', 'PREÇO NÃO AGRADOU', 'Em negociação whatsApp', 'Falecido', 'BLACK LIST - NÃO RETORNAR', 'Não qualificada'];
 var IA_EVIDENCIAS = ['Ouvi a gravação', 'Li o parecer da IA', 'Conferi o histórico no Dryve', 'Cliente confirmou que é motorista de app', 'Cliente negou ser motorista de app'];
 var IA_MOTIVOS = ['Agendamento / Retorno', 'Sem interesse', 'Sem retorno', 'Já possui assinatura', 'Fechou em outra empresa', 'Cotando / pesquisando', 'Telefone errado', 'Sem crédito', 'Documentação', 'Preço', 'Outro'];
 var IA_REGRA_PADRAO = 'O motivo “Motorista de App” é correto quando o cliente confirma que trabalha como motorista de aplicativo (Uber, 99 etc.) e é por isso que não segue com a assinatura. Não é correto quando o cliente não chegou a falar disso (desligou, não atendeu, ligação caiu), demonstrou interesse ou pediu retorno, ou quando o motivo real é outro.';
@@ -4298,7 +4305,7 @@ function sanitizarIA(o) {
   Object.keys(A).slice(0, 20000).forEach(function (k) {
     var a = A[k]; if (!a || typeof a !== 'object') return;
     var lista = function (v) { return (Array.isArray(v) ? v : []).slice(0, 12).map(function (t) { return iaTxt(t, 90); }).filter(Boolean); };
-    r.analises[iaTxt(k, 40)] = { comp: ['boa', 'media', 'ruim'].indexOf(a.comp) >= 0 ? a.comp : '', correto: ['sim', 'nao', 'duvida'].indexOf(a.correto) >= 0 ? a.correto : '', arg: ['sim', 'parcial', 'nao', 'na'].indexOf(a.arg) >= 0 ? a.arg : '', via: a.via === 'transcricao' ? 'transcricao' : '', situ: lista(a.situ), porque: lista(a.porque), porqueTxt: iaTxt(a.porqueTxt, 400), motivoReal: iaTxt(a.motivoReal, 80),
+    r.analises[iaTxt(k, 40)] = { comp: ['boa', 'media', 'ruim'].indexOf(a.comp) >= 0 ? a.comp : '', correto: ['sim', 'nao', 'duvida'].indexOf(a.correto) >= 0 ? a.correto : '', arg: ['sim', 'parcial', 'nao', 'na'].indexOf(a.arg) >= 0 ? a.arg : '', via: a.via === 'transcricao' ? 'transcricao' : '', qualOk: ['sim', 'nao'].indexOf(a.qualOk) >= 0 ? a.qualOk : '', qualCerta: iaTxt(a.qualCerta, 60), qualIA: iaTxt(a.qualIA, 60), situ: lista(a.situ), porque: lista(a.porque), porqueTxt: iaTxt(a.porqueTxt, 400), motivoReal: iaTxt(a.motivoReal, 80),
       evid: lista(a.evid), obs: iaTxt(a.obs, 600), parecer: String(a.parecer || '').slice(0, 4000), por: iaTxt(a.por, 80), em: Number.isFinite(a.em) ? a.em : 0 };
   });
   return r;
@@ -4308,7 +4315,27 @@ function urlGravacao(id) { return id ? (estado.ia.audioBase || 'https://app.3c.p
 /* ---- Áudios do 3C: ouvir e baixar (um a um ou em lote) ----
    Usa o SEU acesso: um token que você cola (fica só na memória da página, nunca é salvo) ou o login do navegador.
    Se o 3C recusar (401/403/429) ou não permitir leitura por este arquivo (CORS), o lote PARA e explica: nada é contornado. */
-var iaToken = '', iaLote = { rodando: false, parar: false };
+var iaToken = '', iaLote = { rodando: false, parar: false }, iaPlayerAtivo = null, iaPlayerVel = null, iaPlayerPular = null;
+/* Áudios baixados (pasta ou arrastados): ficam só na memória desta página. Tocando o arquivo local dá para avançar, voltar 10 s e acelerar. */
+var iaArquivos = new Map();
+function iaCodigoGravacao(g) { var b = g.rec ? g.rec.split('/').pop() : ''; return b.indexOf('-') >= 0 ? b.split('-').pop() : ''; }
+function iaAudioLocal(g) {
+  var cod = iaCodigoGravacao(g);
+  if (cod && iaArquivos.has(cod)) return iaArquivos.get(cod);
+  return g.id && iaArquivos.has(g.id) ? iaArquivos.get(g.id) : null;
+}
+function iaIndexarAudios(arquivos) {
+  var novos = 0;
+  Array.from(arquivos).forEach(function (f) {
+    if (!/\.(mp3|wav|ogg|m4a|opus|aac|flac|webm)$/i.test(f.name) && !/^audio\//.test(f.type)) return;
+    var base = f.name.replace(/\.[^.]+$/, ''), cod = base.indexOf('-') >= 0 ? base.split('-').pop() : base;
+    if (cod && !iaArquivos.has(cod)) novos++;
+    if (cod) iaArquivos.set(cod, f);
+    var m = /[0-9a-f]{24}/i.exec(f.name); if (m) iaArquivos.set(m[0].toLowerCase(), f);
+  });
+  var casam = 0; estado.ia.leads.forEach(function (l) { l.ligacoes.forEach(function (g) { if (iaAudioLocal(g)) casam++; }); });
+  return { total: arquivos.length, novos: novos, casam: casam };
+}
 function iaNomeAudio(g, tipo) {
   var base = g.rec ? g.rec.replace(/\//g, '_') : g.id, ext = /wav/i.test(tipo || '') ? '.wav' : /ogg/i.test(tipo || '') ? '.ogg' : '.mp3';
   return base.replace(/[^A-Za-z0-9._-]/g, '_') + ext;
@@ -4321,7 +4348,27 @@ function iaBuscarAudio(g) {
     if (r.status === 404) { var e3 = new Error('Sem gravação para esta ligação (404).'); e3.pular = true; throw e3; }
     if (!r.ok) throw new Error('Erro ' + r.status + ' ao buscar o áudio.');
     return r.blob();
-  }, function () { var e = new Error('O navegador não conseguiu ler o áudio deste endereço (login ausente ou o 3C não permite leitura por este arquivo). Use o botão de download do 3C ou o transcrever.py com o seu token.'); e.parar = true; throw e; });
+  }, function () { var e = new Error('O navegador não deixa este arquivo ler o áudio do 3C.'); e.rede = true; e.parar = true; throw e; });
+}
+/* Plano B: pede o download pelo próprio navegador (como se você abrisse o endereço do 3C logado). Não lê a resposta, só dispara o download;
+   se o 3C responder uma página (login/erro) em vez de um arquivo, o iframe “carrega” e avisamos. */
+/* Abre a gravação numa aba (navegação normal, com o seu login do 3C): o 3C devolve o arquivo e o navegador baixa. Retorna null se o navegador bloquear o pop-up. */
+function iaAbrirDownload(g) {
+  var w = null; try { w = window.open(urlGravacao(g.id), '_blank'); } catch (e) { w = null; }
+  if (w) { try { w.opener = null; } catch (e) { /* ok */ } setTimeout(function () { try { w.close(); } catch (e) { /* ok */ } }, 10000); }
+  return w;
+}
+function iaBaixarPorNavegador(g) {
+  return new Promise(function (resolve, reject) {
+    var f = document.createElement('iframe'), pronto = false;
+    f.style.display = 'none'; f.setAttribute('aria-hidden', 'true');
+    f.onload = function () {
+      if (pronto) return; pronto = true; f.remove();
+      var e = new Error('O 3C não devolveu um arquivo para baixar (provavelmente você não está logado no 3C neste navegador).'); e.parar = true; reject(e);
+    };
+    f.src = urlGravacao(g.id); document.body.appendChild(f);
+    setTimeout(function () { if (pronto) return; pronto = true; resolve(); setTimeout(function () { f.remove(); }, 30000); }, 3000);
+  });
 }
 function iaSalvarBlob(blob, nome) {
   var a = document.createElement('a'), u = URL.createObjectURL(blob);
@@ -4517,17 +4564,22 @@ function iaLerParecer(texto) {
 }
 function iaAnalise(l) {
   var a = estado.ia.analises[l.codigoNorm];
-  if (!a) { a = estado.ia.analises[l.codigoNorm] = { comp: '', correto: '', arg: '', via: '', situ: [], porque: [], porqueTxt: '', motivoReal: '', evid: [], obs: '', parecer: '', por: '', em: 0 }; }
+  if (!a) { a = estado.ia.analises[l.codigoNorm] = { comp: '', correto: '', arg: '', via: '', qualOk: '', qualCerta: '', qualIA: '', situ: [], porque: [], porqueTxt: '', motivoReal: '', evid: [], obs: '', parecer: '', por: '', em: 0 }; }
   return a;
 }
 /* Conformidade da IA, como no site: % de “Sim” entre os itens respondidos (parcial vale meio ponto; sem como avaliar / não se aplica ficam de fora) */
 function iaConformidade(a) {
   var pts = 0, n = 0;
-  [[a.arg, { sim: 1, parcial: 0.5, nao: 0 }], [a.correto, { sim: 1, nao: 0 }]].forEach(function (x) { if (x[0] in x[1]) { pts += x[1][x[0]]; n++; } });
+  [[a.arg, { sim: 1, parcial: 0.5, nao: 0 }], [a.qualOk, { sim: 1, nao: 0 }], [a.correto, { sim: 1, nao: 0 }]].forEach(function (x) { if (x[0] in x[1]) { pts += x[1][x[0]]; n++; } });
   return n ? Math.round(pts / n * 100) : null;
 }
 function iaGravar(l, a, via) { a.via = via || ''; a.por = estado.ia.analista; a.em = Date.now(); salvarIA(); iaRenderLateral(); }
 /* Prioridade da fila: ligações de maior duração (tempo de fala) primeiro — é onde há mais conteúdo para validar o motivo */
+function iaQualPrincipal(l) {
+  var m = null;
+  l.ligacoes.forEach(function (g) { if (!iaVazioTxt(g.qual) && (!m || g.fala >= m.fala)) m = g; });
+  return m ? m.qual : '';
+}
 function iaMaiorFala(l) { return l.ligacoes.reduce(function (m, g) { return Math.max(m, g.fala || 0); }, 0); }
 /* dia (AAAA-MM-DD) da ligação mais longa do lead: a fila “dia a dia” começa por hoje, depois ontem, anteontem… */
 function iaDiaMaiorFala(l) {
@@ -4555,12 +4607,13 @@ function iaFiltrados() {
   }).sort(iaComparar);
 }
 function iaStats() {
-  var t = { total: estado.ia.leads.length, sim: 0, nao: 0, duvida: 0, man: 0, viaT: 0, porque: {}, motivos: {}, comp: { boa: 0, media: 0, ruim: 0 }, auto: { total: 0, sim: 0, nao: 0, duvida: 0, comp: 0, igual: 0 } };
+  var t = { total: estado.ia.leads.length, sim: 0, nao: 0, duvida: 0, man: 0, viaT: 0, qualErrada: 0, porque: {}, motivos: {}, comp: { boa: 0, media: 0, ruim: 0 }, auto: { total: 0, sim: 0, nao: 0, duvida: 0, comp: 0, igual: 0 } };
   estado.ia.leads.forEach(function (l) {
     var a = estado.ia.analises[l.codigoNorm], st = iaStatus(a), au = iaAutoAnalise(l);
     if (au) { t.auto.total++; t.auto[au.v]++; if (st === 'sim' || st === 'nao') { if (a.via !== 'transcricao' && au.v !== 'duvida') { t.auto.comp++; if (au.v === st) t.auto.igual++; } } }
     if (!st) return;
     if (a.via === 'transcricao') t.viaT++; else t.man++;
+    if (a.qualOk === 'nao') t.qualErrada++;
     t[st]++;
     if (a.comp) t.comp[a.comp]++;
     if (st === 'nao') { a.porque.forEach(function (p) { t.porque[p] = (t.porque[p] || 0) + 1; }); if (a.motivoReal) t.motivos[a.motivoReal] = (t.motivos[a.motivoReal] || 0) + 1; }
@@ -4569,12 +4622,12 @@ function iaStats() {
   return t;
 }
 function iaCSV() {
-  var cab = ['Data da análise', 'Analista', 'Lead', 'Telefone', 'Link Dryve', 'Data perdido', 'Motivo registrado', 'Detalhe do motivo', 'Origem', 'Origem da análise', 'Motivo correto?', 'IA apresentou o serviço e qualificou (SDR)', 'Situação da ligação', 'Conformidade da IA (%)', 'Por quê', 'Motivo sugerido', 'Evidências', 'Ligações IA', 'Maior fala IA (s)', 'Última qualificação IA', 'Comportamento da IA (analista)', 'Sinal do painel', 'Parecer da IA', 'Observação'];
+  var cab = ['Data da análise', 'Analista', 'Lead', 'Telefone', 'Link Dryve', 'Data perdido', 'Motivo registrado', 'Detalhe do motivo', 'Origem', 'Origem da análise', 'Qualificação da IA', 'Qualificação da IA correta?', 'Qualificação correta (se errada)', 'Motivo correto?', 'IA apresentou o serviço e qualificou (SDR)', 'Situação da ligação', 'Conformidade da IA (%)', 'Por quê', 'Motivo sugerido', 'Evidências', 'Ligações IA', 'Maior fala IA (s)', 'Última qualificação IA', 'Comportamento da IA (analista)', 'Sinal do painel', 'Parecer da IA', 'Observação'];
   var linhas = [cab.join(';')];
   estado.ia.leads.forEach(function (l) {
     var a = estado.ia.analises[l.codigoNorm]; if (!iaStatus(a)) return;
     var ult = l.ligacoes.length ? l.ligacoes[l.ligacoes.length - 1].qual : '';
-    linhas.push([a.em ? dataBR(dataISO(new Date(a.em))) : '', a.por, l.codigo, formatTel(l.tel), urlPadraoDryve(l.uuid), l.dataPerdido ? dataBR(l.dataPerdido) : '', l.motivo, l.detalhes, l.origem, a.via === 'transcricao' ? 'Via transcrição' : 'Manual',
+    linhas.push([a.em ? dataBR(dataISO(new Date(a.em))) : '', a.por, l.codigo, formatTel(l.tel), urlPadraoDryve(l.uuid), l.dataPerdido ? dataBR(l.dataPerdido) : '', l.motivo, l.detalhes, l.origem, a.via === 'transcricao' ? 'Via transcrição' : 'Manual', a.qualIA || iaQualPrincipal(l), { sim: 'Sim', nao: 'Não' }[a.qualOk] || 'Sim', a.qualOk === 'nao' ? a.qualCerta : '',
       { sim: 'Sim', nao: 'Não', duvida: 'Sem como avaliar' }[a.correto], { sim: 'Sim', parcial: 'Parcialmente', nao: 'Não', na: 'Não deu tempo (cliente desligou)' }[a.arg] || '', a.situ.join(' | '), iaConformidade(a) === null ? '' : iaConformidade(a), a.porque.concat(a.porqueTxt ? [a.porqueTxt] : []).join(' | '), a.motivoReal, a.evid.join(' | '),
       l.ligacoes.length, l.ligacoes.reduce(function (m, g) { return Math.max(m, g.fala); }, 0), ult, a.comp ? IA_COMP[a.comp].rot : '', iaNotaGeral(l) ? IA_COMP[iaNotaGeral(l)].rot : '', a.parecer.replace(/\s+/g, ' ').trim(), a.obs].map(campoCSV).join(';'));
   });
@@ -4599,12 +4652,12 @@ function iaResumoTexto() {
   return ['Validação de perdido (' + dataBR(dataISO(new Date())) + '):', 'Leads na base: ' + t.total + ' · analisados: ' + t.ana + ' · pendentes: ' + t.pend,
     'Motivo “Motorista de App” correto: ' + t.sim + ' (' + pct(t.sim) + ')', 'Incorreto: ' + t.nao + ' (' + pct(t.nao) + ')', 'Sem como avaliar: ' + t.duvida + ' (' + pct(t.duvida) + ')',
     'Comportamento da IA nas análises: boa ' + t.comp.boa + ' · média ' + t.comp.media + ' · ruim ' + t.comp.ruim, 'Principais razões do erro: ' + top(t.porque), 'Motivos sugeridos: ' + top(t.motivos),
-    '', 'Análises manuais: ' + t.man + ' · aceitas via transcrição: ' + t.viaT,
+    '', 'Qualificação da IA marcada como errada: ' + t.qualErrada + ' de ' + t.ana + ' análises', 'Análises manuais: ' + t.man + ' · aceitas via transcrição: ' + t.viaT,
     t.auto.total ? 'Análise automática por transcrição (' + t.auto.total + ' leads): ' + t.auto.sim + ' provavelmente corretos · ' + t.auto.nao + ' incorretos · ' + t.auto.duvida + ' a conferir' + (t.auto.comp ? ' · coincide com a sua análise manual em ' + t.auto.igual + ' de ' + t.auto.comp + ' (' + fmtPct(t.auto.igual / t.auto.comp * 100) + ')' : '') : 'Análise por transcrição: nenhuma transcrição importada.'].join('\n');
 }
 function iaFilaAudios(min) {
   var itens = [];
-  estado.ia.leads.forEach(function (l) { l.ligacoes.forEach(function (g) { if (g.id && g.fala >= min && !estado.ia.baixados[g.id] && !estado.ia.transc[g.id]) itens.push(g); }); });
+  estado.ia.leads.forEach(function (l) { l.ligacoes.forEach(function (g) { if (g.id && g.fala >= min && !estado.ia.baixados[g.id] && !estado.ia.transc[g.id] && !iaAudioLocal(g)) itens.push(g); }); });
   return itens.sort(function (x, y) { return (x.data || '') !== (y.data || '') ? ((y.data || '') < (x.data || '') ? -1 : 1) : y.fala - x.fala; });
 }
 function iaAudioInfo() {
@@ -4618,22 +4671,43 @@ function iaRodarLote() {
   var log = $('#au-log'), barra = $('#au-barra'), bi = barra.querySelector('i'), btn = $('#au-lote'), parar = $('#au-parar');
   if (!fila.length) { toast('Nada a baixar com essa fala mínima.', { tipo: 'aviso' }); return; }
   iaLote = { rodando: true, parar: false }; log.replaceChildren(); barra.hidden = false; parar.hidden = false; btn.disabled = true;
-  var feitos = 0, pulados = 0, i = 0;
+  var feitos = 0, pulados = 0, i = 0, modoNav = !iaToken;
   function nota(t) { log.insertBefore(el('li', null, t), log.firstChild); }
-  function fim(msg) { iaLote.rodando = false; btn.disabled = false; parar.hidden = true; nota(msg); iaAudioInfo(); iaRenderLista(); }
+  function fim(msg) { iaLote.rodando = false; iaLote.manual = null; $('#au-proxima').hidden = true; btn.disabled = false; parar.hidden = true; nota(msg); iaAudioInfo(); iaRenderLista(); }
+  function pausarManual() {
+    var pb = $('#au-proxima'); pb.hidden = false; pb.textContent = '⬇ Baixar próxima (' + (fila.length - i) + ' restantes)';
+    nota('O navegador bloqueou abrir várias abas sozinho. Opções: (1) clique no ícone de pop-up na barra de endereço e escolha “Sempre permitir” e depois ▶ Baixar lote de novo; ou (2) clique em “Baixar próxima” para cada arquivo (um clique por download).');
+    iaLote.manual = function () {
+      if (i >= fila.length) { pb.hidden = true; fim('Pronto: ' + feitos + ' downloads pedidos (confira a pasta Downloads).'); return; }
+      var gm = fila[i]; var w = iaAbrirDownload(gm);
+      if (!w) { toast('O navegador ainda está bloqueando pop-ups: permita para este arquivo (ícone na barra de endereço).', { tipo: 'aviso' }); return; }
+      i++; estado.ia.baixados[gm.id] = 1; feitos++; salvarIA(); bi.style.width = Math.round(i / fila.length * 100) + '%';
+      nota(i + '/' + fila.length + ' ⬇ aba aberta (' + (gm.rec ? gm.rec.replace(/\//g, '_') : gm.id) + ')');
+      pb.textContent = i >= fila.length ? '✓ Terminar' : '⬇ Baixar próxima (' + (fila.length - i) + ' restantes)'; iaAudioInfo();
+    };
+  }
   function proximo() {
     if (iaLote.parar) { fim('Parado. ' + feitos + ' baixadas.'); return; }
-    if (i >= fila.length) { fim('Pronto: ' + feitos + ' baixadas' + (pulados ? ', ' + pulados + ' sem gravação' : '') + '. Coloque os arquivos na pasta de áudios e rode o transcrever.py.'); return; }
+    if (i >= fila.length) { fim('Pronto: ' + feitos + (modoNav ? ' pedidos de download enviados (confira a pasta Downloads; o painel não consegue confirmar cada arquivo)' : ' baixadas') + (pulados ? ', ' + pulados + ' sem gravação' : '') + '. Coloque os arquivos na pasta de áudios e rode o transcrever.py.'); return; }
     var g = fila[i++]; bi.style.width = Math.round(i / fila.length * 100) + '%';
+    function viaNavegador() {
+      var w = iaAbrirDownload(g);
+      if (!w) { i--; bi.style.width = Math.round(i / fila.length * 100) + '%'; pausarManual(); return; }
+      estado.ia.baixados[g.id] = 1; feitos++; salvarIA(); nota(i + '/' + fila.length + ' ⬇ aba aberta para baixar (' + (g.rec ? g.rec.replace(/\//g, '_') : g.id) + ')');
+      setTimeout(proximo, 2500);
+    }
+    if (modoNav) { viaNavegador(); return; }
     iaBuscarAudio(g).then(function (b) {
       iaSalvarBlob(b, iaNomeAudio(g, b.type)); estado.ia.baixados[g.id] = 1; feitos++; salvarIA();
       nota(i + '/' + fila.length + ' ✓ ' + iaNomeAudio(g, b.type));
       setTimeout(proximo, 1200);
     }, function (e) {
       if (e.pular) { pulados++; nota(i + '/' + fila.length + ' sem gravação, pulei.'); setTimeout(proximo, 600); return; }
+      if (e.rede) { modoNav = true; nota('O navegador não deixa ler o áudio; passei para o modo “pedir o download ao 3C” (usa o seu login do 3C; um a cada 2,5 s).'); viaNavegador(); return; }
       fim('Parei na ' + i + 'ª: ' + e.message + ' (' + feitos + ' baixadas antes).');
     });
   }
+  if (modoNav) nota('Modo “abrir cada gravação no 3C”: usa o seu login do 3C neste navegador, uma aba por arquivo a cada 2,5 s (a aba fecha sozinha). Se o navegador bloquear, aparece o botão “Baixar próxima”.');
   proximo();
 }
 function iaRenderLateral() { iaAudioInfo(); iaRenderInicio(); iaRenderResumo(); iaRenderLista(); iaRenderRelatorio(); }
@@ -4749,22 +4823,67 @@ function iaRenderDetalhe() {
       el('ul', { class: 'frases', style: 'margin:6px 0 0' }, au.pistas.map(function (t) { return el('li', null, t); })),
       el('p', { class: 'dica', style: 'margin:6px 0 0' }, 'A transcrição não separa quem fala (IA × cliente): isto é uma pista. Aceitar marca a análise como “via transcrição”, separada das suas análises manuais.'));
   }
-  var playerAudio = el('audio', { controls: '', preload: 'none' }), playerTxt = el('span', { class: 'dica' }), playerBox = el('div', { class: 'ia-player', hidden: true }, playerTxt, playerAudio), urlAtual = '';
+  var playerAudio = el('audio', { controls: '', preload: 'none' }), playerTxt = el('span', { class: 'dica' }), urlAtual = '';
+  iaPlayerAtivo = playerAudio;
+  var vel = 1; try { vel = parseFloat(localStorage.getItem('finx_vel')) || 1; } catch (e) { /* sem armazenamento */ }
+  playerAudio.defaultPlaybackRate = vel; playerAudio.playbackRate = vel;
+  var botoesVel = [1, 1.5, 2].map(function (v) {
+    var b = el('button', { type: 'button', class: 'btn btn-linha btn-peq btn-vel', 'aria-label': 'Velocidade ' + v + 'x', onclick: function () { definirVel(v); } }, v + 'x');
+    b.dataset.v = String(v); return b;
+  });
+  function definirVel(v) {
+    playerAudio.defaultPlaybackRate = v; playerAudio.playbackRate = v; vel = v;
+    try { localStorage.setItem('finx_vel', String(v)); } catch (e) { /* sem armazenamento */ }
+    botoesVel.forEach(function (b) { b.classList.toggle('on', +b.dataset.v === v); });
+  }
+  iaPlayerVel = function () { definirVel(vel >= 2 ? 1 : vel >= 1.5 ? 2 : 1.5); };
+  definirVel(vel);
+  var playerBox = el('div', { class: 'ia-player', hidden: true }, playerTxt, playerAudio,
+    el('div', { class: 'ia-player-ctl' },
+      el('button', { type: 'button', class: 'btn btn-linha btn-peq', title: 'Voltar 10 s (←)', onclick: function () { pular(-10); } }, '⏪ 10 s'),
+      el('button', { type: 'button', class: 'btn btn-linha btn-peq', title: 'Avançar 10 s (→)', onclick: function () { pular(10); } }, '10 s ⏩'),
+      botoesVel),
+    el('span', { class: 'dica' }, 'Teclas: ← → pulam 10 s · espaço toca/pausa · X troca a velocidade'));
+  function pular(seg) {
+    if (playerAudio.src && playerAudio.seekable && playerAudio.seekable.length === 0) { toast('Este áudio está sendo transmitido e não deixa avançar. Baixe com ⬇ e carregue a pasta de áudios aqui.', { tipo: 'aviso' }); return; }
+    if (playerAudio.src) playerAudio.currentTime = Math.max(0, Math.min(playerAudio.duration || 1e9, playerAudio.currentTime + seg)); }
+  iaPlayerPular = pular;
+  playerAudio.addEventListener('focus', function () { playerAudio.blur(); }); /* as setas/espaço ficam com o painel */
+  function tocarDireto(g) {
+    playerTxt.textContent = '🎧 Abrindo o áudio direto do 3C… (transmitido: não dá para avançar/acelerar; baixe com ⬇ e carregue a pasta de áudios para ter todos os controles)';
+    playerAudio.onerror = function () { playerTxt.textContent = 'O 3C não liberou tocar aqui (precisa estar logado no 3C neste navegador). Use o ⬇ para baixar e ouvir o arquivo.'; };
+    playerAudio.src = urlGravacao(g.id);
+    playerAudio.play().then(function () { playerTxt.textContent = '🎧 ' + (g.data ? dataBR(g.data).slice(0, 5) + ' ' + g.hora : 'ligação') + ' · fala ' + fmtSeg(g.fala); }, function () { /* onerror cuida da mensagem */ });
+  }
+  function tocarLocal(g, f) {
+    if (urlAtual) URL.revokeObjectURL(urlAtual);
+    urlAtual = URL.createObjectURL(f); playerAudio.onerror = null; playerAudio.src = urlAtual; playerAudio.playbackRate = vel;
+    playerTxt.textContent = '🎧 ' + (g.data ? dataBR(g.data).slice(0, 5) + ' ' + g.hora : 'ligação') + ' · fala ' + fmtSeg(g.fala) + ' · arquivo local (pode avançar e acelerar)';
+    playerAudio.play().catch(function () { /* o navegador pode exigir clicar no play */ });
+  }
   function ouvirAudio(g) {
-    playerBox.hidden = false; playerTxt.textContent = 'Carregando o áudio de ' + (g.data ? dataBR(g.data).slice(0, 5) + ' ' + g.hora : 'ligação') + '…';
+    playerBox.hidden = false;
+    var local = iaAudioLocal(g); if (local) { tocarLocal(g, local); return; }
+    if (!iaToken) { tocarDireto(g); return; } playerTxt.textContent = 'Carregando o áudio de ' + (g.data ? dataBR(g.data).slice(0, 5) + ' ' + g.hora : 'ligação') + '…';
     iaBuscarAudio(g).then(function (b) {
       if (urlAtual) URL.revokeObjectURL(urlAtual);
       urlAtual = URL.createObjectURL(b); playerAudio.src = urlAtual; playerTxt.textContent = '🎧 ' + (g.data ? dataBR(g.data).slice(0, 5) + ' ' + g.hora : 'ligação') + ' · fala ' + fmtSeg(g.fala);
       playerAudio.play().catch(function () { /* o navegador pode exigir clicar no play */ });
     }, function (e) {
-      playerTxt.textContent = e.message + ' Abri a gravação do 3C em outra aba.';
-      window.open(urlGravacao(g.id), '_blank', 'noopener,noreferrer');
+      if (!e.rede) { playerTxt.textContent = e.message; return; }
+      tocarDireto(g);
     });
   }
   function baixarAudio(g) {
+    if (!iaToken) {
+      if (iaAbrirDownload(g)) { estado.ia.baixados[g.id] = 1; salvarIA(); toast('Download pedido ao 3C: veja a pasta Downloads.'); return; }
+      iaBaixarPorNavegador(g).then(function () { estado.ia.baixados[g.id] = 1; salvarIA(); toast('Download pedido ao 3C: veja a pasta Downloads.'); }, function (e2) { toast(e2.message, { tipo: 'erro' }); }); return; }
     iaBuscarAudio(g).then(function (b) {
       iaSalvarBlob(b, iaNomeAudio(g, b.type)); estado.ia.baixados[g.id] = 1; salvarIA(); toast('Baixado: ' + iaNomeAudio(g, b.type));
-    }, function (e) { toast(e.message, { tipo: 'erro' }); });
+    }, function (e) {
+      if (!e.rede) { toast(e.message, { tipo: 'erro' }); return; }
+      iaBaixarPorNavegador(g).then(function () { estado.ia.baixados[g.id] = 1; salvarIA(); toast('Download pedido ao 3C: veja a pasta Downloads.'); }, function (e2) { toast(e2.message, { tipo: 'erro' }); });
+    });
   }
   var confChip = el('span', { class: 'ia-conf' });
   function atualizarConf() { var c = iaConformidade(a); confChip.className = 'ia-conf' + (c === null ? '' : c >= 80 ? ' alta' : c >= 50 ? ' media' : ' baixa'); confChip.textContent = 'CONFORMIDADE ' + (c === null ? '—' : c + '%'); }
@@ -4777,9 +4896,14 @@ function iaRenderDetalhe() {
     cor(); return lin;
   }
   var ligs = l.ligacoes.length;
+  var qualInp = el('input', { type: 'text', maxlength: '60', list: 'ia-quals', placeholder: 'Qual seria a qualificação certa?', autocomplete: 'off' }); qualInp.value = a.qualCerta;
+  qualInp.addEventListener('input', function () { a.qualCerta = qualInp.value; a.qualIA = iaQualPrincipal(l); iaGravar(l, a); });
+  var qualCertaBox = el('div', { class: 'campo', hidden: a.qualOk !== 'nao' }, el('label', null, 'Qualificação certa (escreva ou escolha)'), qualInp);
   var checklist = el('div', { class: 'ia-ck' },
     linhaCk('A IA apresentou o serviço e seguiu o processo de SDR (qualificar o lead)?', ligs ? 'Ouça a gravação: ela se apresentou, explicou o serviço e fez as perguntas de qualificação?' : 'Sem ligação da IA registrada', 'arg', [['sim', 'Sim'], ['parcial', 'Parcialmente'], ['nao', 'Não'], ['na', 'Não deu tempo (cliente desligou)']]),
     el('div', { class: 'ia-ck-lin' }, el('div', null, el('b', null, 'Motivo da perda'), el('small', null, 'Registrado no Dryve · não entra na conformidade')), el('b', { style: 'display:inline-block' }, l.motivo || '—')),
+    linhaCk('A qualificação da IA está certa?', 'Qualificação registrada: ' + (iaQualPrincipal(l) || 'nenhuma') + ' · normalmente está certa (se não marcar, conta como certa)', 'qualOk', [['sim', 'Sim, está certa'], ['nao', 'Não, está errada']], function () { qualCertaBox.hidden = a.qualOk !== 'nao'; }),
+    qualCertaBox,
     linhaCk('Motivo correto?', 'O cliente realmente é ' + (l.motivo || 'o motivo registrado') + '?', 'correto', [['sim', 'Sim, está correto'], ['nao', 'Não, está incorreto'], ['duvida', 'Sem como avaliar']], function () { blocoNao.hidden = a.correto !== 'nao'; iaRenderLateral(); }),
     el('div', { class: 'ia-ck-lin', style: 'display:grid' }, el('div', null, el('b', null, 'O que aconteceu na ligação?'), el('small', null, 'Marque o que se aplica (rápido)')), opcoes('situ', IA_SITUACOES, a.situ)),
     el('div', { class: 'ia-ck-lin' }, el('div', null, el('b', null, 'Comportamento da IA na ligação'), el('small', null, sug ? 'Sinal do painel: ' + IA_COMP[sug].rot + ' — ' + IA_COMP[sug].txt : 'Sem ligações da IA para avaliar')),
@@ -4794,7 +4918,7 @@ function iaRenderDetalhe() {
   }
   function aplicarRapida(i) {
     var r = IA_RAPIDAS[i]; if (!r) return;
-    a.correto = r.correto; a.porque = r.porque.slice(); a.motivoReal = r.motivo; if (r.situ) a.situ = r.situ.slice(); if (!a.comp && sug) a.comp = sug;
+    if (!a.qualOk) a.qualOk = 'sim'; a.qualIA = iaQualPrincipal(l); a.correto = r.correto; a.porque = r.porque.slice(); a.motivoReal = r.motivo; if (r.situ) a.situ = r.situ.slice(); if (!a.comp && sug) a.comp = sug;
     iaGravar(l, a); toast(r.rot.replace(/^\S+\s/, '') + ' — salvo.'); proximo();
   }
   iaRapidaAtual = aplicarRapida;
@@ -4819,7 +4943,7 @@ function iaRenderDetalhe() {
         el('tbody', null, l.ligacoes.map(function (g) {
           return el('tr', null, el('td', { class: 'num' }, g.data ? dataBR(g.data).slice(0, 5) + ' ' + g.hora : '—'), el('td', null, g.qual && g.qual !== '-' ? g.qual : '—'), el('td', { class: 'num' }, fmtSeg(g.fala)), el('td', null, g.amd && g.amd !== '-' ? g.amd : '—'), el('td', null, g.causa || '—'), el('td', null, g.status || '—'),
             el('td', null, semaforo(iaNotaLigacao(g)), IA_COMP[iaNotaLigacao(g)].rot),
-            el('td', { style: 'white-space:nowrap' }, estado.ia.transc[g.id] ? '📝 ' : '', estado.ia.baixados[g.id] ? '✔ ' : '',
+            el('td', { style: 'white-space:nowrap' }, estado.ia.transc[g.id] ? '📝 ' : '', iaAudioLocal(g) ? '📁 ' : estado.ia.baixados[g.id] ? '✔ ' : '',
               g.id ? [el('button', { type: 'button', class: 'btn-fone', title: 'Ouvir esta ligação aqui', 'aria-label': 'Ouvir a ligação', onclick: function () { ouvirAudio(g); } }, '🎧'),
                 el('button', { type: 'button', class: 'btn-fone', title: 'Baixar o áudio (nome igual ao do 3C)', 'aria-label': 'Baixar o áudio', onclick: function () { baixarAudio(g); } }, '⬇')] : ''));
         })))) : null,
@@ -4851,13 +4975,14 @@ function iaRenderDetalhe() {
         el('button', { type: 'button', class: 'btn btn-primario btn-grande', onclick: function () {
           if (!a.correto) { toast('Marque se o motivo está correto, incorreto ou sem como avaliar.', { tipo: 'aviso' }); return; }
           if (a.correto === 'nao' && !a.porque.length && !a.porqueTxt.trim()) { toast('Diga por que o motivo está incorreto (marque uma opção ou escreva).', { tipo: 'aviso' }); return; }
-          iaGravar(l, a); toast('Análise salva.'); proximo();
+          if (!a.qualOk) a.qualOk = 'sim'; a.qualIA = iaQualPrincipal(l); iaGravar(l, a); toast('Análise salva.'); proximo();
         } }, '✓ Salvar e ir para o próximo'),
         el('button', { type: 'button', class: 'btn btn-perigo-linha', onclick: function () { delete estado.ia.analises[l.codigoNorm]; salvarIA(); iaRenderDetalhe(); iaRenderLateral(); toast('Análise limpa.'); } }, 'Limpar análise')))));
 }
 function renderIA() {
   var u = estado.ui.ia;
   $('#ia-filtro').value = u.filtro; $('#ia-ordem').value = u.ordem; $('#au-base').value = estado.ia.audioBase; $('#ia-busca').value = u.busca; $('#ia-analista').value = estado.ia.analista; $('#ia-auto').checked = estado.ia.autoCopiar; $('#ia-regra').value = estado.ia.regra;
+  if (!document.getElementById('ia-quals')) document.body.appendChild(el('datalist', { id: 'ia-quals' }, IA_QUALIFICACOES.map(function (m) { return el('option', { value: m }); })));
   if (!document.getElementById('ia-motivos')) document.body.appendChild(el('datalist', { id: 'ia-motivos' }, IA_MOTIVOS.map(function (m) { return el('option', { value: m }); })));
   var lista = iaFiltrados();
   if (!u.sel || !estado.ia.leads.some(function (x) { return x.codigoNorm === u.sel; })) u.sel = lista.length ? lista[0].codigoNorm : '';
@@ -4868,6 +4993,12 @@ function ligarEventosIA() {
     if (estado.ui.aba !== 'ia' || !iaRapidaAtual || document.querySelector('.modal-fundo') || e.ctrlKey || e.metaKey || e.altKey) return;
     var t = e.target && e.target.tagName;
     if (t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT') return;
+    if (iaPlayerAtivo && iaPlayerAtivo.isConnected && iaPlayerAtivo.src && !(t === 'BUTTON' && (e.key === ' ' || e.key === 'Enter'))) {
+      if (e.key === 'ArrowLeft') { e.preventDefault(); iaPlayerPular(-10); return; }
+      if (e.key === 'ArrowRight') { e.preventDefault(); iaPlayerPular(10); return; }
+      if (e.key === ' ') { e.preventDefault(); if (iaPlayerAtivo.paused) iaPlayerAtivo.play().catch(function () {}); else iaPlayerAtivo.pause(); return; }
+      if (e.key === 'x' || e.key === 'X') { e.preventDefault(); iaPlayerVel(); return; }
+    }
     if (/^[1-8]$/.test(e.key)) { e.preventDefault(); iaRapidaAtual(+e.key - 1); }
   });
   $('#ia-filtro').addEventListener('change', function (e) { estado.ui.ia.filtro = e.target.value; iaRenderLista(); });
@@ -4879,6 +5010,10 @@ function ligarEventosIA() {
   $('#au-token').addEventListener('input', function (e) { iaToken = e.target.value.trim(); });
   $('#au-min').addEventListener('input', iaAudioInfo);
   $('#au-lote').addEventListener('click', iaRodarLote);
+  $('#au-pasta').addEventListener('click', function () { $('#au-pasta-in').click(); });
+  $('#au-pasta-in').addEventListener('change', function (e) { var fs = Array.from(e.target.files); e.target.value = ''; if (!fs.length) return; var r = iaIndexarAudios(fs); toast(r.novos + ' áudios encontrados na pasta; ' + r.casam + ' casam com ligações dos leads (📁).'); iaRenderLateral(); iaRenderDetalhe(); });
+  $('#au-esquecer').addEventListener('click', function () { estado.ia.baixados = {}; salvarIA(); iaAudioInfo(); iaRenderLista(); toast('Lista de baixadas zerada.'); });
+  $('#au-proxima').addEventListener('click', function () { if (iaLote.manual) iaLote.manual(); });
   $('#au-parar').addEventListener('click', function () { iaLote.parar = true; });
   $('#ia-ordem').addEventListener('change', function (e) { estado.ui.ia.ordem = e.target.value; renderIA(); });
   $('#ia-busca').addEventListener('input', function (e) { estado.ui.ia.busca = e.target.value; iaRenderLista(); });
@@ -4996,6 +5131,12 @@ function atualizarLinksSite() {
 
 /* Área "arraste os arquivos": reconhece o que é cada arquivo e manda para a importação certa */
 async function processarArquivos(arquivos) {
+  var audios = Array.from(arquivos).filter(function (f) { return /\.(mp3|wav|ogg|m4a|opus|aac|flac|webm)$/i.test(f.name) || /^audio\//.test(f.type); });
+  if (audios.length) {
+    var r = iaIndexarAudios(audios); arquivos = Array.from(arquivos).filter(function (f) { return audios.indexOf(f) < 0; });
+    toast(audios.length + ' ' + plural(audios.length, 'áudio carregado', 'áudios carregados') + ': ' + r.casam + ' ligações com áudio local (agora dá para avançar e acelerar).'); renderTudo();
+    if (!arquivos.length) return;
+  }
   var log = $('#dz-log');
   log.replaceChildren();
   function linha(txt, cor) { log.appendChild(el('li', { style: cor ? 'color:' + cor : '' }, txt)); }
