@@ -379,6 +379,7 @@ def main():
     ap.add_argument("--pasta", help="pasta com áudios já baixados")
     ap.add_argument("--ordem", choices=["dia", "fala"], default="dia", help="dia (padrão): hoje primeiro, depois ontem, anteontem…; dentro de cada dia, as ligações mais longas primeiro. fala: só pela duração, de todos os dias")
     ap.add_argument("--min", type=int, default=1, help="mínimo de segundos de fala (padrão 1 = todas as ligações em que alguém falou; use --min 10 para só as mais longas, ou --min 0 para absolutamente todas, inclusive as sem conversa)")
+    ap.add_argument("--min-lead", type=int, default=10, help="regra por LEAD (telefone): se NENHUMA ligação do lead tiver pelo menos este tanto de fala (padrão 10 s), é impossível validar se é motorista de app: nenhuma ligação dele é baixada nem transcrita (a lista vai para ignoradas_impossiveis.csv). Use 0 para desligar")
     ap.add_argument("--max", type=int, default=0, help="limitar a quantidade (0 = todas)")
     ap.add_argument("--modelo", default="small", help="tiny | base | small (padrão) | medium")
     ap.add_argument("--rapido", action="store_true", help="usa o modelo base: bem mais rápido (uns 3x), com um pouco mais de erros; ideal para o lote grande")
@@ -416,6 +417,25 @@ def main():
         for k, v in ler_csv(a.csv).items():
             ant = ligacoes.get(k, {})
             ligacoes[k] = {"dur": max(v["dur"], ant.get("dur", 0)), "rec": v["rec"] or ant.get("rec", ""), "num": v["num"] or ant.get("num", ""), "quando": v["quando"] or ant.get("quando", "")}
+
+    if a.min_lead > 0:
+        maior = {}
+        for v in ligacoes.values():
+            if v["num"]:
+                maior[v["num"]] = max(maior.get(v["num"], 0), v["dur"])
+        nums_leads = {v["num"] for v in ler_xlsx(a.xlsx).values() if v["num"]} if a.xlsx else None  # só telefones que são leads da planilha
+        fora = [k for k, v in ligacoes.items() if v["num"] and maior.get(v["num"], 0) < a.min_lead and (nums_leads is None or v["num"] in nums_leads)]
+        if fora:
+            leads_fora = sorted({ligacoes[k]["num"] for k in fora})
+            with open("ignoradas_impossiveis.csv", "w", encoding="utf-8-sig", newline="") as f:
+                w = csv.writer(f, delimiter=";")
+                w.writerow(["telefone", "maior fala do lead (s)", "data_hora da ligação", "fala (s)", "id", "motivo"])
+                for k in sorted(fora, key=lambda x: (ligacoes[x]["num"], ligacoes[x].get("quando", ""))):
+                    v = ligacoes[k]
+                    w.writerow([v["num"], maior[v["num"]], quando_br(v.get("quando", "")), v["dur"], k, "Impossível validar: nenhuma ligação do lead com fala >= %d s" % a.min_lead])
+            print("%d leads (telefones) sem nenhuma ligação com fala >= %d s: IMPOSSÍVEL validar se é motorista de app. Suas %d ligações não serão baixadas nem transcritas (lista em ignoradas_impossiveis.csv)." % (len(leads_fora), a.min_lead, len(fora)))
+            for k in fora:
+                del ligacoes[k]
 
     if a.refazer_sem_pergunta:
         n = limpar_sem_pergunta(a.saida)
