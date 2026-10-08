@@ -4104,7 +4104,7 @@ function iaNotaGeral(l) {
   return n.indexOf('boa') >= 0 ? 'boa' : n.indexOf('media') >= 0 ? 'media' : 'ruim';
 }
 function semaforo(nota) { return nota ? el('span', { class: 'sema sema-' + nota, title: 'Comportamento da IA: ' + IA_COMP[nota].rot, 'aria-label': 'Comportamento da IA: ' + IA_COMP[nota].rot }) : null; }
-function iaVazio() { return { leads: [], analises: {}, analista: '', regra: IA_REGRA_PADRAO, importadoEm: 0, arquivo: '', autoCopiar: true }; }
+function iaVazio() { return { leads: [], analises: {}, analista: '', regra: IA_REGRA_PADRAO, importadoEm: 0, arquivo: '', autoCopiar: true, tele: {} }; }
 function formatTel(t) {
   t = String(t || '').replace(/\D/g, '');
   return t.length === 11 ? '(' + t.slice(0, 2) + ') ' + t.slice(2, 7) + '-' + t.slice(7) : t.length === 10 ? '(' + t.slice(0, 2) + ') ' + t.slice(2, 6) + '-' + t.slice(6) : t;
@@ -4116,6 +4116,12 @@ function sanitizarIA(o) {
   if (!o || typeof o !== 'object') return r;
   r.analista = iaTxt(o.analista, 80); r.regra = iaTxt(o.regra, 1500) || IA_REGRA_PADRAO;
   r.autoCopiar = typeof o.autoCopiar === 'boolean' ? o.autoCopiar : true;
+  if (o.tele && typeof o.tele === 'object' && !Array.isArray(o.tele)) {
+    Object.keys(o.tele).slice(0, 8000).forEach(function (k) {
+      var t = o.tele[k]; if (!t || typeof t !== 'object') return;
+      r.tele[iaTxt(k, 40)] = { n: String(t.n || '').replace(/\D/g, '').slice(-11), d: dataValida(t.d) ? t.d : null, h: /^\d{2}:\d{2}$/.test(String(t.h)) ? t.h : '', q: iaTxt(t.q, 60), f: Math.max(0, Math.min(86400, Math.round(Number(t.f) || 0))), s: iaTxt(t.s, 30), a: iaTxt(t.a, 30), c: iaTxt(t.c, 60) };
+    });
+  }
   r.importadoEm = Number.isFinite(o.importadoEm) ? o.importadoEm : 0; r.arquivo = iaTxt(o.arquivo, 120);
   var vistos = new Set();
   (Array.isArray(o.leads) ? o.leads : []).slice(0, 20000).forEach(function (x) {
@@ -4176,30 +4182,54 @@ function importarIAPerdidos(linhas, nome) {
   var novos = 0;
   novo.leads.forEach(function (l) { if (!mapa.has(l.codigoNorm)) novos++; mapa.set(l.codigoNorm, l); });
   estado.ia.leads = Array.from(mapa.values()); estado.ia.importadoEm = Date.now(); estado.ia.arquivo = iaTxt(nome, 120);
+  var cruz = iaAplicarTele();
   salvarIA(); renderTudo();
   var comLig = novo.leads.filter(function (l) { return l.ligacoes.length; }).length;
   var comTel = novo.leads.filter(function (l) { return l.tel; }).length;
-  return 'análise IA: ' + novo.leads.length + ' leads (' + novos + ' novos), ' + comLig + ' com ligações da IA, ' + comTel + ' com telefone' + (res.invalidos ? '; ' + res.invalidos + ' linhas sem código' : '') + '. Nome e CPF não são guardados.';
+  return 'análise IA: ' + novo.leads.length + ' leads (' + novos + ' novos), ' + comLig + ' com ligações da IA, ' + comTel + ' com telefone' + (res.invalidos ? '; ' + res.invalidos + ' linhas sem código' : '') + (cruz.id + cruz.tel ? '; cruzado com a telefonia guardada (' + (cruz.id + cruz.tel) + ' ligações)' : '') + '. Nome e CPF não são guardados.';
 }
-/* CSV da telefonia (3C Plus): completa qualificação/fala das ligações que já existem nos leads, casando pelo id da chamada */
+/* CSV da telefonia (3C Plus): guardado no navegador e cruzado com os leads — pelo id da chamada e, na falta dele, pelo telefone do lead.
+   O cruzamento roda de novo a cada importação, então a ordem dos arquivos não importa (CSV antes ou depois da planilha). */
+function iaVazioTxt(v) { return !v || v === '-'; }
+function iaAplicarTele() {
+  var porId = new Map(), porTel = new Map(), r = { id: 0, tel: 0, sem: 0 };
+  estado.ia.leads.forEach(function (l) {
+    if (l.tel) porTel.set(l.tel.slice(-11), l);
+    l.ligacoes.forEach(function (g) { if (g.id) porId.set(g.id, g); });
+  });
+  Object.keys(estado.ia.tele).forEach(function (id) {
+    var t = estado.ia.tele[id], g = porId.get(id), viaTel = false;
+    if (!g) {
+      var l = t.n ? porTel.get(t.n) : null;
+      if (!l) { r.sem++; return; }
+      g = { id: id, data: t.d, hora: t.h, qual: '', amd: '', causa: '', fala: 0, status: '' }; l.ligacoes.push(g);
+      l.ligacoes.sort(function (x, y) { return ((x.data || '') + x.hora) < ((y.data || '') + y.hora) ? -1 : 1; });
+      porId.set(id, g); viaTel = true;
+    }
+    if (iaVazioTxt(g.qual) && t.q) g.qual = t.q;
+    if (!g.fala && t.f) g.fala = t.f;
+    if (!g.status && t.s) g.status = t.s;
+    if (iaVazioTxt(g.amd) && t.a) g.amd = t.a;
+    if (!g.causa && t.c) g.causa = t.c;
+    if (viaTel) r.tel++; else r.id++;
+  });
+  return r;
+}
 function importarChamadasIA(linhas) {
-  var cab = linhas[0].map(colunaKey), ix = function (n) { return cab.indexOf(n); }, c = { id: ix('id'), qual: ix('qualificationname'), fala: ix('speakingtime'), st: ix('readablestatustext'), amd: ix('readableamdstatustext'), causa: ix('readablehangupcausetext') };
+  var cab = linhas[0].map(colunaKey), ix = function (n) { return cab.indexOf(n); }, c = { id: ix('id'), num: ix('number'), data: ix('calldate'), qual: ix('qualificationname'), fala: ix('speakingtime'), st: ix('readablestatustext'), amd: ix('readableamdstatustext'), causa: ix('readablehangupcausetext') };
   if (c.id < 0) return 'CSV da telefonia sem a coluna _id.';
-  var porId = new Map();
-  estado.ia.leads.forEach(function (l) { l.ligacoes.forEach(function (g) { if (g.id) porId.set(g.id, g); }); });
-  var casadas = 0, total = linhas.length - 1;
+  var total = 0, v = function (r, k) { return c[k] >= 0 && r[c[k]] !== undefined ? r[c[k]] : ''; };
   for (var i = 1; i < linhas.length; i++) {
-    var r = linhas[i], g = porId.get(String(r[c.id] || '').trim());
-    if (!g) continue;
-    casadas++;
-    if (!g.qual && c.qual >= 0) g.qual = iaTxt(r[c.qual], 60);
-    if (!g.fala && c.fala >= 0) g.fala = parseDuracao(r[c.fala]);
-    if (!g.status && c.st >= 0) g.status = iaTxt(r[c.st], 30);
-    if (!g.amd && c.amd >= 0) g.amd = iaTxt(r[c.amd], 30);
-    if (!g.causa && c.causa >= 0) g.causa = iaTxt(r[c.causa], 60);
+    var r = linhas[i], id = iaTxt(r[c.id], 40); if (!id) continue;
+    var dh = parseDataHora(v(r, 'data')); total++;
+    var q = iaTxt(v(r, 'qual'), 60);
+    estado.ia.tele[id] = { n: String(v(r, 'num')).replace(/\\D/g, '').slice(-11), d: dh ? dh.data : null, h: dh ? dh.hora : '', q: q === '-' ? '' : q, f: parseDuracao(v(r, 'fala')), s: iaTxt(v(r, 'st'), 30), a: iaTxt(v(r, 'amd'), 30), c: iaTxt(v(r, 'causa'), 60) };
   }
+  var ks = Object.keys(estado.ia.tele); if (ks.length > 8000) ks.slice(0, ks.length - 8000).forEach(function (k) { delete estado.ia.tele[k]; });
+  var res = iaAplicarTele();
   salvarIA(); renderTudo();
-  return 'telefonia: ' + casadas + ' de ' + total + ' ligações casadas com os leads' + (estado.ia.leads.length ? '' : ' (importe antes o arquivo “agente IA perdidos por motivo”)') + '.';
+  if (!estado.ia.leads.length) return 'telefonia: ' + total + ' ligações guardadas. Elas serão cruzadas com os leads assim que você importar a planilha “agente IA perdidos por motivo”.';
+  return 'telefonia: ' + total + ' ligações lidas — ' + res.id + ' casadas pelo id da chamada' + (res.tel ? ', ' + res.tel + ' pelo telefone do lead (ligações que não vinham na planilha)' : '') + (res.sem ? ', ' + res.sem + ' de outros leads/campanhas (ignoradas)' : '') + (estado.ia.leads.length ? '' : '. Ainda não há leads: ficam guardadas e serão cruzadas quando você importar a planilha “agente IA perdidos por motivo”') + '.';
 }
 /* Sinal automático para ajudar na decisão (não substitui ouvir a gravação) */
 function iaSinal(l) {
@@ -4307,6 +4337,11 @@ function iaIniciar() {
   if (prox.tel && estado.ia.autoCopiar) copiarTexto(formatTel(prox.tel)).then(function () { toast('Telefone copiado: ' + formatTel(prox.tel)); });
   var d = $('#ia-det'); if (d && d.scrollIntoView) d.scrollIntoView({ block: 'start' });
 }
+function iaCobertura() {
+  var n = 0, q = 0, f = 0, ate = 0, tele = Object.keys(estado.ia.tele).length;
+  estado.ia.leads.forEach(function (l) { l.ligacoes.forEach(function (g) { n++; if (!iaVazioTxt(g.qual)) q++; if (g.fala) f++; if (g.amd && g.amd !== '-') ate++; }); });
+  return 'Dados cruzados: ' + n + ' ligações da IA · ' + q + ' com qualificação · ' + f + ' com tempo de fala · ' + ate + ' com “atendeu?”' + (tele ? ' · telefonia: ' + tele + ' ligações carregadas' : ' · CSV da telefonia ainda não carregado (opcional: completa qualificação, fala e desligamento)') + '.';
+}
 function iaRenderInicio() {
   var u = estado.ui.ia, box = $('#ia-inicio'), t = iaStats();
   $('#aba-ia').classList.toggle('ia-foco', !!u.foco && t.total > 0);
@@ -4322,6 +4357,7 @@ function iaRenderInicio() {
   box.replaceChildren(
     el('div', { style: 'display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline' }, el('b', null, t.ana + ' de ' + t.total + ' auditorias feitas'), el('span', { class: 'dica' }, t.pend ? 'faltam ' + t.pend : 'tudo preenchido 🎉')),
     el('div', { class: 'barra' + (t.pend ? '' : ' completa') }, el('i', { style: 'width:' + pct + '%' })),
+    el('div', { class: 'dica' }, iaCobertura()),
     el('div', { class: 'acoes' },
       t.pend ? el('button', { type: 'button', class: 'btn btn-primario btn-grande', onclick: iaIniciar }, (t.ana ? '▶ Continuar auditorias' : '▶ Fazer auditorias') + ' · próximo lead') : null,
       u.foco ? el('button', { type: 'button', class: 'btn btn-linha', onclick: function () { u.foco = false; renderIA(); } }, '☰ Ver lista e filtros') : null));
