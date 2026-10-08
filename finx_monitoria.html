@@ -4,12 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FINX · Painel de Auditorias e Metas</title>
+<script>(function(){var t='';try{t=localStorage.getItem('finx_tema')||''}catch(e){}if(t!=='claro'&&t!=='escuro')t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'escuro':'claro';document.documentElement.setAttribute('data-tema',t)})();</script>
 <style>
 /* =========================================================
    FINX · Painel de Auditorias e Metas
    Identidade visual: azul corporativo, verde só para metas concluídas
    ========================================================= */
 :root{
+  --azul-fundo:#092A5E; --sup:#FFFFFF; --sup2:#F7FAFF; --linha:#D5E1F7; --azul-hover:#D8E6FF; --cinza-cl:#EEF1F6; --cinza-tx:#4A5A78; --borda-verm:#F3B8B2; --borda-amar:#F3D78A;
   --azul:#0057FF; --azul-esc:#092A5E; --azul-cl:#EAF1FF; --azul-med:#BFD3FF;
   --branco:#FFFFFF; --bg:#F4F7FC;
   --verde:#12A150; --verde-cl:#E3F6EB; --verde-esc:#0B6B36;
@@ -19,6 +21,29 @@
   --sombra:0 1px 2px rgba(9,42,94,.06),0 8px 24px rgba(9,42,94,.07);
   --raio:16px;
 }
+:root[data-tema=escuro]{
+  color-scheme:dark;
+  --bg:#0B1220; --sup:#121B2E; --sup2:#17233A; --linha:#2B3A58; --borda:#26344F;
+  --texto:#E6ECF8; --muted:#9FB0CE; --branco:#121B2E;
+  --azul:#2F6BFF; --azul-esc:#CFE0FF; --azul-cl:#172745; --azul-med:#2B4577; --azul-hover:#223A66;
+  --verde:#22B866; --verde-cl:#0F2E1F; --verde-esc:#7BE0A6;
+  --amarelo-cl:#33290A; --amarelo-esc:#FFD76A; --vermelho:#F0564A; --vermelho-cl:#361512; --vermelho-esc:#FF9C92;
+  --cinza-cl:#222E45; --cinza-tx:#B7C4DD; --borda-verm:#6B2A25; --borda-amar:#6B5316;
+  --sombra:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+}
+:root[data-tema=escuro] body{background:var(--bg);color:var(--texto)}
+:root[data-tema=escuro] .btn-linha,:root[data-tema=escuro] .btn-perigo-linha{background:var(--sup2)}
+:root[data-tema=escuro] .btn-linha{color:var(--texto)}
+:root[data-tema=escuro] .btn-sec{background:var(--azul-cl);color:var(--azul-esc)}
+:root[data-tema=escuro] input,:root[data-tema=escuro] select,:root[data-tema=escuro] textarea{background:var(--sup2);color:var(--texto)}
+:root[data-tema=escuro] .chip-tipo input:checked+span small{color:#DCE8FF}
+:root[data-tema=escuro] .ia-conf.alta{color:#7BE0A6}:root[data-tema=escuro] .ia-conf.media{color:#FFD76A}
+:root[data-tema=escuro] .ia-ck-lin small,:root[data-tema=escuro] .ia-ck-lin select{color:var(--texto)}
+:root[data-tema=escuro] .ia-ck-lin small{color:var(--muted)}
+:root[data-tema=escuro] tbody tr:hover td{background:var(--azul-cl)}
+:root[data-tema=escuro] .meta-card.concluida{border-color:#1F7A47}
+.btn-tema{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);color:#fff;border-radius:99px;padding:4px 12px;font-weight:700;font-size:.78rem;white-space:nowrap}
+.btn-tema:hover{background:rgba(255,255,255,.26)}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 [hidden]{display:none !important}
@@ -32,7 +57,7 @@ h1,h2,h3,h4,p{margin:0}
 .pular:focus{left:8px}
 
 /* ---------- Cabeçalho ---------- */
-.topo{background:linear-gradient(120deg,var(--azul-esc),#0B3C94 55%,var(--azul));color:#fff;position:sticky;top:0;z-index:60;box-shadow:0 2px 14px rgba(9,42,94,.28)}
+.topo{background:linear-gradient(120deg,var(--azul-fundo),#0B3C94 55%,var(--azul));color:#fff;position:sticky;top:0;z-index:60;box-shadow:0 2px 14px rgba(9,42,94,.28)}
 .topo-in{max-width:1440px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:22px;flex-wrap:wrap}
 .marca{display:flex;align-items:center;gap:12px;margin-right:auto}
 .logo{width:42px;height:42px;border-radius:12px;background:#fff;color:var(--azul);display:grid;place-items:center;font-weight:900;font-size:1.5rem;letter-spacing:-1px;box-shadow:inset 0 -4px 0 var(--azul-med)}
@@ -46,7 +71,7 @@ h1,h2,h3,h4,p{margin:0}
 
 /* ---------- Layout e navegação ---------- */
 .layout{max-width:1440px;margin:0 auto;padding:20px;display:grid;grid-template-columns:210px minmax(0,1fr);gap:24px;align-items:start}
-.menu{position:sticky;top:96px;background:#fff;border:1px solid var(--borda);border-radius:var(--raio);padding:10px;display:flex;flex-direction:column;gap:4px;box-shadow:var(--sombra)}
+.menu{position:sticky;top:96px;background:var(--sup);border:1px solid var(--borda);border-radius:var(--raio);padding:10px;display:flex;flex-direction:column;gap:4px;box-shadow:var(--sombra)}
 .nav-btn{display:flex;align-items:center;gap:11px;width:100%;padding:11px 13px;border:0;background:transparent;border-radius:11px;color:var(--azul-esc);font-weight:600;text-align:left;transition:background .15s,color .15s}
 .nav-btn:hover{background:var(--azul-cl)}
 .nav-btn.ativo{background:var(--azul);color:#fff;box-shadow:0 4px 12px rgba(0,87,255,.3)}
@@ -68,11 +93,11 @@ main{min-width:0}
 .grid-ops{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px}
 
 /* ---------- Cards ---------- */
-.card{background:#fff;border:1px solid var(--borda);border-radius:var(--raio);padding:18px;box-shadow:var(--sombra)}
+.card{background:var(--sup);border:1px solid var(--borda);border-radius:var(--raio);padding:18px;box-shadow:var(--sombra)}
 .card-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap}
 .card-cab h3{font-size:.8rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
 .dica{font-size:.8rem;color:var(--muted)}
-.vazio{padding:26px 16px;text-align:center;color:var(--muted);border:1.5px dashed var(--borda);border-radius:14px;background:#FAFCFF}
+.vazio{padding:26px 16px;text-align:center;color:var(--muted);border:1.5px dashed var(--borda);border-radius:14px;background:var(--sup2)}
 
 /* ---------- Hero (ritmo necessário) ---------- */
 .hero{--hero-bg:linear-gradient(135deg,#0057FF,#092A5E);--hero-txt:#fff;border-radius:22px;padding:26px;color:var(--hero-txt);background:var(--hero-bg);display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:22px;box-shadow:0 12px 32px rgba(9,42,94,.22)}
@@ -106,13 +131,13 @@ main{min-width:0}
 .tag-azul{background:var(--azul-cl);color:var(--azul)}
 .tag-amarelo{background:var(--amarelo-cl);color:var(--amarelo-esc)}
 .tag-vermelho{background:var(--vermelho-cl);color:var(--vermelho-esc)}
-.tag-cinza{background:#EEF1F6;color:#4A5A78}
+.tag-cinza{background:var(--cinza-cl);color:var(--cinza-tx)}
 .tag-solido-vermelho{background:var(--vermelho);color:#fff}
 
 /* ---------- Cards de meta ---------- */
 .meta-card{padding:16px;display:flex;flex-direction:column;gap:10px;transition:transform .18s,box-shadow .18s}
 .meta-card:hover{transform:translateY(-2px)}
-.meta-card.concluida{border-color:#9BDCB6;background:linear-gradient(180deg,#fff,#F3FBF6)}
+.meta-card.concluida{border-color:#9BDCB6;background:linear-gradient(180deg,var(--sup),var(--verde-cl))}
 .meta-topo{display:flex;align-items:center;justify-content:space-between;gap:6px 8px;flex-wrap:wrap}
 .grid-metas>*,.grid-2>*,.grid-resumo>*{min-width:0}
 .meta-topo h3{font-size:.95rem;color:var(--azul-esc)}
@@ -130,40 +155,40 @@ main{min-width:0}
 .btn-primario{background:var(--azul);color:#fff;box-shadow:0 4px 12px rgba(0,87,255,.28)}
 .btn-primario:hover:not([disabled]){background:#0048D6}
 .btn-sec{background:var(--azul-cl);color:var(--azul)}
-.btn-sec:hover:not([disabled]){background:#D8E6FF}
-.btn-linha{background:#fff;border-color:#BFCDE8;color:var(--azul-esc)}
+.btn-sec:hover:not([disabled]){background:var(--azul-hover)}
+.btn-linha{background:var(--sup);border-color:var(--linha);color:var(--azul-esc)}
 .btn-linha:hover:not([disabled]){background:var(--azul-cl)}
 .btn-perigo{background:var(--vermelho);color:#fff}
 .btn-perigo:hover:not([disabled]){background:#B82419}
-.btn-perigo-linha{background:#fff;border-color:#F0B5B0;color:var(--vermelho-esc)}
+.btn-perigo-linha{background:var(--sup);border-color:var(--borda-verm);color:var(--vermelho-esc)}
 .btn-perigo-linha:hover:not([disabled]){background:var(--vermelho-cl)}
 .btn-peq{padding:6px 11px;min-height:34px;font-size:.84rem;border-radius:9px}
 .btn-grande{padding:13px 22px;font-size:1.02rem}
 .campo{display:flex;flex-direction:column;gap:5px;min-width:0}
 .campo>label,.rotulo{font-size:.8rem;font-weight:700;color:var(--muted)}
-input[type=text],input[type=search],input[type=number],input[type=date],input[type=time],select,textarea{width:100%;border:1.5px solid #BFCDE8;border-radius:11px;padding:10px 12px;background:#fff;min-height:44px}
+input[type=text],input[type=search],input[type=number],input[type=date],input[type=time],select,textarea{width:100%;border:1.5px solid var(--linha);border-radius:11px;padding:10px 12px;background:var(--sup);min-height:44px}
 input:focus,select:focus,textarea:focus{border-color:var(--azul)}
 input[type=checkbox],input[type=radio]{width:18px;height:18px;accent-color:var(--azul)}
 .linha-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-items:end}
 .dropzone{border:2px dashed var(--azul-med);border-radius:16px;padding:28px 18px;text-align:center;background:var(--azul-cl);cursor:pointer;transition:background .15s,border-color .15s;color:var(--azul-esc)}
-.dropzone:hover,.dropzone.sobre{border-color:var(--azul);background:#D8E6FF}
+.dropzone:hover,.dropzone.sobre{border-color:var(--azul);background:var(--azul-hover)}
 .pl-ajustes summary{cursor:pointer;font-weight:700;color:var(--azul-esc)}
 .aviso-lead.azul{background:var(--azul-cl);color:var(--azul-esc);border-color:var(--azul-med)}
-.pl-ajustes.ck{background:#fff;color:var(--texto);border:1px solid var(--borda);border-radius:14px;padding:12px 14px;text-align:left}
+.pl-ajustes.ck{background:var(--sup);color:var(--texto);border:1px solid var(--borda);border-radius:14px;padding:12px 14px;text-align:left}
 .ck summary{color:var(--azul-esc)}
 .ck-fatos{display:flex;flex-wrap:wrap;gap:6px}
 .ck-fatos span{background:var(--azul-cl);color:var(--azul-esc);border-radius:99px;padding:3px 10px;font-size:.8rem;font-weight:600}
 .ck .rotulo{color:var(--muted)}
 .ck .dica{color:var(--muted)}
 .ck-lista{display:grid;gap:6px}
-.ck-item{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:#F7FAFF;border:1px solid #E1E9F8;border-radius:10px;padding:8px 12px}
+.ck-item{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:var(--sup2);border:1px solid var(--linha);border-radius:10px;padding:8px 12px}
 .ck-nome{font-weight:700;display:flex;flex-direction:column;color:var(--azul-esc)}
 .ck-nome small{font-weight:600;color:var(--muted);font-size:.72rem}
 .ck-val{font-weight:700;color:var(--azul-esc);text-align:right}
 .ck-man{color:var(--muted);font-size:.85rem}
 .ia-grid{display:grid;grid-template-columns:minmax(230px,300px) minmax(0,1fr);gap:16px;align-items:start}
 .ia-lista{display:grid;gap:6px;max-height:78vh;overflow:auto;padding-right:4px}
-.ia-item{display:grid;gap:3px;text-align:left;background:#fff;border:1.5px solid var(--borda);border-radius:12px;padding:9px 12px;cursor:pointer;width:100%}
+.ia-item{display:grid;gap:3px;text-align:left;background:var(--sup);border:1.5px solid var(--borda);border-radius:12px;padding:9px 12px;cursor:pointer;width:100%}
 .ia-item:hover{border-color:var(--azul-med)}
 .ia-item.sel{border-color:var(--azul);box-shadow:0 0 0 3px rgba(0,87,255,.15)}
 .ia-item b{font-size:1.02rem;color:var(--azul-esc)}
@@ -179,23 +204,23 @@ input[type=checkbox],input[type=radio]{width:18px;height:18px;accent-color:var(-
 .ia-sinal{border-radius:12px;padding:10px 14px;font-weight:600;font-size:.92rem}
 .ia-sinal.ok{background:var(--azul-cl);color:var(--azul-esc)}
 .ia-sinal.aviso{background:var(--amarelo-cl);color:var(--amarelo-esc)}
-.ia-inicio{display:grid;gap:12px;margin-bottom:14px;border:2px solid var(--azul);background:linear-gradient(135deg,#F4F8FF,#fff)}
+.ia-inicio{display:grid;gap:12px;margin-bottom:14px;border:2px solid var(--azul);background:linear-gradient(135deg,var(--sup2),var(--sup))}
 .ia-inicio .btn-grande{font-size:1.15rem;padding:16px 26px}
 .ia-inicio.vazio-ia{border-style:dashed;text-align:center;justify-items:center;cursor:default}
-.ia-inicio.vazio-ia.sobre{background:#D8E6FF}
+.ia-inicio.vazio-ia.sobre{background:var(--azul-hover)}
 #aba-ia.ia-foco .filtros-card,#aba-ia.ia-foco #ia-lista,#aba-ia.ia-foco #ia-resumo,#aba-ia.ia-foco #ia-rel,#aba-ia.ia-foco #ia-rel-tit{display:none}
 #aba-ia.ia-foco .ia-grid{grid-template-columns:minmax(0,1fr)}
 .ia-ck{display:grid;gap:8px}
-.ia-ck-lin{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:#F7FAFF;border:1.5px solid #D5E1F7;border-radius:12px;padding:10px 14px}
+.ia-ck-lin{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--sup2);border:1.5px solid var(--linha);border-radius:12px;padding:10px 14px}
 .ia-ck-lin>div:first-child{flex:1 1 160px;min-width:0}
 .ia-ck-lin b{display:block;font-size:.95rem}
 .ia-ck-lin small{color:var(--texto-suave,#5b6b8a);font-size:.78rem}
-.ia-ck-lin select{flex:0 0 210px;max-width:100%;padding:8px 10px;border-radius:9px;border:1.5px solid #C5D3EE;background:#fff;font:inherit;font-weight:600}
+.ia-ck-lin select{flex:0 0 210px;max-width:100%;padding:8px 10px;border-radius:9px;border:1.5px solid var(--linha);background:var(--sup);font:inherit;font-weight:600}
 .ia-ck-lin.ok{border-color:#2e9e5b}.ia-ck-lin.ruim{border-color:var(--vermelho)}
-.ia-conf{display:inline-flex;gap:8px;align-items:center;border-radius:99px;padding:4px 12px;font-weight:800;border:1.5px solid #D5E1F7}
+.ia-conf{display:inline-flex;gap:8px;align-items:center;border-radius:99px;padding:4px 12px;font-weight:800;border:1.5px solid var(--linha)}
 .ia-conf.alta{color:#1e7a45;border-color:#2e9e5b}.ia-conf.media{color:#9a6b00;border-color:#e0a800}.ia-conf.baixa{color:var(--vermelho);border-color:var(--vermelho)}
 .ia-opcoes{display:flex;flex-wrap:wrap;gap:8px}
-.ia-opcoes label{display:inline-flex;align-items:center;gap:8px;background:#F7FAFF;border:1.5px solid #D5E1F7;border-radius:11px;padding:8px 12px;font-weight:600;cursor:pointer}
+.ia-opcoes label{display:inline-flex;align-items:center;gap:8px;background:var(--sup2);border:1.5px solid var(--linha);border-radius:11px;padding:8px 12px;font-weight:600;cursor:pointer}
 .ia-opcoes label:has(input:checked){background:var(--azul);border-color:var(--azul);color:#fff}
 .ia-opcoes label.nao:has(input:checked){background:var(--vermelho);border-color:var(--vermelho)}
 @media (max-width:900px){.ia-grid{grid-template-columns:1fr}.ia-lista{max-height:260px}}
@@ -208,24 +233,24 @@ input[type=checkbox],input[type=radio]{width:18px;height:18px;accent-color:var(-
 .chips-tipo{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .chip-tipo{position:relative;display:block}
 .chip-tipo input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}
-.chip-tipo span{display:flex;flex-direction:column;align-items:center;gap:1px;border:1.5px solid #BFCDE8;border-radius:12px;padding:9px 6px;font-weight:700;text-align:center;background:#fff;transition:all .15s;color:var(--azul-esc)}
+.chip-tipo span{display:flex;flex-direction:column;align-items:center;gap:1px;border:1.5px solid var(--linha);border-radius:12px;padding:9px 6px;font-weight:700;text-align:center;background:var(--sup);transition:all .15s;color:var(--azul-esc)}
 .chip-tipo small{font-weight:600;color:var(--muted);font-size:.74rem}
 .chip-tipo input:checked+span{background:var(--azul);border-color:var(--azul);color:#fff;box-shadow:0 4px 12px rgba(0,87,255,.28)}
 .chip-tipo input:checked+span small{color:#DCE8FF}
 .chip-tipo input:focus-visible+span{outline:3px solid #6C9BFF;outline-offset:2px}
-.erro-form{background:var(--vermelho-cl);color:var(--vermelho-esc);border:1px solid #F3B8B2;border-radius:10px;padding:9px 12px;font-weight:600;font-size:.9rem}
-.aviso-lead{background:var(--amarelo-cl);color:var(--amarelo-esc);border:1px solid #F3D78A;border-radius:10px;padding:9px 12px;font-size:.88rem;font-weight:600}
-.aviso-lead.vermelho{background:var(--vermelho-cl);color:var(--vermelho-esc);border-color:#F3B8B2}
+.erro-form{background:var(--vermelho-cl);color:var(--vermelho-esc);border:1px solid var(--borda-verm);border-radius:10px;padding:9px 12px;font-weight:600;font-size:.9rem}
+.aviso-lead{background:var(--amarelo-cl);color:var(--amarelo-esc);border:1px solid var(--borda-amar);border-radius:10px;padding:9px 12px;font-size:.88rem;font-weight:600}
+.aviso-lead.vermelho{background:var(--vermelho-cl);color:var(--vermelho-esc);border-color:var(--borda-verm)}
 
 /* ---------- Avisos (banners) ---------- */
 .banner{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-radius:14px;padding:12px 16px;margin-bottom:16px;font-size:.92rem;border:1px solid}
 .banner.azul{background:var(--azul-cl);border-color:var(--azul-med);color:var(--azul-esc)}
-.banner.amarelo{background:var(--amarelo-cl);border-color:#F3D78A;color:var(--amarelo-esc)}
-.banner.vermelho{background:var(--vermelho-cl);border-color:#F3B8B2;color:var(--vermelho-esc)}
+.banner.amarelo{background:var(--amarelo-cl);border-color:var(--borda-amar);color:var(--amarelo-esc)}
+.banner.vermelho{background:var(--vermelho-cl);border-color:var(--borda-verm);color:var(--vermelho-esc)}
 
 /* ---------- Listas de dados ---------- */
 .kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 16px;margin-top:12px}
-.kv div{background:#F7FAFF;border:1px solid #E5ECF9;border-radius:11px;padding:8px 11px}
+.kv div{background:var(--sup2);border:1px solid var(--linha);border-radius:11px;padding:8px 11px}
 .kv dt{font-size:.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
 .kv dd{margin:2px 0 0;font-weight:700;font-variant-numeric:tabular-nums}
 .big{font-size:2rem;font-weight:800;line-height:1.1;color:var(--azul-esc);font-variant-numeric:tabular-nums}
@@ -247,7 +272,7 @@ input[type=checkbox],input[type=radio]{width:18px;height:18px;accent-color:var(-
 
 /* ---------- Equipe ---------- */
 .filtros-card{margin:14px 0;display:grid;gap:14px}
-.op-card{background:#fff;border:1px solid var(--borda);border-top:5px solid var(--azul-med);border-radius:var(--raio);padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:var(--sombra);transition:transform .18s}
+.op-card{background:var(--sup);border:1px solid var(--borda);border-top:5px solid var(--azul-med);border-radius:var(--raio);padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:var(--sombra);transition:transform .18s}
 .op-card:hover{transform:translateY(-2px)}
 .op-card.st-verde{border-top-color:var(--verde)}
 .op-card.st-azul{border-top-color:var(--azul)}
@@ -259,7 +284,7 @@ input[type=checkbox],input[type=radio]{width:18px;height:18px;accent-color:var(-
 .op-nome{min-width:0;display:flex;flex-direction:column;gap:3px}
 .op-nome strong{overflow-wrap:anywhere;line-height:1.2}
 .op-nums{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.op-nums div{background:#F7FAFF;border-radius:10px;padding:7px 9px;text-align:center}
+.op-nums div{background:var(--sup2);border-radius:10px;padding:7px 9px;text-align:center}
 .op-nums b{display:block;font-size:1.25rem;font-variant-numeric:tabular-nums;color:var(--azul-esc)}
 .op-nums span{font-size:.7rem;color:var(--muted);font-weight:700;text-transform:uppercase}
 .op-det{font-size:.84rem;color:var(--muted);display:grid;gap:3px}
@@ -271,42 +296,42 @@ input[type=checkbox],input[type=radio]{width:18px;height:18px;accent-color:var(-
 
 /* ---------- Histórico ---------- */
 .hist-barra{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:14px 0 10px}
-.tabela-wrap{background:#fff;border:1px solid var(--borda);border-radius:var(--raio);max-height:66vh;overflow:auto;box-shadow:var(--sombra)}
+.tabela-wrap{background:var(--sup);border:1px solid var(--borda);border-radius:var(--raio);max-height:66vh;overflow:auto;box-shadow:var(--sombra)}
 table{width:100%;border-collapse:collapse;min-width:820px}
-th{position:sticky;top:0;z-index:2;background:var(--azul-esc);color:#fff;text-align:left;padding:0;font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+th{position:sticky;top:0;z-index:2;background:var(--azul-fundo);color:#fff;text-align:left;padding:0;font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
 th .ord,th>span{display:block;padding:11px 12px}
 th .ord{width:100%;background:transparent;border:0;color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit;text-align:left}
 th .ord:hover{background:rgba(255,255,255,.12)}
-td{padding:9px 12px;border-bottom:1px solid #EDF2FB;vertical-align:top;font-size:.9rem}
-tbody tr:hover td{background:#F5F8FF}
-tr.rep td{background:#FFF8F7}
+td{padding:9px 12px;border-bottom:1px solid var(--linha);vertical-align:top;font-size:.9rem}
+tbody tr:hover td{background:var(--sup2)}
+tr.rep td{background:var(--vermelho-cl)}
 td.lead{font-weight:700;overflow-wrap:anywhere}
-td.obs{max-width:260px;overflow-wrap:anywhere;color:#364866}
+td.obs{max-width:260px;overflow-wrap:anywhere;color:var(--texto)}
 td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
 .pag{display:flex;gap:8px;align-items:center;justify-content:center;margin-top:12px;flex-wrap:wrap}
 
 /* ---------- Relatórios ---------- */
-.relatorio{white-space:pre-wrap;word-break:break-word;background:#F7FAFF;border:1px solid var(--borda);border-radius:12px;padding:14px;font-family:Consolas,"Courier New",monospace;font-size:.9rem;margin:12px 0}
+.relatorio{white-space:pre-wrap;word-break:break-word;background:var(--sup2);border:1px solid var(--borda);border-radius:12px;padding:14px;font-family:Consolas,"Courier New",monospace;font-size:.9rem;margin:12px 0}
 
 /* ---------- Configurações ---------- */
 .cfg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
-.interruptor{display:flex;gap:10px;align-items:center;background:#F7FAFF;border:1px solid #E1E9F8;border-radius:12px;padding:11px 13px;font-weight:600}
+.interruptor{display:flex;gap:10px;align-items:center;background:var(--sup2);border:1px solid var(--linha);border-radius:12px;padding:11px 13px;font-weight:600}
 .interruptor input{flex:none}
 
 /* ---------- Modal ---------- */
 .modal-fundo{position:fixed;inset:0;background:rgba(9,42,94,.58);display:flex;align-items:center;justify-content:center;padding:14px;z-index:200;animation:fade .15s both}
-.modal{background:#fff;border-radius:20px;width:100%;max-width:580px;max-height:92vh;overflow:auto;box-shadow:0 24px 70px rgba(0,0,0,.35);animation:entrar .2s both}
+.modal{background:var(--sup);border-radius:20px;width:100%;max-width:580px;max-height:92vh;overflow:auto;box-shadow:0 24px 70px rgba(0,0,0,.35);animation:entrar .2s both}
 .modal-topo{padding:16px 22px;background:var(--azul-cl);color:var(--azul-esc);font-weight:800;font-size:1.08rem}
 .modal.alerta .modal-topo{background:var(--vermelho);color:#fff;font-size:1.2rem;letter-spacing:.03em}
 .modal.perigo .modal-topo{background:var(--vermelho-cl);color:var(--vermelho-esc)}
 .modal-corpo{padding:18px 22px;display:grid;gap:12px}
-.modal-rodape{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;padding:14px 22px;border-top:1px solid var(--borda);background:#FAFCFF}
+.modal-rodape{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;padding:14px 22px;border-top:1px solid var(--borda);background:var(--sup2)}
 .ocorrencias{list-style:none;margin:0;padding:0;display:grid;gap:6px;max-height:200px;overflow:auto}
-.ocorrencias li{background:#F7FAFF;border:1px solid #E1E9F8;border-radius:10px;padding:7px 10px;font-size:.86rem}
+.ocorrencias li{background:var(--sup2);border:1px solid var(--linha);border-radius:10px;padding:7px 10px;font-size:.86rem}
 
 /* ---------- Toasts e botão topo ---------- */
 .toasts{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:300;max-width:min(420px,calc(100vw - 36px))}
-.toast{background:var(--azul-esc);color:#fff;border-radius:12px;padding:11px 15px;box-shadow:0 10px 30px rgba(0,0,0,.25);display:flex;gap:12px;align-items:center;justify-content:space-between;font-size:.92rem;animation:entrar .25s both}
+.toast{background:var(--azul-fundo);color:#fff;border-radius:12px;padding:11px 15px;box-shadow:0 10px 30px rgba(0,0,0,.25);display:flex;gap:12px;align-items:center;justify-content:space-between;font-size:.92rem;animation:entrar .25s both}
 .toast.ok{border-left:5px solid #4ADE80}
 .toast.erro{background:#8E1A11;border-left:5px solid #FF8A80}
 .toast.aviso{background:#5A3F00;border-left:5px solid #FFD35E}
@@ -318,7 +343,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
 .btn.on{background:var(--azul);color:#fff;border-color:var(--azul)}
 .pl-dias{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .pl-dias .btn small{font-weight:600;opacity:.85}
-.proxima{border:0;color:#fff;background:linear-gradient(120deg,var(--azul-esc),#0B3C94 55%,var(--azul));display:grid;gap:12px}
+.proxima{border:0;color:#fff;background:linear-gradient(120deg,var(--azul-fundo),#0B3C94 55%,var(--azul));display:grid;gap:12px}
 .proxima .card-cab h3{color:rgba(255,255,255,.85)}
 .proxima-acao{font-size:1.25rem;font-weight:800;line-height:1.25}
 .proxima-cod{font-size:2.1rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
@@ -327,7 +352,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
 .proxima .ck .tag-azul{background:var(--azul-cl);color:var(--azul)}
 .proxima .ck .tag-amarelo{background:var(--amarelo-cl);color:var(--amarelo-esc)}
 .proxima .ck .tag-vermelho{background:var(--vermelho-cl);color:var(--vermelho-esc)}
-.proxima .ck .tag-cinza{background:#EEF1F6;color:#4A5A78}
+.proxima .ck .tag-cinza{background:var(--cinza-cl);color:var(--cinza-tx)}
 .proxima .dica{color:rgba(255,255,255,.8)}
 .proxima .btn-linha{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.4);color:#fff}
 .proxima .btn-linha:hover:not([disabled]){background:rgba(255,255,255,.26)}
@@ -347,7 +372,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
 .cel-meta{display:grid;gap:3px;min-width:96px}
 .cel-meta b{font-variant-numeric:tabular-nums}
 .cel-meta .dica{line-height:1.2}
-.pl-ajustes{border:1px solid var(--borda);border-radius:var(--raio);background:#fff;box-shadow:var(--sombra);padding:14px 18px}
+.pl-ajustes{border:1px solid var(--borda);border-radius:var(--raio);background:var(--sup);box-shadow:var(--sombra);padding:14px 18px}
 .pl-ajustes>summary{cursor:pointer;font-weight:700;color:var(--azul-esc)}
 .pl-ajustes[open]>summary{margin-bottom:12px}
 
@@ -408,6 +433,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
       <div class="rel-data" id="rel-data"></div>
     </div>
     <div class="topo-chips">
+      <button type="button" class="btn-tema" id="btn-tema" aria-label="Alternar modo escuro"></button>
       <span class="chip-topo" id="chip-mes" title="Mês atual"></span>
       <span class="chip-topo" id="chip-uteis" title="Dias úteis (segunda a sexta) restantes até o final do mês"></span>
       <span class="chip-topo" id="chip-salvo" title="Os dados ficam salvos no localStorage deste navegador"></span>
@@ -606,6 +632,8 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
               <option value="nao">Motivo incorreto</option><option value="sim">Motivo correto</option>
               <option value="duvida">Sem como avaliar</option><option value="todos">Todos</option>
             </select></div>
+          <div class="campo"><label for="ia-ordem">Ordem da fila</label>
+            <select id="ia-ordem"><option value="fala">Ligações mais longas primeiro</option><option value="data">Mais recentes primeiro</option></select></div>
           <div class="campo"><label for="ia-busca">Buscar código do lead</label><input type="search" id="ia-busca" autocomplete="off" placeholder="Ex.: 3380608"></div>
           <div class="campo"><label for="ia-analista">Analista (aparece no relatório)</label><input type="text" id="ia-analista" maxlength="80" autocomplete="off" placeholder="Seu nome"></div>
           <div class="campo"><label class="interruptor" for="ia-auto" style="margin-top:20px"><input type="checkbox" id="ia-auto"> Copiar o telefone do próximo lead sozinho</label></div>
@@ -928,7 +956,7 @@ var estado = {
     equipe: { busca: '', filtro: 'todos', ordem: 'nome', dir: 'asc' },
     hist: { q: '', ini: '', fim: '', op: '', tipo: '', lead: '', soRep: false, ordem: 'tempo', dir: 'desc', pag: 1, tam: 25 },
     plano: { dia: '', tipo: '', closer: '', ajustes: false, pulados: [] },
-    cad: { dia: 'auto' }, checkAberto: true, ia: { filtro: 'pend', busca: '', sel: '' },
+    cad: { dia: 'auto' }, checkAberto: true, ia: { filtro: 'pend', ordem: 'fala', busca: '', sel: '' },
     relData: '', relMes: 0, relAno: 0
   }
 };
@@ -4070,17 +4098,20 @@ function construirChecklist(leadNorm, tipo) {
    Importa o export "agente IA perdidos por motivo" (e, opcionalmente, o CSV de chamadas da telefonia).
    Guarda: código, uuid do lead no Dryve, telefone (para filtrar no relatório da telefonia), motivo, etapa, origem, datas e as ligações da IA
    (data, qualificação, fala, situação, detecção, causa do desligamento). Nome e CPF do cliente NÃO são guardados. */
-var IA_PORQUES = ['Cliente não é motorista de aplicativo', 'Cliente tem interesse / pediu retorno', 'O motivo real é outro', 'Cliente desligou antes de falar o motivo', 'Ligação caiu / sem contato', 'Telefone errado / outra pessoa', 'A IA classificou errado', 'Lead duplicado / já atendido'];
+var IA_PORQUES = ['Cliente não é motorista de aplicativo', 'Cliente tem interesse / pediu retorno', 'O motivo real é outro', 'Cliente desligou antes de falar o motivo', 'Ligação caiu / sem contato', 'Cliente não respondeu', 'Cliente não estava escutando', 'Telefone errado / outra pessoa', 'A IA classificou errado', 'Lead duplicado / já atendido'];
+var IA_SITUACOES = ['Desligou na apresentação da IA', 'Cliente não respondeu', 'Queda de ligação', 'Cliente não estava escutando', 'Cliente desligou na hora', 'Caixa postal / não atendeu', 'Barulho / áudio ruim'];
 var IA_EVIDENCIAS = ['Ouvi a gravação', 'Li o parecer da IA', 'Conferi o histórico no Dryve', 'Cliente confirmou que é motorista de app', 'Cliente negou ser motorista de app'];
 var IA_MOTIVOS = ['Agendamento / Retorno', 'Sem interesse', 'Sem retorno', 'Já possui assinatura', 'Fechou em outra empresa', 'Cotando / pesquisando', 'Telefone errado', 'Sem crédito', 'Documentação', 'Preço', 'Outro'];
 var IA_REGRA_PADRAO = 'O motivo “Motorista de App” é correto quando o cliente confirma que trabalha como motorista de aplicativo (Uber, 99 etc.) e é por isso que não segue com a assinatura. Não é correto quando o cliente não chegou a falar disso (desligou, não atendeu, ligação caiu), demonstrou interesse ou pediu retorno, ou quando o motivo real é outro.';
 /* Respostas rápidas: 1 clique (ou tecla 1–6) preenche o checklist, salva e vai para o próximo lead */
 var IA_RAPIDAS = [
   { rot: '✅ Motivo correto', correto: 'sim', porque: [], motivo: '' },
-  { rot: '❌ Desligou antes de falar o motivo', correto: 'nao', porque: ['Cliente desligou antes de falar o motivo'], motivo: 'Sem retorno' },
-  { rot: '❌ Ligação caiu / sem contato', correto: 'nao', porque: ['Ligação caiu / sem contato'], motivo: 'Sem retorno' },
+  { rot: '❌ Desligou na apresentação da IA', correto: 'nao', porque: ['Cliente desligou antes de falar o motivo'], motivo: 'Sem retorno', situ: ['Desligou na apresentação da IA'] },
+  { rot: '❌ Ligação caiu / sem contato', correto: 'nao', porque: ['Ligação caiu / sem contato'], motivo: 'Sem retorno', situ: ['Queda de ligação'] },
   { rot: '❌ Não é motorista de app', correto: 'nao', porque: ['Cliente não é motorista de aplicativo'], motivo: '' },
   { rot: '❌ Tem interesse / pediu retorno', correto: 'nao', porque: ['Cliente tem interesse / pediu retorno'], motivo: 'Agendamento / Retorno' },
+  { rot: '❌ Cliente não respondeu', correto: 'nao', porque: ['Cliente não respondeu'], motivo: 'Sem retorno', situ: ['Cliente não respondeu'] },
+  { rot: '❌ Cliente não estava escutando', correto: 'nao', porque: ['Cliente não estava escutando'], motivo: 'Sem retorno', situ: ['Cliente não estava escutando'] },
   { rot: '❔ Sem como avaliar', correto: 'duvida', porque: [], motivo: '' }
 ];
 var iaRapidaAtual = null;
@@ -4090,7 +4121,7 @@ var IA_FALA_BOA = 30, IA_FALA_MEDIA = 45;
 var IA_COMP = {
   boa: { rot: 'Boa', cor: 'verde', txt: 'conversa de verdade: a IA chegou a uma qualificação com pelo menos ' + IA_FALA_BOA + ' s de fala' },
   media: { rot: 'Média', cor: 'amarelo', txt: 'conversa curta, ou o cliente desligou depois de falar bastante (' + IA_FALA_MEDIA + ' s ou mais)' },
-  ruim: { rot: 'Ruim', cor: 'vermelho', txt: 'o cliente desligou/caiu logo, sem qualificação, ou a ligação foi abandonada' }
+  ruim: { rot: 'Ruim', cor: 'vermelho', txt: 'o cliente desligou/caiu logo (em geral na apresentação da Natasha), sem qualificação, ou a ligação foi abandonada' }
 };
 function iaNotaLigacao(g) {
   var q = normBusca(g.qual), st = normBusca(g.status);
@@ -4142,7 +4173,7 @@ function sanitizarIA(o) {
   Object.keys(A).slice(0, 20000).forEach(function (k) {
     var a = A[k]; if (!a || typeof a !== 'object') return;
     var lista = function (v) { return (Array.isArray(v) ? v : []).slice(0, 12).map(function (t) { return iaTxt(t, 90); }).filter(Boolean); };
-    r.analises[iaTxt(k, 40)] = { comp: ['boa', 'media', 'ruim'].indexOf(a.comp) >= 0 ? a.comp : '', correto: ['sim', 'nao', 'duvida'].indexOf(a.correto) >= 0 ? a.correto : '', arg: ['sim', 'parcial', 'nao', 'na'].indexOf(a.arg) >= 0 ? a.arg : '', cad: ['sim', 'nao', 'na'].indexOf(a.cad) >= 0 ? a.cad : '', indic: ['sim', 'nao'].indexOf(a.indic) >= 0 ? a.indic : '', porque: lista(a.porque), porqueTxt: iaTxt(a.porqueTxt, 400), motivoReal: iaTxt(a.motivoReal, 80),
+    r.analises[iaTxt(k, 40)] = { comp: ['boa', 'media', 'ruim'].indexOf(a.comp) >= 0 ? a.comp : '', correto: ['sim', 'nao', 'duvida'].indexOf(a.correto) >= 0 ? a.correto : '', arg: ['sim', 'parcial', 'nao', 'na'].indexOf(a.arg) >= 0 ? a.arg : '', cad: ['sim', 'nao', 'na'].indexOf(a.cad) >= 0 ? a.cad : '', situ: lista(a.situ), porque: lista(a.porque), porqueTxt: iaTxt(a.porqueTxt, 400), motivoReal: iaTxt(a.motivoReal, 80),
       evid: lista(a.evid), obs: iaTxt(a.obs, 600), parecer: String(a.parecer || '').slice(0, 4000), por: iaTxt(a.por, 80), em: Number.isFinite(a.em) ? a.em : 0 };
   });
   return r;
@@ -4238,7 +4269,10 @@ function iaSinal(l) {
   var motorista = l.ligacoes.filter(function (g) { return normBusca(g.qual).indexOf('motorista') !== -1; });
   if (motorista.length) return { tom: 'ok', txt: 'A IA qualificou como “Motorista de aplicativo” em ' + motorista.length + ' ' + plural(motorista.length, 'ligação', 'ligações') + ' (' + dataBR(motorista[motorista.length - 1].data || '0000-00-00').slice(0, 5) + '). Há indício a favor do motivo; confirme na gravação.' };
   var semConversa = q.every(function (x) { return IA_QUAL_SEM_CONVERSA.indexOf(x) >= 0; });
-  if (semConversa) return { tom: 'aviso', txt: 'Em nenhuma ligação houve conversa útil (cliente desligou, caiu ou não atendeu). Não há evidência do motivo nas ligações da IA.' };
+  if (semConversa) {
+    var curtas = l.ligacoes.every(function (g) { return g.fala < 20; });
+    return { tom: 'aviso', txt: curtas ? 'Todas as ligações foram muito curtas (maior fala ' + fmtSeg(iaMaiorFala(l)) + '): o cliente provavelmente desligou logo na apresentação da Natasha, antes de falar o motivo. Não há evidência do motivo — resposta rápida 2.' : 'Em nenhuma ligação houve conversa útil (cliente desligou, caiu ou não atendeu). Não há evidência do motivo nas ligações da IA.' };
+  }
   var outras = Array.from(new Set(l.ligacoes.map(function (g) { return g.qual; }).filter(function (x) { return x && IA_QUAL_SEM_CONVERSA.indexOf(normBusca(x)) < 0; })));
   return { tom: 'aviso', txt: 'A IA registrou outra qualificação: ' + outras.join(', ') + '. Isso pode contradizer o motivo “Motorista de App”.' };
 }
@@ -4276,7 +4310,7 @@ function iaLerParecer(texto) {
 }
 function iaAnalise(l) {
   var a = estado.ia.analises[l.codigoNorm];
-  if (!a) { a = estado.ia.analises[l.codigoNorm] = { comp: '', correto: '', arg: '', cad: '', indic: '', porque: [], porqueTxt: '', motivoReal: '', evid: [], obs: '', parecer: '', por: '', em: 0 }; }
+  if (!a) { a = estado.ia.analises[l.codigoNorm] = { comp: '', correto: '', arg: '', cad: '', situ: [], porque: [], porqueTxt: '', motivoReal: '', evid: [], obs: '', parecer: '', por: '', em: 0 }; }
   return a;
 }
 /* Conformidade da IA, como no site: % de “Sim” entre os itens respondidos (parcial vale meio ponto; sem como avaliar / não se aplica ficam de fora) */
@@ -4286,6 +4320,15 @@ function iaConformidade(a) {
   return n ? Math.round(pts / n * 100) : null;
 }
 function iaGravar(l, a) { a.por = estado.ia.analista; a.em = Date.now(); salvarIA(); iaRenderLateral(); }
+/* Prioridade da fila: ligações de maior duração (tempo de fala) primeiro — é onde há mais conteúdo para validar o motivo */
+function iaMaiorFala(l) { return l.ligacoes.reduce(function (m, g) { return Math.max(m, g.fala || 0); }, 0); }
+function iaComparar(a, b) {
+  if (estado.ui.ia.ordem !== 'data') { var d = iaMaiorFala(b) - iaMaiorFala(a); if (d) return d; }
+  return (b.dataPerdido || '') < (a.dataPerdido || '') ? -1 : (b.dataPerdido || '') > (a.dataPerdido || '') ? 1 : (a.codigoNorm < b.codigoNorm ? -1 : 1);
+}
+function iaProximoPendente(exceto) {
+  return estado.ia.leads.filter(function (x) { return !iaStatus(estado.ia.analises[x.codigoNorm]) && x.codigoNorm !== exceto; }).sort(iaComparar)[0];
+}
 function iaFiltrados() {
   var u = estado.ui.ia, b = normLead(u.busca);
   return estado.ia.leads.filter(function (l) {
@@ -4295,7 +4338,7 @@ function iaFiltrados() {
     if (u.filtro === 'ana') return !!st;
     if (u.filtro === 'todos') return true;
     return st === u.filtro;
-  }).sort(function (a, b2) { return (b2.dataPerdido || '') < (a.dataPerdido || '') ? -1 : 1; });
+  }).sort(iaComparar);
 }
 function iaStats() {
   var t = { total: estado.ia.leads.length, sim: 0, nao: 0, duvida: 0, porque: {}, motivos: {}, comp: { boa: 0, media: 0, ruim: 0 } };
@@ -4310,13 +4353,13 @@ function iaStats() {
   return t;
 }
 function iaCSV() {
-  var cab = ['Data da análise', 'Analista', 'Lead', 'Telefone', 'Link Dryve', 'Data perdido', 'Motivo registrado', 'Detalhe do motivo', 'Origem', 'Motivo correto?', 'Seguiu a argumentação', 'Realizou a cadência', 'Houve indicação', 'Conformidade da IA (%)', 'Por quê', 'Motivo sugerido', 'Evidências', 'Ligações IA', 'Maior fala IA (s)', 'Última qualificação IA', 'Comportamento da IA (analista)', 'Sinal do painel', 'Parecer da IA', 'Observação'];
+  var cab = ['Data da análise', 'Analista', 'Lead', 'Telefone', 'Link Dryve', 'Data perdido', 'Motivo registrado', 'Detalhe do motivo', 'Origem', 'Motivo correto?', 'Seguiu a argumentação', 'Realizou a cadência', 'Situação da ligação', 'Conformidade da IA (%)', 'Por quê', 'Motivo sugerido', 'Evidências', 'Ligações IA', 'Maior fala IA (s)', 'Última qualificação IA', 'Comportamento da IA (analista)', 'Sinal do painel', 'Parecer da IA', 'Observação'];
   var linhas = [cab.join(';')];
   estado.ia.leads.forEach(function (l) {
     var a = estado.ia.analises[l.codigoNorm]; if (!iaStatus(a)) return;
     var ult = l.ligacoes.length ? l.ligacoes[l.ligacoes.length - 1].qual : '';
     linhas.push([a.em ? dataBR(dataISO(new Date(a.em))) : '', a.por, l.codigo, formatTel(l.tel), urlPadraoDryve(l.uuid), l.dataPerdido ? dataBR(l.dataPerdido) : '', l.motivo, l.detalhes, l.origem,
-      { sim: 'Sim', nao: 'Não', duvida: 'Sem como avaliar' }[a.correto], { sim: 'Sim', parcial: 'Parcialmente', nao: 'Não', na: 'Não se aplica' }[a.arg] || '', { sim: 'Sim', nao: 'Não', na: 'Não se aplica' }[a.cad] || '', { sim: 'Sim', nao: 'Não' }[a.indic] || '', iaConformidade(a) === null ? '' : iaConformidade(a), a.porque.concat(a.porqueTxt ? [a.porqueTxt] : []).join(' | '), a.motivoReal, a.evid.join(' | '),
+      { sim: 'Sim', nao: 'Não', duvida: 'Sem como avaliar' }[a.correto], { sim: 'Sim', parcial: 'Parcialmente', nao: 'Não', na: 'Não se aplica' }[a.arg] || '', { sim: 'Sim', nao: 'Não', na: 'Não se aplica' }[a.cad] || '', a.situ.join(' | '), iaConformidade(a) === null ? '' : iaConformidade(a), a.porque.concat(a.porqueTxt ? [a.porqueTxt] : []).join(' | '), a.motivoReal, a.evid.join(' | '),
       l.ligacoes.length, l.ligacoes.reduce(function (m, g) { return Math.max(m, g.fala); }, 0), ult, a.comp ? IA_COMP[a.comp].rot : '', iaNotaGeral(l) ? IA_COMP[iaNotaGeral(l)].rot : '', a.parecer.replace(/\s+/g, ' ').trim(), a.obs].map(campoCSV).join(';'));
   });
   return '\uFEFF' + linhas.join('\r\n') + '\r\n';
@@ -4331,7 +4374,7 @@ function iaResumoTexto() {
 function iaRenderLateral() { iaRenderInicio(); iaRenderResumo(); iaRenderLista(); iaRenderRelatorio(); }
 /* Cartão de partida: sem base → soltar a planilha aqui; com base → botão “Fazer auditorias” que abre o próximo lead pendente já com o telefone copiado */
 function iaIniciar() {
-  var u = estado.ui.ia, prox = estado.ia.leads.filter(function (x) { return !iaStatus(estado.ia.analises[x.codigoNorm]); })[0];
+  var u = estado.ui.ia, prox = iaProximoPendente('');
   if (!prox) { toast('Todos os leads já foram analisados. 🎉'); return; }
   u.filtro = 'pend'; u.busca = ''; u.foco = true; u.sel = prox.codigoNorm; renderIA();
   if (prox.tel && estado.ia.autoCopiar) copiarTexto(formatTel(prox.tel)).then(function () { toast('Telefone copiado: ' + formatTel(prox.tel)); });
@@ -4355,7 +4398,7 @@ function iaRenderInicio() {
   }
   var pct = Math.round(t.ana / t.total * 100);
   box.replaceChildren(
-    el('div', { style: 'display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline' }, el('b', null, t.ana + ' de ' + t.total + ' auditorias feitas'), el('span', { class: 'dica' }, t.pend ? 'faltam ' + t.pend : 'tudo preenchido 🎉')),
+    el('div', { style: 'display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline' }, el('b', null, t.ana + ' de ' + t.total + ' auditorias feitas'), el('span', { class: 'dica' }, t.pend ? 'faltam ' + t.pend + (estado.ui.ia.ordem !== 'data' ? ' · fila: ligações mais longas primeiro' : '') : 'tudo preenchido 🎉')),
     el('div', { class: 'barra' + (t.pend ? '' : ' completa') }, el('i', { style: 'width:' + pct + '%' })),
     el('div', { class: 'dica' }, iaCobertura()),
     el('div', { class: 'acoes' },
@@ -4377,7 +4420,7 @@ function iaRenderLista() {
     var st = iaStatus(estado.ia.analises[l.codigoNorm]), ult = l.ligacoes.length ? l.ligacoes[l.ligacoes.length - 1].qual : '';
     return el('button', { type: 'button', class: 'ia-item' + (u.sel === l.codigoNorm ? ' sel' : ''), dataset: { cod: l.codigoNorm } },
       el('b', null, semaforo(iaNotaGeral(l)), l.codigo, ' ', tag(IA_ROTULO[st], IA_COR[st])),
-      el('span', null, formatTel(l.tel) || 'sem telefone'),
+      el('span', null, (formatTel(l.tel) || 'sem telefone') + (iaMaiorFala(l) ? ' · maior fala ' + fmtSeg(iaMaiorFala(l)) : '')),
       el('span', null, l.ligacoes.length + ' ' + plural(l.ligacoes.length, 'ligação IA', 'ligações IA') + (ult && ult !== '-' ? ' · ' + ult : '') + (l.dataPerdido ? ' · perdido ' + dataBR(l.dataPerdido).slice(0, 5) : '')));
   }));
 }
@@ -4438,25 +4481,25 @@ function iaRenderDetalhe() {
     linhaCk('A IA realizou a cadência?', ligs + ' ' + plural(ligs, 'ligação', 'ligações') + ' da IA neste lead (meta: ' + estado.config.cadencia.ligacoes + ')', 'cad', [['sim', 'Sim'], ['nao', 'Não'], ['na', 'Não se aplica']]),
     el('div', { class: 'ia-ck-lin' }, el('div', null, el('b', null, 'Motivo da perda'), el('small', null, 'Registrado no Dryve · não entra na conformidade')), el('b', { style: 'display:inline-block' }, l.motivo || '—')),
     linhaCk('Motivo correto?', 'O cliente realmente é ' + (l.motivo || 'o motivo registrado') + '?', 'correto', [['sim', 'Sim, está correto'], ['nao', 'Não, está incorreto'], ['duvida', 'Sem como avaliar']], function () { blocoNao.hidden = a.correto !== 'nao'; iaRenderLateral(); }),
-    linhaCk('Houve indicação?', 'O cliente indicou alguém / pediu para falar com outra pessoa', 'indic', [['sim', 'Sim'], ['nao', 'Não']]),
+    el('div', { class: 'ia-ck-lin', style: 'display:grid' }, el('div', null, el('b', null, 'O que aconteceu na ligação?'), el('small', null, 'Marque o que se aplica (rápido)')), opcoes('situ', IA_SITUACOES, a.situ)),
     el('div', { class: 'ia-ck-lin' }, el('div', null, el('b', null, 'Comportamento da IA na ligação'), el('small', null, sug ? 'Sinal do painel: ' + IA_COMP[sug].rot + ' — ' + IA_COMP[sug].txt : 'Sem ligações da IA para avaliar')),
       el('div', { class: 'ia-opcoes', role: 'radiogroup', 'aria-label': 'Comportamento da IA na ligação' }, compInputs)));
   atualizarConf();
   function proximo() {
     var lista = iaFiltrados(), i = lista.findIndex(function (x) { return x.codigoNorm === l.codigoNorm; });
-    var prox = estado.ia.leads.filter(function (x) { return !iaStatus(estado.ia.analises[x.codigoNorm]) && x.codigoNorm !== l.codigoNorm; })[0];
+    var prox = iaProximoPendente(l.codigoNorm);
     u.sel = prox ? prox.codigoNorm : l.codigoNorm; iaRenderDetalhe(); iaRenderLateral();
     if (prox && estado.ia.autoCopiar && prox.tel) copiarTexto(formatTel(prox.tel)).then(function () { toast('Próximo telefone copiado: ' + formatTel(prox.tel)); });
     if (!prox) { toast('Todos os leads foram analisados. 🎉'); u.foco = false; renderIA(); }
   }
   function aplicarRapida(i) {
     var r = IA_RAPIDAS[i]; if (!r) return;
-    a.correto = r.correto; a.porque = r.porque.slice(); a.motivoReal = r.motivo; if (!a.comp && sug) a.comp = sug;
+    a.correto = r.correto; a.porque = r.porque.slice(); a.motivoReal = r.motivo; if (r.situ) a.situ = r.situ.slice(); if (!a.comp && sug) a.comp = sug;
     iaGravar(l, a); toast(r.rot.replace(/^\S+\s/, '') + ' — salvo.'); proximo();
   }
   iaRapidaAtual = aplicarRapida;
   var rapidasBox = el('div', { style: 'display:grid;gap:8px' },
-    el('div', { class: 'rotulo' }, 'RESPOSTA RÁPIDA · 1 CLIQUE SALVA E VAI PARA O PRÓXIMO (teclas 1 a 6)'),
+    el('div', { class: 'rotulo' }, 'RESPOSTA RÁPIDA · 1 CLIQUE SALVA E VAI PARA O PRÓXIMO (teclas 1 a 8)'),
     el('div', { class: 'ia-rapidas' }, IA_RAPIDAS.map(function (r, i) {
       return el('button', { type: 'button', class: 'btn ' + (i === 0 ? 'btn-primario' : 'btn-linha'), onclick: function () { aplicarRapida(i); } }, (i + 1) + ' · ' + r.rot);
     })),
@@ -4505,7 +4548,7 @@ function iaRenderDetalhe() {
 }
 function renderIA() {
   var u = estado.ui.ia;
-  $('#ia-filtro').value = u.filtro; $('#ia-busca').value = u.busca; $('#ia-analista').value = estado.ia.analista; $('#ia-auto').checked = estado.ia.autoCopiar; $('#ia-regra').value = estado.ia.regra;
+  $('#ia-filtro').value = u.filtro; $('#ia-ordem').value = u.ordem; $('#ia-busca').value = u.busca; $('#ia-analista').value = estado.ia.analista; $('#ia-auto').checked = estado.ia.autoCopiar; $('#ia-regra').value = estado.ia.regra;
   if (!document.getElementById('ia-motivos')) document.body.appendChild(el('datalist', { id: 'ia-motivos' }, IA_MOTIVOS.map(function (m) { return el('option', { value: m }); })));
   var lista = iaFiltrados();
   if (!u.sel || !estado.ia.leads.some(function (x) { return x.codigoNorm === u.sel; })) u.sel = lista.length ? lista[0].codigoNorm : '';
@@ -4516,9 +4559,10 @@ function ligarEventosIA() {
     if (estado.ui.aba !== 'ia' || !iaRapidaAtual || document.querySelector('.modal-fundo') || e.ctrlKey || e.metaKey || e.altKey) return;
     var t = e.target && e.target.tagName;
     if (t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT') return;
-    if (/^[1-6]$/.test(e.key)) { e.preventDefault(); iaRapidaAtual(+e.key - 1); }
+    if (/^[1-8]$/.test(e.key)) { e.preventDefault(); iaRapidaAtual(+e.key - 1); }
   });
   $('#ia-filtro').addEventListener('change', function (e) { estado.ui.ia.filtro = e.target.value; iaRenderLista(); });
+  $('#ia-ordem').addEventListener('change', function (e) { estado.ui.ia.ordem = e.target.value; renderIA(); });
   $('#ia-busca').addEventListener('input', function (e) { estado.ui.ia.busca = e.target.value; iaRenderLista(); });
   $('#ia-auto').addEventListener('change', function (e) { estado.ia.autoCopiar = e.target.checked; salvarIA(); });
   $('#ia-analista').addEventListener('input', function (e) { estado.ia.analista = iaTxt(e.target.value, 80); salvarIA(); });
@@ -4825,6 +4869,17 @@ function ligarEventos() {
   window.addEventListener('drop', function (e) { e.preventDefault(); });
   $('#b-site').addEventListener('click', function () { atualizarDoSite(false); });
   ligarEventosIA();
+  (function () {
+    var b = $('#btn-tema');
+    function pintar() { var e = document.documentElement.getAttribute('data-tema') === 'escuro'; b.textContent = e ? '☀️ Modo claro' : '🌙 Modo escuro'; b.setAttribute('aria-pressed', e ? 'true' : 'false'); }
+    b.addEventListener('click', function () {
+      var novo = document.documentElement.getAttribute('data-tema') === 'escuro' ? 'claro' : 'escuro';
+      document.documentElement.setAttribute('data-tema', novo);
+      try { localStorage.setItem('finx_tema', novo); } catch (e) { /* sem armazenamento: vale só nesta sessão */ }
+      pintar();
+    });
+    pintar();
+  })();
   (function () {
     var box = $('#ia-inicio');
     ['dragenter', 'dragover'].forEach(function (n) { box.addEventListener(n, function (e) { e.preventDefault(); box.classList.add('sobre'); }); });
