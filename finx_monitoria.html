@@ -218,6 +218,10 @@ input[type=checkbox],input[type=radio]{width:18px;height:18px;accent-color:var(-
 .ia-auto.sim{border-color:#2e9e5b}.ia-auto.nao{border-color:var(--vermelho)}.ia-auto.duvida{border-color:#e0a800}
 .ck-horas{display:block;font-variant-numeric:tabular-nums;color:var(--texto)}
 .ck-rep{display:block;color:var(--amarelo-esc)}
+.ia-player{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:var(--sup2);border:1.5px solid var(--linha);border-radius:12px;padding:8px 12px}
+.ia-player audio{flex:1 1 280px;min-width:0;max-width:100%}
+.btn-fone{border:0;background:transparent;font-size:1.15rem;cursor:pointer;padding:2px 6px;border-radius:8px}
+.btn-fone:hover{background:var(--azul-cl)}
 .ia-ck{display:grid;gap:8px}
 .ia-ck-lin{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--sup2);border:1.5px solid var(--linha);border-radius:12px;padding:10px 14px}
 .ia-ck-lin>div:first-child{flex:1 1 160px;min-width:0}
@@ -640,6 +644,25 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
     <section class="aba" id="aba-ia" data-aba="ia" aria-label="Análise IA Natasha: validação de perdido" hidden>
       <div class="secao-titulo"><h2>Análise IA Natasha · Validação de perdido</h2><span id="ia-sub"></span></div>
       <div id="ia-inicio"></div>
+      <details class="card pl-ajustes" id="ia-audio">
+        <summary>🎧 Áudios do 3C: ouvir, baixar e baixar em lote</summary>
+        <div style="display:grid;gap:10px;margin-top:10px">
+          <p class="dica" style="margin:0">O botão 🎧 de cada ligação toca o áudio aqui mesmo; ⬇ baixa o arquivo com o mesmo nome que o 3C usa. Para o lote, o painel usa o <b>seu</b> acesso e vai um por vez, devagar. Se o 3C recusar (401/403/429) ou não permitir a leitura por este arquivo, o lote <b>para</b> e avisa: nada é contornado. Nesse caso use o botão de download do 3C ou o <code>transcrever.py</code> com o seu token.</p>
+          <div class="linha-form">
+            <div class="campo"><label for="au-base">Endereço do 3C</label><input type="text" id="au-base" autocomplete="off" placeholder="https://app.3c.plus"></div>
+            <div class="campo"><label for="au-token">Seu token de API (opcional; não é salvo)</label><input type="password" id="au-token" autocomplete="off" placeholder="cole aqui se tiver"></div>
+            <div class="campo"><label for="au-n">Quantas baixar agora</label><input type="number" id="au-n" min="1" max="500" value="30"></div>
+            <div class="campo"><label for="au-min">Fala mínima (s)</label><input type="number" id="au-min" min="0" max="3600" value="10"></div>
+          </div>
+          <div class="acoes">
+            <button type="button" class="btn btn-primario" id="au-lote">⬇ Baixar lote</button>
+            <button type="button" class="btn btn-linha" id="au-parar" hidden>■ Parar</button>
+            <span class="dica" id="au-info"></span>
+          </div>
+          <div class="barra" id="au-barra" hidden><i style="width:0%"></i></div>
+          <ul class="frases" id="au-log" style="margin:0"></ul>
+        </div>
+      </details>
       <div class="grid-resumo" id="ia-resumo"></div>
       <div class="card filtros-card">
         <div class="linha-form">
@@ -4232,7 +4255,7 @@ function iaNotaGeral(l) {
   return n.indexOf('boa') >= 0 ? 'boa' : n.indexOf('media') >= 0 ? 'media' : 'ruim';
 }
 function semaforo(nota) { return nota ? el('span', { class: 'sema sema-' + nota, title: 'Comportamento da IA: ' + IA_COMP[nota].rot, 'aria-label': 'Comportamento da IA: ' + IA_COMP[nota].rot }) : null; }
-function iaVazio() { return { leads: [], analises: {}, analista: '', regra: IA_REGRA_PADRAO, importadoEm: 0, arquivo: '', autoCopiar: true, tele: {}, transc: {} }; }
+function iaVazio() { return { leads: [], analises: {}, analista: '', regra: IA_REGRA_PADRAO, importadoEm: 0, arquivo: '', autoCopiar: true, tele: {}, transc: {}, audioBase: 'https://app.3c.plus', baixados: {} }; }
 function formatTel(t) {
   t = String(t || '').replace(/\D/g, '');
   return t.length === 11 ? '(' + t.slice(0, 2) + ') ' + t.slice(2, 7) + '-' + t.slice(7) : t.length === 10 ? '(' + t.slice(0, 2) + ') ' + t.slice(2, 6) + '-' + t.slice(6) : t;
@@ -4244,13 +4267,15 @@ function sanitizarIA(o) {
   if (!o || typeof o !== 'object') return r;
   r.analista = iaTxt(o.analista, 80); r.regra = iaTxt(o.regra, 1500) || IA_REGRA_PADRAO;
   r.autoCopiar = typeof o.autoCopiar === 'boolean' ? o.autoCopiar : true;
+  if (/^https?:\/\/[^\s/]+(:\d+)?$/i.test(String(o.audioBase || '').replace(/\/+$/, ''))) r.audioBase = String(o.audioBase).replace(/\/+$/, '');
+  if (o.baixados && typeof o.baixados === 'object' && !Array.isArray(o.baixados)) Object.keys(o.baixados).slice(0, 5000).forEach(function (k) { if (o.baixados[k]) r.baixados[iaTxt(k, 40)] = 1; });
   if (o.transc && typeof o.transc === 'object' && !Array.isArray(o.transc)) {
     Object.keys(o.transc).slice(0, 3000).forEach(function (k) { var t = String(o.transc[k] || '').slice(0, 4000); if (t) r.transc[iaTxt(k, 40)] = t; });
   }
   if (o.tele && typeof o.tele === 'object' && !Array.isArray(o.tele)) {
     Object.keys(o.tele).slice(0, 8000).forEach(function (k) {
       var t = o.tele[k]; if (!t || typeof t !== 'object') return;
-      r.tele[iaTxt(k, 40)] = { n: String(t.n || '').replace(/\D/g, '').slice(-11), d: dataValida(t.d) ? t.d : null, h: /^\d{2}:\d{2}$/.test(String(t.h)) ? t.h : '', q: iaTxt(t.q, 60), f: Math.max(0, Math.min(86400, Math.round(Number(t.f) || 0))), s: iaTxt(t.s, 30), a: iaTxt(t.a, 30), c: iaTxt(t.c, 60) };
+      r.tele[iaTxt(k, 40)] = { n: String(t.n || '').replace(/\D/g, '').slice(-11), d: dataValida(t.d) ? t.d : null, h: /^\d{2}:\d{2}$/.test(String(t.h)) ? t.h : '', r: iaTxt(t.r, 80), q: iaTxt(t.q, 60), f: Math.max(0, Math.min(86400, Math.round(Number(t.f) || 0))), s: iaTxt(t.s, 30), a: iaTxt(t.a, 30), c: iaTxt(t.c, 60) };
     });
   }
   r.importadoEm = Number.isFinite(o.importadoEm) ? o.importadoEm : 0; r.arquivo = iaTxt(o.arquivo, 120);
@@ -4265,7 +4290,7 @@ function sanitizarIA(o) {
       codigo: cod, codigoNorm: n, uuid: u ? u[0].toLowerCase() : '', tel: String(x.tel || '').replace(/\D/g, '').slice(-11), motivo: iaTxt(x.motivo, 60), detalhes: iaTxt(x.detalhes, 120), etapa: iaTxt(x.etapa, 60), origem: iaTxt(x.origem, 60),
       dataLead: dataValida(x.dataLead) ? x.dataLead : null, dataPerdido: dataValida(x.dataPerdido) ? x.dataPerdido : null,
       ligacoes: (Array.isArray(x.ligacoes) ? x.ligacoes : []).slice(0, 60).map(function (c) {
-        return c && typeof c === 'object' ? { id: iaTxt(c.id, 40), data: dataValida(c.data) ? c.data : null, hora: /^\d{2}:\d{2}$/.test(String(c.hora)) ? c.hora : '', qual: iaTxt(c.qual, 60), amd: iaTxt(c.amd, 30), causa: iaTxt(c.causa, 60), fala: Math.max(0, Math.min(86400, Math.round(Number(c.fala) || 0))), status: iaTxt(c.status, 30) } : null;
+        return c && typeof c === 'object' ? { id: iaTxt(c.id, 40), data: dataValida(c.data) ? c.data : null, hora: /^\d{2}:\d{2}$/.test(String(c.hora)) ? c.hora : '', qual: iaTxt(c.qual, 60), amd: iaTxt(c.amd, 30), causa: iaTxt(c.causa, 60), rec: iaTxt(c.rec, 80), fala: Math.max(0, Math.min(86400, Math.round(Number(c.fala) || 0))), status: iaTxt(c.status, 30) } : null;
       }).filter(Boolean)
     });
   });
@@ -4279,7 +4304,31 @@ function sanitizarIA(o) {
   return r;
 }
 function urlPadraoDryve(uuid) { return uuid ? DRYVE_BASE + '/' + uuid : ''; }
-function urlGravacao(id) { return id ? 'https://app.3c.plus/api/v1/calls/' + encodeURIComponent(id) + '/recording' : ''; }
+function urlGravacao(id) { return id ? (estado.ia.audioBase || 'https://app.3c.plus') + '/api/v1/calls/' + encodeURIComponent(id) + '/recording' : ''; }
+/* ---- Áudios do 3C: ouvir e baixar (um a um ou em lote) ----
+   Usa o SEU acesso: um token que você cola (fica só na memória da página, nunca é salvo) ou o login do navegador.
+   Se o 3C recusar (401/403/429) ou não permitir leitura por este arquivo (CORS), o lote PARA e explica: nada é contornado. */
+var iaToken = '', iaLote = { rodando: false, parar: false };
+function iaNomeAudio(g, tipo) {
+  var base = g.rec ? g.rec.replace(/\//g, '_') : g.id, ext = /wav/i.test(tipo || '') ? '.wav' : /ogg/i.test(tipo || '') ? '.ogg' : '.mp3';
+  return base.replace(/[^A-Za-z0-9._-]/g, '_') + ext;
+}
+function iaBuscarAudio(g) {
+  var opc = iaToken ? { headers: { Authorization: 'Bearer ' + iaToken }, credentials: 'omit' } : { credentials: 'include' };
+  return fetch(urlGravacao(g.id), opc).then(function (r) {
+    if (r.status === 401 || r.status === 403) { var e = new Error('O 3C recusou o acesso (' + r.status + '): sua conta/token não tem permissão para este áudio.'); e.parar = true; throw e; }
+    if (r.status === 429) { var e2 = new Error('O 3C pediu para ir mais devagar (429). Tente de novo mais tarde.'); e2.parar = true; throw e2; }
+    if (r.status === 404) { var e3 = new Error('Sem gravação para esta ligação (404).'); e3.pular = true; throw e3; }
+    if (!r.ok) throw new Error('Erro ' + r.status + ' ao buscar o áudio.');
+    return r.blob();
+  }, function () { var e = new Error('O navegador não conseguiu ler o áudio deste endereço (login ausente ou o 3C não permite leitura por este arquivo). Use o botão de download do 3C ou o transcrever.py com o seu token.'); e.parar = true; throw e; });
+}
+function iaSalvarBlob(blob, nome) {
+  var a = document.createElement('a'), u = URL.createObjectURL(blob);
+  a.href = u; a.download = nome; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function () { URL.revokeObjectURL(u); }, 4000);
+}
+
 function partesLista(v) { return String(v === null || v === undefined ? '' : v).split(' | ').map(function (x) { return x.trim(); }); }
 /* Export "agente IA perdidos por motivo": uma linha por lead, com as ligações da IA em listas separadas por " | " */
 function analisarIAPerdidos(linhas) {
@@ -4287,17 +4336,18 @@ function analisarIAPerdidos(linhas) {
   var C = { cod: ix('pedidosreferencecode') >= 0 ? ix('pedidosreferencecode') : ix('perdidosreferencecode'), uuid: ix('pedidosid'), motivo: ix('pedidoslostreasondescription') >= 0 ? ix('pedidoslostreasondescription') : ix('perdidoslostreasondescription'),
     det: ix('pedidoslostdetails') >= 0 ? ix('pedidoslostdetails') : ix('perdidoslostdetails'), etapa: ix('pedidosboardstepname') >= 0 ? ix('pedidosboardstepname') : ix('perdidosboardstepname'),
     origem: ix('pedidosorigem') >= 0 ? ix('pedidosorigem') : ix('perdidosorigem'), dLead: ix('pedidosdatalead'), dPerd: ix('perdidosdataperdido') >= 0 ? ix('perdidosdataperdido') : ix('pedidosdataperdido'),
-    tel: ix('telefone') >= 0 ? ix('telefone') : ix('pedidosleadphone'), amd: ix('iareadableamdstatustext'), causa: ix('iareadablehangupcausetext'), id: ix('iaid'), data: ix('iacalldate'), qual: ix('iaqualification'), fala: ix('iaspeakingtime'), st: ix('iareadablestatustext') };
+    tel: ix('telefone') >= 0 ? ix('telefone') : ix('pedidosleadphone'), amd: ix('iareadableamdstatustext'), causa: ix('iareadablehangupcausetext'), id: ix('iaid'), data: ix('iacalldate'), qual: ix('iaqualification'), fala: ix('iaspeakingtime'), st: ix('iareadablestatustext'), rec: ix('iarecordname') };
   if (C.cod < 0 || C.motivo < 0) return { erro: 'Não achei as colunas do lead (reference_code e lost_reason_description).' };
   var itens = [], invalidos = 0, cel = function (l, k) { return C[k] >= 0 && l[C[k]] !== undefined ? l[C[k]] : ''; };
   for (var i = 1; i < linhas.length; i++) {
     var l = linhas[i], cod = iaTxt(cel(l, 'cod'), 40);
     if (!normLead(cod)) { invalidos++; continue; }
     var amds = partesLista(cel(l, 'amd')), causas = partesLista(cel(l, 'causa')), ids = partesLista(cel(l, 'id')), datas = partesLista(cel(l, 'data')), quals = partesLista(cel(l, 'qual')), falas = partesLista(cel(l, 'fala')), sts = partesLista(cel(l, 'st'));
+    var recs = partesLista(cel(l, 'rec'));
     var n = Math.max(ids.length, datas.length), lig = [];
     for (var k = 0; k < n; k++) {
       var dh = parseDataHora(datas[k] || '');
-      lig.push({ id: ids[k] || '', data: dh ? dh.data : null, hora: dh ? dh.hora : '', qual: quals[k] !== undefined ? quals[k] : '', amd: amds.length === 1 ? amds[0] : (amds[k] || ''), causa: causas.length === 1 ? causas[0] : (causas[k] || ''), fala: parseDuracao(falas[k] || ''), status: sts.length === 1 ? sts[0] : (sts[k] || '') });
+      lig.push({ rec: recs[k] || '', id: ids[k] || '', data: dh ? dh.data : null, hora: dh ? dh.hora : '', qual: quals[k] !== undefined ? quals[k] : '', amd: amds.length === 1 ? amds[0] : (amds[k] || ''), causa: causas.length === 1 ? causas[0] : (causas[k] || ''), fala: parseDuracao(falas[k] || ''), status: sts.length === 1 ? sts[0] : (sts[k] || '') });
     }
     lig.sort(function (a, b) { return ((a.data || '') + a.hora) < ((b.data || '') + b.hora) ? -1 : 1; });
     itens.push({ codigo: cod, uuid: String(cel(l, 'uuid')), tel: String(cel(l, 'tel')), motivo: cel(l, 'motivo'), detalhes: cel(l, 'det'), etapa: cel(l, 'etapa'), origem: cel(l, 'origem'),
@@ -4333,10 +4383,11 @@ function iaAplicarTele() {
     if (!g) {
       var l = t.n ? porTel.get(t.n) : null;
       if (!l) { r.sem++; return; }
-      g = { id: id, data: t.d, hora: t.h, qual: '', amd: '', causa: '', fala: 0, status: '' }; l.ligacoes.push(g);
+      g = { id: id, rec: t.r || '', data: t.d, hora: t.h, qual: '', amd: '', causa: '', fala: 0, status: '' }; l.ligacoes.push(g);
       l.ligacoes.sort(function (x, y) { return ((x.data || '') + x.hora) < ((y.data || '') + y.hora) ? -1 : 1; });
       porId.set(id, g); viaTel = true;
     }
+    if (!g.rec && t.r) g.rec = t.r;
     if (iaVazioTxt(g.qual) && t.q) g.qual = t.q;
     if (!g.fala && t.f) g.fala = t.f;
     if (!g.status && t.s) g.status = t.s;
@@ -4347,14 +4398,14 @@ function iaAplicarTele() {
   return r;
 }
 function importarChamadasIA(linhas) {
-  var cab = linhas[0].map(colunaKey), ix = function (n) { return cab.indexOf(n); }, c = { id: ix('id'), num: ix('number'), data: ix('calldate'), qual: ix('qualificationname'), fala: ix('speakingtime'), st: ix('readablestatustext'), amd: ix('readableamdstatustext'), causa: ix('readablehangupcausetext') };
+  var cab = linhas[0].map(colunaKey), ix = function (n) { return cab.indexOf(n); }, c = { id: ix('id'), rec: ix('recordname'), num: ix('number'), data: ix('calldate'), qual: ix('qualificationname'), fala: ix('speakingtime'), st: ix('readablestatustext'), amd: ix('readableamdstatustext'), causa: ix('readablehangupcausetext') };
   if (c.id < 0) return 'CSV da telefonia sem a coluna _id.';
   var total = 0, v = function (r, k) { return c[k] >= 0 && r[c[k]] !== undefined ? r[c[k]] : ''; };
   for (var i = 1; i < linhas.length; i++) {
     var r = linhas[i], id = iaTxt(r[c.id], 40); if (!id) continue;
     var dh = parseDataHora(v(r, 'data')); total++;
     var q = iaTxt(v(r, 'qual'), 60);
-    estado.ia.tele[id] = { n: String(v(r, 'num')).replace(/\\D/g, '').slice(-11), d: dh ? dh.data : null, h: dh ? dh.hora : '', q: q === '-' ? '' : q, f: parseDuracao(v(r, 'fala')), s: iaTxt(v(r, 'st'), 30), a: iaTxt(v(r, 'amd'), 30), c: iaTxt(v(r, 'causa'), 60) };
+    estado.ia.tele[id] = { r: iaTxt(v(r, 'rec'), 80), n: String(v(r, 'num')).replace(/\D/g, '').slice(-11), d: dh ? dh.data : null, h: dh ? dh.hora : '', q: q === '-' ? '' : q, f: parseDuracao(v(r, 'fala')), s: iaTxt(v(r, 'st'), 30), a: iaTxt(v(r, 'amd'), 30), c: iaTxt(v(r, 'causa'), 60) };
   }
   var ks = Object.keys(estado.ia.tele); if (ks.length > 8000) ks.slice(0, ks.length - 8000).forEach(function (k) { delete estado.ia.tele[k]; });
   var res = iaAplicarTele();
@@ -4551,7 +4602,41 @@ function iaResumoTexto() {
     '', 'Análises manuais: ' + t.man + ' · aceitas via transcrição: ' + t.viaT,
     t.auto.total ? 'Análise automática por transcrição (' + t.auto.total + ' leads): ' + t.auto.sim + ' provavelmente corretos · ' + t.auto.nao + ' incorretos · ' + t.auto.duvida + ' a conferir' + (t.auto.comp ? ' · coincide com a sua análise manual em ' + t.auto.igual + ' de ' + t.auto.comp + ' (' + fmtPct(t.auto.igual / t.auto.comp * 100) + ')' : '') : 'Análise por transcrição: nenhuma transcrição importada.'].join('\n');
 }
-function iaRenderLateral() { iaRenderInicio(); iaRenderResumo(); iaRenderLista(); iaRenderRelatorio(); }
+function iaFilaAudios(min) {
+  var itens = [];
+  estado.ia.leads.forEach(function (l) { l.ligacoes.forEach(function (g) { if (g.id && g.fala >= min && !estado.ia.baixados[g.id] && !estado.ia.transc[g.id]) itens.push(g); }); });
+  return itens.sort(function (x, y) { return (x.data || '') !== (y.data || '') ? ((y.data || '') < (x.data || '') ? -1 : 1) : y.fala - x.fala; });
+}
+function iaAudioInfo() {
+  var info = $('#au-info'); if (!info) return;
+  var min = Math.max(0, +$('#au-min').value || 0), fila = iaFilaAudios(min), ja = Object.keys(estado.ia.baixados).length;
+  info.textContent = fila.length + ' ' + plural(fila.length, 'ligação', 'ligações') + ' com fala ≥ ' + min + ' s ainda sem áudio baixado (hoje primeiro, mais longas primeiro)' + (ja ? ' · ' + ja + ' já baixadas' : '');
+}
+function iaRodarLote() {
+  if (iaLote.rodando) return;
+  var n = Math.max(1, Math.min(500, +$('#au-n').value || 30)), min = Math.max(0, +$('#au-min').value || 0), fila = iaFilaAudios(min).slice(0, n);
+  var log = $('#au-log'), barra = $('#au-barra'), bi = barra.querySelector('i'), btn = $('#au-lote'), parar = $('#au-parar');
+  if (!fila.length) { toast('Nada a baixar com essa fala mínima.', { tipo: 'aviso' }); return; }
+  iaLote = { rodando: true, parar: false }; log.replaceChildren(); barra.hidden = false; parar.hidden = false; btn.disabled = true;
+  var feitos = 0, pulados = 0, i = 0;
+  function nota(t) { log.insertBefore(el('li', null, t), log.firstChild); }
+  function fim(msg) { iaLote.rodando = false; btn.disabled = false; parar.hidden = true; nota(msg); iaAudioInfo(); iaRenderLista(); }
+  function proximo() {
+    if (iaLote.parar) { fim('Parado. ' + feitos + ' baixadas.'); return; }
+    if (i >= fila.length) { fim('Pronto: ' + feitos + ' baixadas' + (pulados ? ', ' + pulados + ' sem gravação' : '') + '. Coloque os arquivos na pasta de áudios e rode o transcrever.py.'); return; }
+    var g = fila[i++]; bi.style.width = Math.round(i / fila.length * 100) + '%';
+    iaBuscarAudio(g).then(function (b) {
+      iaSalvarBlob(b, iaNomeAudio(g, b.type)); estado.ia.baixados[g.id] = 1; feitos++; salvarIA();
+      nota(i + '/' + fila.length + ' ✓ ' + iaNomeAudio(g, b.type));
+      setTimeout(proximo, 1200);
+    }, function (e) {
+      if (e.pular) { pulados++; nota(i + '/' + fila.length + ' sem gravação, pulei.'); setTimeout(proximo, 600); return; }
+      fim('Parei na ' + i + 'ª: ' + e.message + ' (' + feitos + ' baixadas antes).');
+    });
+  }
+  proximo();
+}
+function iaRenderLateral() { iaAudioInfo(); iaRenderInicio(); iaRenderResumo(); iaRenderLista(); iaRenderRelatorio(); }
 /* Cartão de partida: sem base → soltar a planilha aqui; com base → botão “Fazer auditorias” que abre o próximo lead pendente já com o telefone copiado */
 function iaIniciar() {
   var u = estado.ui.ia, prox = iaProximoPendente('');
@@ -4664,6 +4749,23 @@ function iaRenderDetalhe() {
       el('ul', { class: 'frases', style: 'margin:6px 0 0' }, au.pistas.map(function (t) { return el('li', null, t); })),
       el('p', { class: 'dica', style: 'margin:6px 0 0' }, 'A transcrição não separa quem fala (IA × cliente): isto é uma pista. Aceitar marca a análise como “via transcrição”, separada das suas análises manuais.'));
   }
+  var playerAudio = el('audio', { controls: '', preload: 'none' }), playerTxt = el('span', { class: 'dica' }), playerBox = el('div', { class: 'ia-player', hidden: true }, playerTxt, playerAudio), urlAtual = '';
+  function ouvirAudio(g) {
+    playerBox.hidden = false; playerTxt.textContent = 'Carregando o áudio de ' + (g.data ? dataBR(g.data).slice(0, 5) + ' ' + g.hora : 'ligação') + '…';
+    iaBuscarAudio(g).then(function (b) {
+      if (urlAtual) URL.revokeObjectURL(urlAtual);
+      urlAtual = URL.createObjectURL(b); playerAudio.src = urlAtual; playerTxt.textContent = '🎧 ' + (g.data ? dataBR(g.data).slice(0, 5) + ' ' + g.hora : 'ligação') + ' · fala ' + fmtSeg(g.fala);
+      playerAudio.play().catch(function () { /* o navegador pode exigir clicar no play */ });
+    }, function (e) {
+      playerTxt.textContent = e.message + ' Abri a gravação do 3C em outra aba.';
+      window.open(urlGravacao(g.id), '_blank', 'noopener,noreferrer');
+    });
+  }
+  function baixarAudio(g) {
+    iaBuscarAudio(g).then(function (b) {
+      iaSalvarBlob(b, iaNomeAudio(g, b.type)); estado.ia.baixados[g.id] = 1; salvarIA(); toast('Baixado: ' + iaNomeAudio(g, b.type));
+    }, function (e) { toast(e.message, { tipo: 'erro' }); });
+  }
   var confChip = el('span', { class: 'ia-conf' });
   function atualizarConf() { var c = iaConformidade(a); confChip.className = 'ia-conf' + (c === null ? '' : c >= 80 ? ' alta' : c >= 50 ? ' media' : ' baixa'); confChip.textContent = 'CONFORMIDADE ' + (c === null ? '—' : c + '%'); }
   function linhaCk(rot, dica, campo, opts, onMudou) {
@@ -4717,8 +4819,11 @@ function iaRenderDetalhe() {
         el('tbody', null, l.ligacoes.map(function (g) {
           return el('tr', null, el('td', { class: 'num' }, g.data ? dataBR(g.data).slice(0, 5) + ' ' + g.hora : '—'), el('td', null, g.qual && g.qual !== '-' ? g.qual : '—'), el('td', { class: 'num' }, fmtSeg(g.fala)), el('td', null, g.amd && g.amd !== '-' ? g.amd : '—'), el('td', null, g.causa || '—'), el('td', null, g.status || '—'),
             el('td', null, semaforo(iaNotaLigacao(g)), IA_COMP[iaNotaLigacao(g)].rot),
-            el('td', null, estado.ia.transc[g.id] ? '📝 ' : '', g.id ? el('a', { class: 'link-mini', href: urlGravacao(g.id), target: '_blank', rel: 'noopener noreferrer', title: 'Abrir a gravação (precisa estar logado na telefonia)' }, '🎧') : ''));
+            el('td', { style: 'white-space:nowrap' }, estado.ia.transc[g.id] ? '📝 ' : '', estado.ia.baixados[g.id] ? '✔ ' : '',
+              g.id ? [el('button', { type: 'button', class: 'btn-fone', title: 'Ouvir esta ligação aqui', 'aria-label': 'Ouvir a ligação', onclick: function () { ouvirAudio(g); } }, '🎧'),
+                el('button', { type: 'button', class: 'btn-fone', title: 'Baixar o áudio (nome igual ao do 3C)', 'aria-label': 'Baixar o áudio', onclick: function () { baixarAudio(g); } }, '⬇')] : ''));
         })))) : null,
+      playerBox,
       l.ligacoes.length ? el('p', { class: 'dica', style: 'margin:0' }, l.ligacoes.length + ' ' + plural(l.ligacoes.length, 'ligação', 'ligações') + ' da IA · maior fala ' + fmtSeg(maior)) : null,
       iaTranscDoLead(l).length ? el('div', { style: 'display:grid;gap:8px' }, el('div', { class: 'rotulo' }, 'TRANSCRIÇÃO (automática · não separa quem fala)'),
         iaTranscDoLead(l).sort(function (x, y) { return y.g.fala - x.g.fala; }).map(function (x, i) {
@@ -4752,7 +4857,7 @@ function iaRenderDetalhe() {
 }
 function renderIA() {
   var u = estado.ui.ia;
-  $('#ia-filtro').value = u.filtro; $('#ia-ordem').value = u.ordem; $('#ia-busca').value = u.busca; $('#ia-analista').value = estado.ia.analista; $('#ia-auto').checked = estado.ia.autoCopiar; $('#ia-regra').value = estado.ia.regra;
+  $('#ia-filtro').value = u.filtro; $('#ia-ordem').value = u.ordem; $('#au-base').value = estado.ia.audioBase; $('#ia-busca').value = u.busca; $('#ia-analista').value = estado.ia.analista; $('#ia-auto').checked = estado.ia.autoCopiar; $('#ia-regra').value = estado.ia.regra;
   if (!document.getElementById('ia-motivos')) document.body.appendChild(el('datalist', { id: 'ia-motivos' }, IA_MOTIVOS.map(function (m) { return el('option', { value: m }); })));
   var lista = iaFiltrados();
   if (!u.sel || !estado.ia.leads.some(function (x) { return x.codigoNorm === u.sel; })) u.sel = lista.length ? lista[0].codigoNorm : '';
@@ -4766,6 +4871,15 @@ function ligarEventosIA() {
     if (/^[1-8]$/.test(e.key)) { e.preventDefault(); iaRapidaAtual(+e.key - 1); }
   });
   $('#ia-filtro').addEventListener('change', function (e) { estado.ui.ia.filtro = e.target.value; iaRenderLista(); });
+  $('#au-base').addEventListener('change', function (e) {
+    var v = e.target.value.trim().replace(/\/+$/, '');
+    if (/^https?:\/\/[^\s/]+(:\d+)?$/i.test(v)) { estado.ia.audioBase = v; salvarIA(); } else { toast('Endereço inválido. Ex.: https://app.3c.plus', { tipo: 'aviso' }); }
+    e.target.value = estado.ia.audioBase;
+  });
+  $('#au-token').addEventListener('input', function (e) { iaToken = e.target.value.trim(); });
+  $('#au-min').addEventListener('input', iaAudioInfo);
+  $('#au-lote').addEventListener('click', iaRodarLote);
+  $('#au-parar').addEventListener('click', function () { iaLote.parar = true; });
   $('#ia-ordem').addEventListener('change', function (e) { estado.ui.ia.ordem = e.target.value; renderIA(); });
   $('#ia-busca').addEventListener('input', function (e) { estado.ui.ia.busca = e.target.value; iaRenderLista(); });
   $('#ia-auto').addEventListener('change', function (e) { estado.ia.autoCopiar = e.target.checked; salvarIA(); });
