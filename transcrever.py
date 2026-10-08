@@ -379,7 +379,7 @@ def main():
     ap.add_argument("--pasta", help="pasta com áudios já baixados")
     ap.add_argument("--ordem", choices=["dia", "fala"], default="dia", help="dia (padrão): hoje primeiro, depois ontem, anteontem…; dentro de cada dia, as ligações mais longas primeiro. fala: só pela duração, de todos os dias")
     ap.add_argument("--min", type=int, default=1, help="mínimo de segundos de fala (padrão 1 = todas as ligações em que alguém falou; use --min 10 para só as mais longas, ou --min 0 para absolutamente todas, inclusive as sem conversa)")
-    ap.add_argument("--min-lead", type=int, default=10, help="regra por LEAD (telefone): se NENHUMA ligação do lead tiver pelo menos este tanto de fala (padrão 10 s), é impossível validar se é motorista de app: nenhuma ligação dele é baixada nem transcrita (a lista vai para ignoradas_impossiveis.csv). Use 0 para desligar")
+    ap.add_argument("--min-lead", type=int, default=15, help="regra por LEAD (telefone): se NENHUMA ligação do lead tiver pelo menos este tanto de fala (padrão 15 s), é impossível validar se é motorista de app: nenhuma ligação dele é baixada nem transcrita (a lista vai para ignoradas_impossiveis.csv). Use 0 para desligar")
     ap.add_argument("--max", type=int, default=0, help="limitar a quantidade (0 = todas)")
     ap.add_argument("--modelo", default="small", help="tiny | base | small (padrão) | medium")
     ap.add_argument("--rapido", action="store_true", help="usa o modelo base: bem mais rápido (uns 3x), com um pouco mais de erros; ideal para o lote grande")

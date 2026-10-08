@@ -693,7 +693,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
             <div class="campo"><label for="au-base">Endereço do 3C</label><input type="text" id="au-base" autocomplete="off" placeholder="https://app.3c.plus"></div>
             <div class="campo"><label for="au-token">Seu token de API (opcional; não é salvo)</label><input type="password" id="au-token" autocomplete="off" placeholder="cole aqui se tiver"></div>
             <div class="campo"><label for="au-n">Quantas baixar agora</label><input type="number" id="au-n" min="1" max="500" value="30"></div>
-            <div class="campo"><label for="au-min">Fala mínima (s)</label><input type="number" id="au-min" min="0" max="3600" value="10"></div>
+            <div class="campo"><label for="au-min">Fala mínima (s)</label><input type="number" id="au-min" min="0" max="3600" value="15"></div>
           </div>
           <div class="acoes">
             <button type="button" class="btn btn-primario" id="au-lote">⬇ Baixar lote</button>
@@ -716,7 +716,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
             <select id="ia-filtro">
               <option value="pend">Pendentes de análise</option><option value="ana">Já analisados</option>
               <option value="nao">Motivo incorreto</option><option value="sim">Motivo correto</option>
-              <option value="duvida">Sem como avaliar</option><option value="transc">Com transcrição (análise automática)</option><option value="diverge">⚠ Divergem da IA</option><option value="pendtr">🎙 Áudio baixado sem transcrição</option><option value="imp">⛔ Impossível validar (sem ligação com fala suficiente)</option><option value="todos">Todos</option>
+              <option value="duvida">Sem como avaliar</option><option value="transc">Com transcrição (análise automática)</option><option value="diverge">⚠ Divergem da IA</option><option value="pendtr">🎙 Áudio baixado sem transcrição</option><option value="imp">⛔ Descartados automaticamente (sem ligação com fala suficiente)</option><option value="todos">Todos</option>
             </select></div>
           <div class="campo"><label for="ia-ordem">Ordem da fila</label>
             <select id="ia-ordem"><option value="dia">Hoje primeiro, depois ontem…; no dia, as mais longas</option><option value="fala">Mais longas de todos os dias</option><option value="data">Mais recentes primeiro</option></select></div>
@@ -4557,6 +4557,7 @@ function importarParecerCopilot(linhas) {
   for (var i = 1; i < linhas.length; i++) {
     var r = linhas[i], nl = normLead(cel(r, 'lead'));
     if (!nl) continue;
+    if (/^automatico/.test(normBusca(cel(r, 'orig')))) continue; /* descartado pela regra de fala mínima: o painel recalcula, não guarda como análise */
     var l = mapa.get(nl); if (!l) { semLead++; continue; }
     var correto = iaVeredito(cel(r, 'cor')); if (!correto) continue;
     var a = iaAnalise(l), tinha = iaStatus(a) && a.via !== 'copilot';
@@ -4752,11 +4753,12 @@ function iaFiltrados() {
     var imp = !!iaImpossivel(l);
     if (u.filtro === 'imp') return imp;
     if (u.filtro === 'pend') return !st && !imp;
-    if (u.filtro === 'ana') return !!st && !imp;
+    if (u.filtro === 'ana') return !!st || imp;
     if (u.filtro === 'todos') return true;
     if (u.filtro === 'transc') return iaTranscDoLead(l).length > 0;
     if (u.filtro === 'diverge') return iaDiverge(estado.ia.analises[l.codigoNorm]);
     if (u.filtro === 'pendtr') return !!pendTr.leads[l.codigoNorm];
+    if (u.filtro === 'nao') return imp || st === 'nao';
     return st === u.filtro && !imp;
   }).sort(iaComparar);
 }
@@ -4775,7 +4777,7 @@ function iaStats() {
     if (a.comp) t.comp[a.comp]++;
     if (st === 'nao') { a.porque.forEach(function (p) { t.porque[p] = (t.porque[p] || 0) + 1; }); if (a.motivoReal) t.motivos[a.motivoReal] = (t.motivos[a.motivoReal] || 0) + 1; }
   });
-  t.ana = t.sim + t.nao + t.duvida; t.pend = t.total - t.imp - t.ana; t.tels = Object.keys(telsBase).length; t.telsAna = Object.keys(telsAna).length;
+  t.ana = t.sim + t.nao + t.duvida; t.pend = t.total - t.imp - t.ana; t.decididos = t.ana + t.imp; t.naoTotal = t.nao + t.imp; t.tels = Object.keys(telsBase).length; t.telsAna = Object.keys(telsAna).length;
   return t;
 }
 function iaColsCopilot(a) {
@@ -4787,6 +4789,16 @@ function iaCSV() {
   var cab = ['Data da análise', 'Analista', 'Lead', 'Telefone', 'Link Dryve', 'Data perdido', 'Motivo registrado', 'Detalhe do motivo', 'Origem', 'Origem da análise', 'Qualificação da IA', 'Qualificação da IA correta?', 'Qualificação correta (se errada)', 'Motivo correto?', 'IA apresentou o serviço e qualificou (SDR)', 'Situação da ligação', 'Conformidade da IA (%)', 'Por quê', 'Motivo sugerido', 'Evidências', 'Ligações IA', 'Maior fala IA (s)', 'Última qualificação IA', 'Comportamento da IA (analista)', 'Sinal do painel', 'Parecer da IA', 'Observação', 'IA: Correto', 'IA: Confirmou ser motorista de app', 'IA: Qualificação da IA correta', 'IA: Qualificação sugerida', 'IA: Comportamento da IA', 'IA: Motivo sugerido', 'IA: Evidência literal do cliente', 'IA: Percepção da auditoria', 'Comparação manual × IA', 'Veredito final (validado)', 'Confiança', 'Comentário da validação'];
   var linhas = [cab.join(';')];
   estado.ia.leads.forEach(function (l) {
+    var ri = iaImpossivel(l);
+    if (ri) {
+      var vz = cab.map(function () { return ''; }), pos = function (n) { return cab.indexOf(n); };
+      vz[pos('Data da análise')] = dataBR(dataISO(new Date())); vz[pos('Analista')] = 'Automático'; vz[pos('Lead')] = l.codigo; vz[pos('Telefone')] = formatTel(l.tel); vz[pos('Link Dryve')] = urlPadraoDryve(l.uuid); vz[pos('Data perdido')] = l.dataPerdido ? dataBR(l.dataPerdido) : '';
+      vz[pos('Motivo registrado')] = l.motivo; vz[pos('Detalhe do motivo')] = l.detalhes; vz[pos('Origem')] = l.origem; vz[pos('Origem da análise')] = 'Automático (sem ligação com fala ≥ ' + ri.min + ' s)'; vz[pos('Qualificação da IA')] = iaQualPrincipal(l);
+      vz[pos('Motivo correto?')] = 'Não'; vz[pos('Por quê')] = 'Nenhuma ligação do lead passou de ' + ri.min + ' s de fala (maior: ' + ri.maior + ' s): sem conversa, o cliente não confirmou ser motorista de aplicativo'; vz[pos('Motivo sugerido')] = 'Sem retorno'; vz[pos('Evidências')] = 'Descartado automaticamente pela regra de fala mínima';
+      vz[pos('Ligações IA')] = l.ligacoes.length; vz[pos('Maior fala IA (s)')] = ri.maior; vz[pos('Última qualificação IA')] = l.ligacoes.length ? l.ligacoes[l.ligacoes.length - 1].qual : '';
+      vz[pos('Veredito final (validado)')] = 'NÃO'; vz[pos('Confiança')] = 'Média-alta'; vz[pos('Comentário da validação')] = 'Descartado automaticamente: nenhuma ligação do lead com fala de ' + ri.min + ' s ou mais.';
+      linhas.push(vz.map(campoCSV).join(';')); return;
+    }
     var a = estado.ia.analises[l.codigoNorm]; if (!iaStatus(a)) return;
     var ult = l.ligacoes.length ? l.ligacoes[l.ligacoes.length - 1].qual : '';
     linhas.push([a.em ? dataBR(dataISO(new Date(a.em))) : '', a.por, l.codigo, formatTel(l.tel), urlPadraoDryve(l.uuid), l.dataPerdido ? dataBR(l.dataPerdido) : '', l.motivo, l.detalhes, l.origem, a.via === 'transcricao' ? 'Via transcrição' : a.via === 'copilot' ? 'Via IA' : 'Manual', a.qualIA || iaQualPrincipal(l), { sim: 'Sim', nao: 'Não' }[a.qualOk] || 'Sim', a.qualOk === 'nao' ? a.qualCerta : '',
@@ -4826,16 +4838,16 @@ function iaCSVAuto() {
   return '\uFEFF' + linhas.join('\r\n') + '\r\n';
 }
 function iaResumoTexto() {
-  var t = iaStats(), pct = function (n) { return t.ana ? fmtPct(n / t.ana * 100) : '0%'; };
+  var t = iaStats(), pct = function (n) { return t.decididos ? fmtPct(n / t.decididos * 100) : '0%'; };
   var top = function (o) { return Object.keys(o).sort(function (a, b) { return o[b] - o[a]; }).slice(0, 5).map(function (k) { return k + ' (' + o[k] + ')'; }).join('; ') || '—'; };
-  return ['Validação de perdido (' + dataBR(dataISO(new Date())) + '):', 'Leads na base: ' + t.total + ' (' + t.tels + ' ' + plural(t.tels, 'telefone distinto', 'telefones distintos') + ') · analisados: ' + t.ana + ' leads (' + t.telsAna + ' ' + plural(t.telsAna, 'telefone', 'telefones') + ')' + ' · pendentes: ' + t.pend + (t.imp ? ' · impossíveis de validar (nenhuma ligação com fala ≥ ' + iaFalaMin() + ' s): ' + t.imp : ''),
-    'Motivo “Motorista de App” correto: ' + t.sim + ' (' + pct(t.sim) + ')', 'Incorreto: ' + t.nao + ' (' + pct(t.nao) + ')', 'Sem como avaliar: ' + t.duvida + ' (' + pct(t.duvida) + ')',
+  return ['Validação de perdido (' + dataBR(dataISO(new Date())) + '):', 'Leads na base: ' + t.total + ' (' + t.tels + ' ' + plural(t.tels, 'telefone distinto', 'telefones distintos') + ') · analisados: ' + t.ana + ' leads (' + t.telsAna + ' ' + plural(t.telsAna, 'telefone', 'telefones') + ')' + (t.imp ? ' + ' + t.imp + ' descartados automaticamente como incorretos (nenhuma ligação com fala ≥ ' + iaFalaMin() + ' s)' : '') + ' · pendentes: ' + t.pend,
+    'Motivo “Motorista de App” correto: ' + t.sim + ' (' + pct(t.sim) + ')', 'Incorreto: ' + t.naoTotal + ' (' + pct(t.naoTotal) + ')' + (t.imp ? ' [' + t.imp + ' descartados automaticamente]' : ''), 'Sem como avaliar: ' + t.duvida + ' (' + pct(t.duvida) + ')',
     'Comportamento da IA nas análises: boa ' + t.comp.boa + ' · média ' + t.comp.media + ' · ruim ' + t.comp.ruim, 'Principais razões do erro: ' + top(t.porque), 'Motivos sugeridos: ' + top(t.motivos),
     '', 'Qualificação da IA marcada como errada: ' + t.qualErrada + ' de ' + t.ana + ' análises', 'IA: ' + estado.ia.leads.filter(function (x) { var q = estado.ia.analises[x.codigoNorm]; return q && q.cop; }).length + ' pareceres · divergem da sua análise: ' + estado.ia.leads.filter(function (x) { return iaDiverge(estado.ia.analises[x.codigoNorm]); }).length, 'Veredito final validado: ' + (function () { var c = { sim: 0, nao: 0, duvida: 0 }; estado.ia.leads.forEach(function (x) { var q = estado.ia.analises[x.codigoNorm]; if (q && q.val && q.val.v) c[q.val.v]++; }); return c.sim + c.nao + c.duvida ? 'correto ' + c.sim + ' · incorreto ' + c.nao + ' · sem dados ' + c.duvida : 'nenhum importado'; })(), 'Análises manuais: ' + t.man + ' · aceitas via transcrição: ' + t.viaT + ' · importadas da IA: ' + t.viaC,
     t.auto.total ? 'Análise automática por transcrição (' + t.auto.total + ' leads): ' + t.auto.sim + ' provavelmente corretos · ' + t.auto.nao + ' incorretos · ' + t.auto.duvida + ' a conferir' + (t.auto.comp ? ' · coincide com a sua análise manual em ' + t.auto.igual + ' de ' + t.auto.comp + ' (' + fmtPct(t.auto.igual / t.auto.comp * 100) + ')' : '') : 'Análise por transcrição: nenhuma transcrição importada.'].join('\n');
 }
 /* ===== Regra por LEAD: sem nenhuma ligação com fala >= fala mínima, é impossível validar se é motorista de app ===== */
-function iaFalaMin() { var e = $('#au-min'), v = e && e.value !== '' ? +e.value : 10; return isFinite(v) ? Math.max(0, v) : 10; }
+function iaFalaMin() { var e = $('#au-min'), v = e && e.value !== '' ? +e.value : 15; return isFinite(v) ? Math.max(0, v) : 15; }
 /* Uma análise manual sua sempre vale (você ouviu o áudio); as demais não decidem um lead sem conversa. */
 function iaImpossivel(l) {
   var a = estado.ia.analises[l.codigoNorm]; if (a && a.correto && !a.via) return null;
@@ -4844,13 +4856,13 @@ function iaImpossivel(l) {
 }
 function iaTelDigitos(l) { return String(l.tel || '').replace(/\D/g, '').slice(-11); }
 function iaTxtImpossivel(l, r) {
-  return 'Nenhuma ' + (r.n === 1 ? 'ligação' : 'das ' + r.n + ' ligações') + ' deste lead passou de ' + r.min + ' s de fala (a maior teve ' + r.maior + ' s). Sem conversa não dá para saber se o cliente é motorista de aplicativo: nenhuma foi baixada nem será transcrita.';
+  return 'Nenhuma ' + (r.n === 1 ? 'ligação' : 'das ' + r.n + ' ligações') + ' deste lead passou de ' + r.min + ' s de fala (a maior teve ' + r.maior + ' s). Sem conversa o cliente não confirmou ser motorista de aplicativo: o lead é descartado como INCORRETO (motivo real: sem retorno). Nenhuma ligação foi baixada nem será transcrita.';
 }
 function iaCSVImpossiveis() {
   var linhas = [['Lead', 'Telefone', 'Link Dryve', 'Data perdido', 'Motivo registrado', 'Ligações do lead', 'Maior fala (s)', 'Fala mínima (s)', 'Motivo de não ter sido considerado', 'Ligações não consideradas (data hora · fala)'].join(';')];
   estado.ia.leads.forEach(function (l) {
     var r = iaImpossivel(l); if (!r) return;
-    linhas.push([l.codigo, formatTel(l.tel), urlPadraoDryve(l.uuid), l.dataPerdido ? dataBR(l.dataPerdido) : '', l.motivo, l.ligacoes.length, r.maior, r.min, 'Impossível validar: nenhuma ligação com fala de ' + r.min + ' s ou mais',
+    linhas.push([l.codigo, formatTel(l.tel), urlPadraoDryve(l.uuid), l.dataPerdido ? dataBR(l.dataPerdido) : '', l.motivo, l.ligacoes.length, r.maior, r.min, 'Descartado como incorreto: nenhuma ligação com fala de ' + r.min + ' s ou mais',
       l.ligacoes.map(function (g) { return (g.data ? dataBR(g.data) + ' ' + g.hora : '?') + ' · ' + g.fala + ' s'; }).join(' | ')].map(campoCSV).join(';'));
   });
   return '﻿' + linhas.join('\r\n') + '\r\n';
@@ -4864,7 +4876,7 @@ function iaAudioInfo() {
   var info = $('#au-info'); if (!info) return;
   var min = Math.max(0, +$('#au-min').value || 0), fila = iaFilaAudios(min), ja = Object.keys(estado.ia.baixados).length;
   var nImp = estado.ia.leads.filter(function (l) { return iaImpossivel(l); }).length;
-  info.textContent = fila.length + ' ' + plural(fila.length, 'ligação', 'ligações') + ' com fala ≥ ' + min + ' s ainda sem áudio baixado (hoje primeiro, mais longas primeiro)' + (nImp ? ' · ' + nImp + ' ' + plural(nImp, 'lead impossível', 'leads impossíveis') + ' de validar (nenhuma ligação com fala ≥ ' + min + ' s): não baixados' : '') + (ja ? ' · ' + ja + ' já baixadas' : '') + (Object.keys(estado.ia.transc).length ? ' · ' + Object.keys(estado.ia.transc).length + ' já transcritas (puladas)' : '') + (Object.keys(estado.ia.semAudio).length ? ' · ' + Object.keys(estado.ia.semAudio).length + ' sem gravação no 3C (puladas)' : '');
+  info.textContent = fila.length + ' ' + plural(fila.length, 'ligação', 'ligações') + ' com fala ≥ ' + min + ' s ainda sem áudio baixado (hoje primeiro, mais longas primeiro)' + (nImp ? ' · ' + nImp + ' ' + plural(nImp, 'lead descartado', 'leads descartados') + ' como incorretos (nenhuma ligação com fala ≥ ' + min + ' s): não baixados' : '') + (ja ? ' · ' + ja + ' já baixadas' : '') + (Object.keys(estado.ia.transc).length ? ' · ' + Object.keys(estado.ia.transc).length + ' já transcritas (puladas)' : '') + (Object.keys(estado.ia.semAudio).length ? ' · ' + Object.keys(estado.ia.semAudio).length + ' sem gravação no 3C (puladas)' : '');
 }
 function iaRodarLote() {
   if (iaLote.rodando) return;
@@ -5025,9 +5037,10 @@ function vizTabela(cab, linhas) {
 }
 function vizCard(titulo, sub, corpo) { return el('article', { class: 'card viz-card' }, el('h3', null, titulo), sub ? el('p', { class: 'viz-sub' }, sub) : null, corpo); }
 function iaDashDados() {
-  var t = iaStats(), d = { t: t, qual: { ok: 0, err: 0 }, cmp: { n: 0, igual: 0, dif: 0 }, dur: [{ rot: 'sem fala', a: 0, b: 30 }, { rot: 'até 10 s', a: 0.001, b: 10 }, { rot: '10–29 s', a: 10, b: 30 }, { rot: '30–59 s', a: 30, b: 60 }, { rot: '1–3 min', a: 60, b: 180 }, { rot: '3 min+', a: 180, b: 1e9 }] };
-  d.dur[0].b = 0.001; d.dur.forEach(function (x) { x.sim = 0; x.nao = 0; x.duvida = 0; });
+  var t = iaStats(), d = { t: t, qual: { ok: 0, err: 0 }, cmp: { n: 0, igual: 0, dif: 0 }, dur: [{ rot: 'sem fala', a: 0, b: 0.001 }, { rot: 'até 14 s', a: 0.001, b: 15 }, { rot: '15–29 s', a: 15, b: 30 }, { rot: '30–59 s', a: 30, b: 60 }, { rot: '1–3 min', a: 60, b: 180 }, { rot: '3 min+', a: 180, b: 1e9 }] };
+  d.dur.forEach(function (x) { x.sim = 0; x.nao = 0; x.duvida = 0; });
   estado.ia.leads.forEach(function (l) {
+    if (iaImpossivel(l)) { var fi = iaMaiorFala(l), bi = d.dur.filter(function (x) { return fi >= x.a && fi < x.b; })[0]; if (bi) bi.nao++; return; }
     var a = estado.ia.analises[l.codigoNorm], st = iaStatus(a); if (!st) return;
     var q = a.qualOk || (a.cop && a.cop.qualOk) || ''; if (q === 'sim') d.qual.ok++; else if (q === 'nao') d.qual.err++;
     if (a.cop && a.cop.correto && a.via !== 'copilot' && a.cop.correto !== 'duvida' && a.correto !== 'duvida') { d.cmp.n++; if (iaDiverge(a)) d.cmp.dif++; else d.cmp.igual++; }
@@ -5041,9 +5054,10 @@ function iaRenderDash() {
   if (!cont.dataset.pronto) { cont.dataset.pronto = '1'; ['mouseover', 'mousemove', 'mouseout', 'focusin', 'focusout'].forEach(function (ev) { cont.addEventListener(ev, vizDica); }); }
   var d = iaDashDados(), t = d.t, cor = function (n) { return 'var(' + n + ')'; };
   if (!t.ana) { cont.replaceChildren(el('article', { class: 'card' }, el('p', { class: 'dica', style: 'margin:0' }, 'Os gráficos aparecem assim que houver análises (manuais ou da IA).'))); return; }
-  var viaveis = t.total - t.imp, cob = [{ rot: 'Analisados por você', n: t.man, cor: cor('--vb-forte'), txt: 'var(--vb-t1)', filtro: 'ana' }, { rot: 'Analisados pela IA', n: t.viaC + t.viaT, cor: cor('--vb-claro'), txt: 'var(--vb-t2)', filtro: 'ana' }, { rot: 'Pendentes', n: t.pend, cor: cor('--vtrilho'), txt: 'var(--texto)', filtro: 'pend' }, { rot: 'Impossíveis de validar (sem fala ≥ ' + iaFalaMin() + ' s)', n: t.imp, cor: cor('--vn'), filtro: 'imp' }];
-  var ver = [{ rot: 'Motivo correto', n: t.sim, cor: cor('--v1'), filtro: 'sim' }, { rot: 'Motivo incorreto', n: t.nao, cor: cor('--v2'), filtro: 'nao' }, { rot: 'Sem como avaliar', n: t.duvida, cor: cor('--vn'), filtro: 'duvida' }];
-  var mot = Object.keys(t.motivos).sort(function (a, b) { return t.motivos[b] - t.motivos[a]; }).map(function (k) { return [k, t.motivos[k]]; });
+  var viaveis = t.total, cob = [{ rot: 'Analisados por você', n: t.man, cor: cor('--vb-forte'), txt: 'var(--vb-t1)', filtro: 'ana' }, { rot: 'Analisados pela IA', n: t.viaC + t.viaT, cor: cor('--vb-claro'), txt: 'var(--vb-t2)', filtro: 'ana' }, { rot: 'Pendentes', n: t.pend, cor: cor('--vtrilho'), txt: 'var(--texto)', filtro: 'pend' }, { rot: 'Descartados: incorretos sem fala ≥ ' + iaFalaMin() + ' s', n: t.imp, cor: cor('--vn'), filtro: 'imp' }];
+  var ver = [{ rot: 'Motivo correto', n: t.sim, cor: cor('--v1'), filtro: 'sim' }, { rot: 'Motivo incorreto', n: t.naoTotal, cor: cor('--v2'), filtro: 'nao' }, { rot: 'Sem como avaliar', n: t.duvida, cor: cor('--vn'), filtro: 'duvida' }];
+  var motT = Object.assign({}, t.motivos); if (t.imp) motT['Sem retorno'] = (motT['Sem retorno'] || 0) + t.imp;
+  var mot = Object.keys(motT).sort(function (a, b) { return motT[b] - motT[a]; }).map(function (k) { return [k, motT[k]]; });
   var por = Object.keys(t.porque).sort(function (a, b) { return t.porque[b] - t.porque[a]; }).slice(0, 7).map(function (k) { return [k, t.porque[k]]; });
   var comp = [['Boa', t.comp.boa], ['Média', t.comp.media], ['Ruim', t.comp.ruim]], nc = t.comp.boa + t.comp.media + t.comp.ruim;
   var qual = [{ rot: 'Qualificação da IA correta', n: d.qual.ok, cor: cor('--v1') }, { rot: 'Qualificação errada', n: d.qual.err, cor: cor('--v2') }], nq = d.qual.ok + d.qual.err;
@@ -5061,9 +5075,9 @@ function iaRenderDash() {
   cont.replaceChildren(
     el('div', { class: 'secao-titulo' }, el('h2', null, 'Dashboard da validação'), el('span', null, 'Clique numa barra para ver os leads')),
     el('div', { class: 'viz-grade' },
-      vizCard('Cobertura da base', t.ana + ' de ' + viaveis + ' leads que dá para validar (' + fmtPct(viaveis ? t.ana / viaveis * 100 : 0) + ')' + (t.imp ? ' · ' + t.imp + ' impossíveis de validar' : ''), el('div', { style: 'display:grid;gap:10px' }, vizPilha(cob, t.total), vizLegenda(cob, t.total), vizTabela(['Grupo', 'Leads'], cob.map(function (x) { return [x.rot, x.n]; })))),
-      vizCard('O motivo “Motorista de App” estava certo?', 'Sobre os ' + t.ana + ' leads analisados', el('div', { style: 'display:grid;gap:10px' }, vizPilha(ver, t.ana), vizLegenda(ver, t.ana), vizTabela(['Veredito', 'Leads'], ver.map(function (x) { return [x.rot, x.n]; })))),
-      vizCard('Qual era o motivo real?', 'Nos ' + t.nao + ' leads em que o motivo estava incorreto', el('div', { style: 'display:grid;gap:10px' }, vizLinhas(mot, t.nao), mot.length ? vizTabela(['Motivo real', 'Leads'], mot) : null)),
+      vizCard('Cobertura da base', t.decididos + ' de ' + viaveis + ' leads decididos (' + fmtPct(viaveis ? t.decididos / viaveis * 100 : 0) + ') · faltam ' + t.pend, el('div', { style: 'display:grid;gap:10px' }, vizPilha(cob, t.total), vizLegenda(cob, t.total), vizTabela(['Grupo', 'Leads'], cob.map(function (x) { return [x.rot, x.n]; })))),
+      vizCard('O motivo “Motorista de App” estava certo?', 'Sobre os ' + t.decididos + ' leads decididos' + (t.imp ? ' (' + t.imp + ' descartados automaticamente como incorretos)' : ''), el('div', { style: 'display:grid;gap:10px' }, vizPilha(ver, t.decididos), vizLegenda(ver, t.decididos), vizTabela(['Veredito', 'Leads'], ver.map(function (x) { return [x.rot, x.n]; })))),
+      vizCard('Qual era o motivo real?', 'Nos ' + t.naoTotal + ' leads em que o motivo estava incorreto', el('div', { style: 'display:grid;gap:10px' }, vizLinhas(mot, t.naoTotal), mot.length ? vizTabela(['Motivo real', 'Leads'], mot) : null)),
       por.length ? vizCard('Por que estava errado', 'Marcações das análises manuais', el('div', { style: 'display:grid;gap:10px' }, vizLinhas(por, t.nao), vizTabela(['Motivo', 'Leads'], por))) : null,
       vizCard('Quanto tempo o cliente falou', 'Maior fala por lead, dividida por veredito. Conversa curta quase nunca chega à pergunta do Uber/99.', el('div', { style: 'display:grid;gap:10px' }, colunas, vizLegenda(ver, 0), vizTabela(['Maior fala', 'Correto', 'Incorreto', 'Sem como avaliar'], d.dur.map(function (x) { return [x.rot, x.sim, x.nao, x.duvida]; })))),
       vizCard('Comportamento da Natasha', nc ? 'Nos ' + nc + ' leads com essa avaliação' : 'Ainda sem avaliações', el('div', { style: 'display:grid;gap:10px' }, vizLinhas(comp, nc), nc ? vizTabela(['Comportamento', 'Leads'], comp) : null)),
@@ -5105,12 +5119,11 @@ function iaRenderInicio() {
       u.foco ? el('button', { type: 'button', class: 'btn btn-linha', onclick: function () { u.foco = false; renderIA(); } }, '☰ Ver lista e filtros') : null));
 }
 function iaRenderResumo() {
-  var t = iaStats(), pct = function (n) { return t.ana ? fmtPct(n / t.ana * 100) : '—'; };
+  var t = iaStats(), pct = function (n) { return t.decididos ? fmtPct(n / t.decididos * 100) : '—'; };
   $('#ia-sub').textContent = estado.ia.importadoEm ? 'Base de ' + dataHoraBR(estado.ia.importadoEm) + (estado.ia.arquivo ? ' · ' + estado.ia.arquivo : '') : 'Nenhum arquivo importado';
   $('#ia-resumo').replaceChildren.apply($('#ia-resumo'), [
-    statEquipe('Leads na base', String(t.total), t.tels + ' ' + plural(t.tels, 'telefone distinto', 'telefones distintos') + (t.imp ? ' · ' + t.imp + ' impossíveis de validar (sem ligação ≥ ' + iaFalaMin() + ' s)' : '')), statEquipe('Analisados (total)', t.ana + ' / ' + (t.total - t.imp), t.man + ' manuais' + (t.viaC ? ' · ' + t.viaC + ' IA' : '') + (t.viaT ? ' · ' + t.viaT + ' via transcrição' : '') + ' · faltam ' + t.pend),
-    statEquipe('Motivo correto', t.sim + ' (' + pct(t.sim) + ')'), statEquipe('Motivo incorreto', t.nao + ' (' + pct(t.nao) + ')', null, t.nao > 0), statEquipe('Sem como avaliar', t.duvida + ' (' + pct(t.duvida) + ')'),
-    t.imp ? statEquipe('Impossíveis de validar', t.imp + ' ' + plural(t.imp, 'lead', 'leads'), t.impLig + ' ligações, nenhuma com fala ≥ ' + iaFalaMin() + ' s: não baixadas') : null,
+    statEquipe('Leads na base', String(t.total), t.tels + ' ' + plural(t.tels, 'telefone distinto', 'telefones distintos')), statEquipe('Analisados (total)', t.decididos + ' / ' + t.total, t.man + ' manuais' + (t.viaC ? ' · ' + t.viaC + ' IA' : '') + (t.viaT ? ' · ' + t.viaT + ' via transcrição' : '') + (t.imp ? ' · ' + t.imp + ' descartados (sem ligação ≥ ' + iaFalaMin() + ' s)' : '') + ' · faltam ' + t.pend),
+    statEquipe('Motivo correto', t.sim + ' (' + pct(t.sim) + ')'), statEquipe('Motivo incorreto', t.naoTotal + ' (' + pct(t.naoTotal) + ')', t.imp ? 'inclui ' + t.imp + ' descartados automaticamente' : null, t.naoTotal > 0), statEquipe('Sem como avaliar', t.duvida + ' (' + pct(t.duvida) + ')'),
     t.auto.total ? statEquipe('Por transcrição (auto)', t.auto.total + ' leads', t.auto.sim + ' corretos · ' + t.auto.nao + ' incorretos · ' + t.auto.duvida + ' a conferir') : null].filter(Boolean));
 }
 function iaRenderLista() {
@@ -5121,7 +5134,7 @@ function iaRenderLista() {
   cont.replaceChildren.apply(cont, lista.slice(0, 400).map(function (l) {
     var st = iaStatus(estado.ia.analises[l.codigoNorm]), ult = l.ligacoes.length ? l.ligacoes[l.ligacoes.length - 1].qual : '';
     return el('button', { type: 'button', class: 'ia-item' + (u.sel === l.codigoNorm ? ' sel' : ''), dataset: { cod: l.codigoNorm } },
-      el('b', null, semaforo(iaNotaGeral(l)), l.codigo, ' ', iaImpossivel(l) ? tag('IMPOSSÍVEL VALIDAR', 'cinza', 'Nenhuma ligação com fala suficiente') : tag(IA_ROTULO[st], IA_COR[st]), iaDiverge(estado.ia.analises[l.codigoNorm]) ? ' ' : '', iaDiverge(estado.ia.analises[l.codigoNorm]) ? tag('DIVERGE DA IA', 'amarelo') : null, pendLista[l.codigoNorm] ? ' ' : '', pendLista[l.codigoNorm] ? tag('FALTA TRANSCREVER', 'amarelo', 'Tem áudio baixado que ainda não foi transcrito') : null),
+      el('b', null, semaforo(iaNotaGeral(l)), l.codigo, ' ', iaImpossivel(l) ? [tag(IA_ROTULO.nao, IA_COR.nao), ' ', tag('AUTO · sem fala ≥ ' + iaFalaMin() + ' s', 'cinza', 'Descartado automaticamente: nenhuma ligação com fala suficiente')] : tag(IA_ROTULO[st], IA_COR[st]), iaDiverge(estado.ia.analises[l.codigoNorm]) ? ' ' : '', iaDiverge(estado.ia.analises[l.codigoNorm]) ? tag('DIVERGE DA IA', 'amarelo') : null, pendLista[l.codigoNorm] ? ' ' : '', pendLista[l.codigoNorm] ? tag('FALTA TRANSCREVER', 'amarelo', 'Tem áudio baixado que ainda não foi transcrito') : null),
       el('span', null, (formatTel(l.tel) || 'sem telefone') + (iaMaiorFala(l) ? ' · maior fala ' + fmtSeg(iaMaiorFala(l)) : '')),
       el('span', null, l.ligacoes.length + ' ' + plural(l.ligacoes.length, 'ligação IA', 'ligações IA') + (ult && ult !== '-' ? ' · ' + ult : '') + (l.dataPerdido ? ' · perdido ' + dataBR(l.dataPerdido).slice(0, 5) : '')));
   }));
@@ -5144,7 +5157,7 @@ function iaRenderRelatorio() {
     el('pre', { class: 'relatorio', style: 'margin:0' }, iaResumoTexto()),
     el('div', { class: 'acoes' },
       el('button', { type: 'button', class: 'btn btn-primario', disabled: !t.ana, onclick: function () { baixar('finx_validacao_perdido_' + dataISO(new Date()) + '.csv', iaCSV(), 'text/csv;charset=utf-8'); toast('Relatório exportado (' + t.ana + ' análises).'); } }, '⭳ Exportar relatório (CSV padrão)'),
-      t.imp ? el('button', { type: 'button', class: 'btn btn-linha', onclick: function () { baixar('finx_leads_impossiveis_de_validar_' + dataISO(new Date()) + '.csv', iaCSVImpossiveis(), 'text/csv;charset=utf-8'); toast('Lista exportada (' + t.imp + ' leads).'); } }, '⭳ Leads impossíveis de validar (CSV)') : null,
+      t.imp ? el('button', { type: 'button', class: 'btn btn-linha', onclick: function () { baixar('finx_leads_impossiveis_de_validar_' + dataISO(new Date()) + '.csv', iaCSVImpossiveis(), 'text/csv;charset=utf-8'); toast('Lista exportada (' + t.imp + ' leads).'); } }, '⭳ Descartados automaticamente (CSV)') : null,
       el('button', { type: 'button', class: 'btn btn-sec', onclick: function () { copiarTexto(iaResumoTexto()).then(function (ok) { toast(ok ? 'Resumo copiado.' : 'Não consegui copiar.', { tipo: ok ? 'ok' : 'erro' }); }); } }, '⧉ Copiar resumo'))));
 }
 function iaRenderDetalhe() {
@@ -5321,7 +5334,7 @@ function iaRenderDetalhe() {
           l.uuid ? el('a', { class: 'btn btn-linha', href: urlPadraoDryve(l.uuid), target: '_blank', rel: 'noopener noreferrer', title: 'Abre o lead no Dryve Pro (nova aba)' }, '↗ Abrir no Dryve') : el('button', { type: 'button', class: 'btn btn-linha', disabled: true }, 'Sem link do Dryve'),
           el('button', { type: 'button', class: 'btn btn-linha', onclick: function () { copiarTexto(l.codigo).then(function () { toast('Código copiado.'); }); } }, '⧉ Código'))),
       el('div', { class: 'ck-fatos' }, ['Motivo registrado: ' + l.motivo, l.detalhes ? 'Detalhe: ' + l.detalhes : '', l.etapa ? 'Etapa: ' + l.etapa : '', l.origem ? 'Origem: ' + l.origem : '', l.dataLead ? 'Lead criado ' + dataBR(l.dataLead) : '', l.dataPerdido ? 'Perdido em ' + dataBR(l.dataPerdido) : ''].filter(Boolean).map(function (t) { return el('span', null, t); })),
-      iaImpossivel(l) ? el('div', { class: 'ia-auto duvida' }, el('div', { class: 'rotulo' }, 'IMPOSSÍVEL VALIDAR'), el('b', null, iaTxtImpossivel(l, iaImpossivel(l))), el('p', { class: 'dica', style: 'margin:6px 0 0' }, 'Se mesmo assim você ouvir e analisar este lead, a sua análise manual passa a valer. Dá para mudar o limite em “Fala mínima” (Baixar gravações).')) : null,
+      iaImpossivel(l) ? el('div', { class: 'ia-auto duvida' }, el('div', { class: 'rotulo' }, 'DESCARTADO AUTOMATICAMENTE · MOTIVO INCORRETO'), el('b', null, iaTxtImpossivel(l, iaImpossivel(l))), el('p', { class: 'dica', style: 'margin:6px 0 0' }, 'Se mesmo assim você ouvir e analisar este lead, a sua análise manual passa a valer. Dá para mudar o limite em “Fala mínima” (Baixar gravações).')) : null,
       el('div', { class: 'ia-sinal ' + sinal.tom }, sinal.txt),
       l.ligacoes.length ? el('div', { class: 'tabela-wrap', style: 'max-height:260px' }, el('table', { style: 'min-width:760px' },
         el('thead', null, el('tr', null, ['Quando', 'Qualificação da IA', 'Fala', 'Atendeu', 'Desligamento', 'Situação', 'IA', 'Gravação'].map(function (t) { return el('th', { scope: 'col' }, el('span', null, t)); }))),
