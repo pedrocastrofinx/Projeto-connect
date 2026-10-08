@@ -675,7 +675,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
             <select id="ia-filtro">
               <option value="pend">Pendentes de análise</option><option value="ana">Já analisados</option>
               <option value="nao">Motivo incorreto</option><option value="sim">Motivo correto</option>
-              <option value="duvida">Sem como avaliar</option><option value="transc">Com transcrição (análise automática)</option><option value="todos">Todos</option>
+              <option value="duvida">Sem como avaliar</option><option value="transc">Com transcrição (análise automática)</option><option value="diverge">⚠ Divergem do Copilot</option><option value="todos">Todos</option>
             </select></div>
           <div class="campo"><label for="ia-ordem">Ordem da fila</label>
             <select id="ia-ordem"><option value="dia">Hoje primeiro, depois ontem…; no dia, as mais longas</option><option value="fala">Mais longas de todos os dias</option><option value="data">Mais recentes primeiro</option></select></div>
@@ -4163,6 +4163,7 @@ async function importarArquivoBase(arquivo) {
 function tipoDasLinhas(linhas) {
   var cab = (linhas[0] || []).map(colunaKey), tem = function (lista) { return lista.some(function (n) { return cab.indexOf(n) !== -1; }); };
   if (tem(['pedidosreferencecode', 'perdidosreferencecode']) && tem(['iaqualification'])) return 'iaperdidos';
+  if (tem(['origemdaanalise']) && tem(['motivocorreto']) && tem(['lead'])) return 'analisespainel';
   if (tem(['lead']) && tem(['correto']) && tem(['confirmousermotoristadeapp', 'qualificacaodaiacorreta', 'comportamentodaia'])) return 'parecercopilot';
   if ((tem(['id']) && tem(['texto']) && tem(['duracaos'])) || (tem(['iddaligacao']) && tem(['transcricao']))) return 'transcricoes';
   if (tem(['qualificationname']) && tem(['recording']) && tem(['campaignname'])) return 'chamadasia';
@@ -4278,6 +4279,15 @@ function formatTel(t) {
 }
 function salvarIA() { return salvarChave(CH.ia, estado.ia); }
 function iaTxt(v, n) { return limparTexto(v).slice(0, n); }
+function iaSanCop(c) {
+  if (!c || typeof c !== 'object') return null;
+  var v = function (x) { return ['sim', 'nao', 'duvida'].indexOf(x) >= 0 ? x : ''; };
+  return { correto: v(c.correto), conf: iaTxt(c.conf, 20), qualOk: ['sim', 'nao'].indexOf(c.qualOk) >= 0 ? c.qualOk : '', qualSug: iaTxt(c.qualSug, 60), comp: ['boa', 'media', 'ruim'].indexOf(c.comp) >= 0 ? c.comp : '', motivo: iaTxt(c.motivo, 80), porque: iaTxt(c.porque, 500), evid: iaTxt(c.evid, 300), perc: iaTxt(c.perc, 500) };
+}
+function iaSanVal(c) {
+  if (!c || typeof c !== 'object') return null;
+  return { v: ['sim', 'nao', 'duvida'].indexOf(c.v) >= 0 ? c.v : '', conf: iaTxt(c.conf, 30), txt: iaTxt(c.txt, 900) };
+}
 function sanitizarIA(o) {
   var r = iaVazio();
   if (!o || typeof o !== 'object') return r;
@@ -4314,7 +4324,7 @@ function sanitizarIA(o) {
   Object.keys(A).slice(0, 20000).forEach(function (k) {
     var a = A[k]; if (!a || typeof a !== 'object') return;
     var lista = function (v) { return (Array.isArray(v) ? v : []).slice(0, 12).map(function (t) { return iaTxt(t, 90); }).filter(Boolean); };
-    r.analises[iaTxt(k, 40)] = { comp: ['boa', 'media', 'ruim'].indexOf(a.comp) >= 0 ? a.comp : '', correto: ['sim', 'nao', 'duvida'].indexOf(a.correto) >= 0 ? a.correto : '', arg: ['sim', 'parcial', 'nao', 'na'].indexOf(a.arg) >= 0 ? a.arg : '', via: a.via === 'transcricao' || a.via === 'copilot' ? a.via : '', qualOk: ['sim', 'nao'].indexOf(a.qualOk) >= 0 ? a.qualOk : '', qualCerta: iaTxt(a.qualCerta, 60), qualIA: iaTxt(a.qualIA, 60), situ: lista(a.situ), porque: lista(a.porque), porqueTxt: iaTxt(a.porqueTxt, 400), motivoReal: iaTxt(a.motivoReal, 80),
+    r.analises[iaTxt(k, 40)] = { comp: ['boa', 'media', 'ruim'].indexOf(a.comp) >= 0 ? a.comp : '', correto: ['sim', 'nao', 'duvida'].indexOf(a.correto) >= 0 ? a.correto : '', arg: ['sim', 'parcial', 'nao', 'na'].indexOf(a.arg) >= 0 ? a.arg : '', via: a.via === 'transcricao' || a.via === 'copilot' ? a.via : '', cop: iaSanCop(a.cop), val: iaSanVal(a.val), qualOk: ['sim', 'nao'].indexOf(a.qualOk) >= 0 ? a.qualOk : '', qualCerta: iaTxt(a.qualCerta, 60), qualIA: iaTxt(a.qualIA, 60), situ: lista(a.situ), porque: lista(a.porque), porqueTxt: iaTxt(a.porqueTxt, 400), motivoReal: iaTxt(a.motivoReal, 80),
       evid: lista(a.evid), obs: iaTxt(a.obs, 600), parecer: String(a.parecer || '').slice(0, 4000), por: iaTxt(a.por, 80), em: Number.isFinite(a.em) ? a.em : 0 };
   });
   return r;
@@ -4363,10 +4373,16 @@ function iaBuscarAudio(g) {
    se o 3C responder uma página (login/erro) em vez de um arquivo, o iframe “carrega” e avisamos. */
 /* Abre a gravação numa aba (navegação normal, com o seu login do 3C): o 3C devolve o arquivo e o navegador baixa. Retorna null se o navegador bloquear o pop-up. */
 function iaAbrirDownload(g) {
-  var w = null; try { w = window.open(urlGravacao(g.id), '_blank'); } catch (e) { w = null; }
-  if (w) { try { w.opener = null; } catch (e) { /* ok */ } setTimeout(function () { try { w.close(); } catch (e) { /* ok */ } }, 10000); }
+  /* UMA aba só, reaproveitada em todos os downloads (nome fixo): não acumula abas. Fecha sozinha ao terminar. */
+  var w = null; try { w = window.open(urlGravacao(g.id), 'finx_download_audio'); } catch (e) { w = null; }
+  if (w) {
+    clearTimeout(iaAbaTimer); iaAbaTimer = setTimeout(iaFecharAba, 15000);
+    iaAbaRef = w;
+  }
   return w;
 }
+var iaAbaRef = null, iaAbaTimer = 0;
+function iaFecharAba() { try { if (iaAbaRef && !iaAbaRef.closed) iaAbaRef.close(); } catch (e) { /* o navegador pode não deixar fechar */ } iaAbaRef = null; }
 function iaBaixarPorNavegador(g) {
   return new Promise(function (resolve, reject) {
     var f = document.createElement('iframe'), pronto = false;
@@ -4470,34 +4486,74 @@ function importarChamadasIA(linhas) {
   return 'telefonia: ' + total + ' ligações lidas — ' + res.id + ' casadas pelo id da chamada' + (res.tel ? ', ' + res.tel + ' pelo telefone do lead (ligações que não vinham na planilha)' : '') + (res.sem ? ', ' + res.sem + ' de outros leads/campanhas (ignoradas)' : '') + (estado.ia.leads.length ? '' : '. Ainda não há leads: ficam guardadas e serão cruzadas quando você importar a planilha “agente IA perdidos por motivo”') + '.';
 }
 /* Transcrições geradas pelo transcrever.py (id da ligação; duracao_s; texto). Ficam só neste navegador. */
-/* Resposta do Copilot (CSV no formato do prompt): vira análise “via Copilot”. Nunca sobrescreve uma análise que você já fez à mão. */
+/* Vereditos escritos em texto livre (SIM / NÃO / SEM DADOS / Sim / Não / Sem como avaliar) */
+function iaVeredito(v) { v = normBusca(v); return /^sim/.test(v) ? 'sim' : /^nao/.test(v) ? 'nao' : /dado|duvid|sem como|a conferir/.test(v) ? 'duvida' : ''; }
+function iaCompTxt(v) { v = normBusca(v); return /^boa/.test(v) ? 'boa' : /^media/.test(v) ? 'media' : /^ruim/.test(v) ? 'ruim' : ''; }
+/* Diverge = o Copilot e a análise que NÃO veio dele dizem coisas diferentes (um “sem como avaliar” não conta como divergência) */
+function iaDiverge(a) {
+  return !!(a && a.cop && a.cop.correto && a.correto && a.via !== 'copilot' && a.cop.correto !== a.correto && a.cop.correto !== 'duvida' && a.correto !== 'duvida');
+}
+/* Parecer do Copilot (CSV/planilha no formato do prompt, ou a planilha completa que ele devolve). Guarda o parecer SEM sobrescrever uma análise sua. */
 function importarParecerCopilot(linhas) {
-  var cab = linhas[0].map(colunaKey), ix = function (n) { return cab.indexOf(n); };
+  var cab = linhas[0].map(colunaKey), ix = function () { for (var i = 0; i < arguments.length; i++) { var k = cab.indexOf(arguments[i]); if (k >= 0) return k; } return -1; };
   var C = { lead: ix('lead'), cor: ix('correto'), conf: ix('confirmousermotoristadeapp'), qok: ix('qualificacaodaiacorreta'), qsug: ix('qualificacaosugerida'), comp: ix('comportamentodaia'),
-    mot: ix('motivosugerido'), pq: ix('porque'), ev: ix('evidencia') };
-  var cel = function (r, k) { return C[k] >= 0 && r[C[k]] !== undefined ? String(r[C[k]]).trim() : ''; };
+    mot: ix('motivosugerido'), pq: ix('porque', 'basedetectivadadecisao', 'baseobjetivadadecisao'), perc: ix('percepcaodaauditoria'), ev: ix('evidencialiteraldocliente', 'evidenciadocliente', 'evidencia') };
+  var cel = function (r, k) { return C[k] >= 0 && r[C[k]] !== undefined && r[C[k]] !== null ? String(r[C[k]]).trim().replace(/^["“”]+|["“”]+$/g, '') : ''; };
   var mapa = new Map(); estado.ia.leads.forEach(function (l) { mapa.set(l.codigoNorm, l); });
-  var novas = 0, mantidas = 0, semLead = 0;
+  var novas = 0, soParecer = 0, semLead = 0, div = 0;
   for (var i = 1; i < linhas.length; i++) {
-    var r = linhas[i], l = mapa.get(normLead(cel(r, 'lead')));
-    if (!normLead(cel(r, 'lead'))) continue;
-    if (!l) { semLead++; continue; }
-    var atual = estado.ia.analises[l.codigoNorm];
-    if (atual && iaStatus(atual) && atual.via !== 'copilot') { mantidas++; continue; }
-    var v = normBusca(cel(r, 'cor')), correto = /^sim/.test(v) ? 'sim' : /^nao/.test(v) ? 'nao' : /dado|duvid|sem/.test(v) ? 'duvida' : '';
-    if (!correto) continue;
-    var a = iaAnalise(l), comp = normBusca(cel(r, 'comp')), q = normBusca(cel(r, 'qok'));
+    var r = linhas[i], nl = normLead(cel(r, 'lead'));
+    if (!nl) continue;
+    var l = mapa.get(nl); if (!l) { semLead++; continue; }
+    var correto = iaVeredito(cel(r, 'cor')); if (!correto) continue;
+    var a = iaAnalise(l), tinha = iaStatus(a) && a.via !== 'copilot';
+    a.cop = iaSanCop({ correto: correto, conf: cel(r, 'conf'), qualOk: iaVeredito(cel(r, 'qok')), qualSug: cel(r, 'qsug'), comp: iaCompTxt(cel(r, 'comp')), motivo: cel(r, 'mot'), porque: cel(r, 'pq'), evid: cel(r, 'ev'), perc: cel(r, 'perc') });
+    if (tinha) { soParecer++; if (iaDiverge(a)) div++; continue; }
+    var c = a.cop;
     a.correto = correto; a.via = 'copilot'; a.por = 'Copilot'; a.em = Date.now();
-    a.comp = /^boa/.test(comp) ? 'boa' : /^media/.test(comp) ? 'media' : /^ruim/.test(comp) ? 'ruim' : a.comp;
-    a.qualOk = /^sim/.test(q) ? 'sim' : /^nao/.test(q) ? 'nao' : a.qualOk; a.qualIA = iaQualPrincipal(l);
-    a.qualCerta = a.qualOk === 'nao' ? iaTxt(cel(r, 'qsug'), 60) : '';
-    a.motivoReal = correto === 'nao' ? iaTxt(cel(r, 'mot'), 80) : '';
-    a.porqueTxt = iaTxt(cel(r, 'pq'), 400); a.porque = []; a.obs = iaTxt(cel(r, 'ev') ? 'Evidência: ' + cel(r, 'ev') : '', 600);
+    a.comp = c.comp || a.comp; a.qualOk = c.qualOk || a.qualOk; a.qualIA = iaQualPrincipal(l); a.qualCerta = a.qualOk === 'nao' ? c.qualSug : '';
+    a.motivoReal = correto === 'nao' ? c.motivo : ''; a.porqueTxt = c.porque; a.porque = []; a.obs = iaTxt(c.evid ? 'Evidência: ' + c.evid + (c.perc ? ' · ' + c.perc : '') : c.perc, 600);
     a.evid = ['Parecer do Copilot (a partir da transcrição)'];
     novas++;
   }
   salvarIA(); renderTudo();
-  return 'parecer do Copilot: ' + novas + ' ' + plural(novas, 'análise importada', 'análises importadas') + ' (via Copilot)' + (mantidas ? ', ' + mantidas + ' já analisadas por você (mantidas)' : '') + (semLead ? ', ' + semLead + ' leads que não estão na base' : '') + '.';
+  return 'parecer do Copilot: ' + novas + ' ' + plural(novas, 'análise nova', 'análises novas') + ' (via Copilot)' + (soParecer ? ', ' + soParecer + ' em leads que você já analisou (guardei o parecer ao lado, sem sobrescrever' + (div ? '; ' + div + ' divergem da sua' : '') + ')' : '') + (semLead ? ', ' + semLead + ' leads que não estão na base' : '') + '.';
+}
+/* Planilha exportada pelo painel (ou a CONSOLIDADA): restaura as análises SEM duplicar nem sobrescrever o que já existe */
+function importarAnalisesPainel(linhas) {
+  var cab = linhas[0].map(colunaKey), ix = function () { for (var i = 0; i < arguments.length; i++) { var k = cab.indexOf(arguments[i]); if (k >= 0) return k; } return -1; };
+  var pref = function (p) { return cab.findIndex(function (c) { return c.indexOf(p) === 0; }); };
+  var C = { lead: ix('lead'), orig: ix('origemdaanalise'), qia: ix('qualificacaodaia'), qok: ix('qualificacaodaiacorreta'), qcerta: ix('qualificacaocorretaseerrada'), cor: ix('motivocorreto'), arg: pref('iaapresentou'), sit: ix('situacaodaligacao'),
+    pq: ix('porque'), mot: ix('motivosugerido'), evid: ix('evidencias'), comp: ix('comportamentodaiaanalista'), obs: ix('observacao'), por: ix('analista'),
+    cCor: ix('copilotcorreto'), cConf: ix('copilotconfirmousermotoristadeapp'), cQok: ix('copilotqualificacaodaiacorreta'), cQs: ix('copilotqualificacaosugerida'), cComp: ix('copilotcomportamentodaia'), cMot: ix('copilotmotivosugerido'), cEv: ix('copilotevidencialiteraldocliente'), cPerc: ix('copilotpercepcaodaauditoria'),
+    vV: ix('vereditofinalvalidado'), vC: ix('confianca'), vT: ix('comentariodavalidacao') };
+  var cel = function (r, k) { return C[k] >= 0 && r[C[k]] !== undefined && r[C[k]] !== null ? String(r[C[k]]).trim() : ''; };
+  var lista = function (t) { return t ? t.split(/\s*\|\s*/).filter(Boolean) : []; };
+  var mapa = new Map(); estado.ia.leads.forEach(function (l) { mapa.set(l.codigoNorm, l); });
+  var novas = 0, mantidas = 0, semLead = 0, comParecer = 0, comVal = 0;
+  for (var i = 1; i < linhas.length; i++) {
+    var r = linhas[i], nl = normLead(cel(r, 'lead'));
+    if (!nl) continue;
+    var l = mapa.get(nl); if (!l) { semLead++; continue; }
+    var a = iaAnalise(l), tinha = !!iaStatus(a);
+    if (cel(r, 'cCor')) {
+      a.cop = iaSanCop({ correto: iaVeredito(cel(r, 'cCor')), conf: cel(r, 'cConf'), qualOk: iaVeredito(cel(r, 'cQok')), qualSug: cel(r, 'cQs'), comp: iaCompTxt(cel(r, 'cComp')), motivo: cel(r, 'cMot'), porque: '', evid: cel(r, 'cEv'), perc: cel(r, 'cPerc') }); comParecer++;
+    }
+    if (cel(r, 'vV')) { a.val = iaSanVal({ v: iaVeredito(cel(r, 'vV')), conf: cel(r, 'vC'), txt: cel(r, 'vT') }); comVal++; }
+    if (tinha) { mantidas++; continue; }
+    var correto = iaVeredito(cel(r, 'cor')); if (!correto) continue;
+    var orig = normBusca(cel(r, 'orig')), via = /copilot/.test(orig) ? 'copilot' : /transcr/.test(orig) ? 'transcricao' : '';
+    var q = lista(cel(r, 'pq')), conhecidos = q.filter(function (x) { return IA_PORQUES.indexOf(x) >= 0; }), livres = q.filter(function (x) { return IA_PORQUES.indexOf(x) < 0; });
+    var ag = normBusca(cel(r, 'arg'));
+    a.correto = correto; a.via = via; a.por = cel(r, 'por') || (via === 'copilot' ? 'Copilot' : ''); a.em = Date.now();
+    a.arg = /^sim/.test(ag) ? 'sim' : /^parcial/.test(ag) ? 'parcial' : /^nao deu/.test(ag) ? 'na' : /^nao/.test(ag) ? 'nao' : '';
+    a.qualOk = iaVeredito(cel(r, 'qok')) === 'sim' ? 'sim' : iaVeredito(cel(r, 'qok')) === 'nao' ? 'nao' : ''; a.qualCerta = iaTxt(cel(r, 'qcerta'), 60); a.qualIA = iaTxt(cel(r, 'qia'), 60);
+    a.situ = lista(cel(r, 'sit')).slice(0, 12); a.porque = conhecidos; a.porqueTxt = iaTxt(livres.join(' | '), 400); a.motivoReal = iaTxt(cel(r, 'mot'), 80);
+    a.evid = lista(cel(r, 'evid')).slice(0, 12); a.comp = iaCompTxt(cel(r, 'comp')); a.obs = iaTxt(cel(r, 'obs'), 600);
+    novas++;
+  }
+  salvarIA(); renderTudo();
+  return 'análises do painel: ' + novas + ' ' + plural(novas, 'restaurada', 'restauradas') + (mantidas ? ', ' + mantidas + ' leads já tinham análise (mantidas, sem duplicar)' : '') + (comParecer ? '; ' + comParecer + ' pareceres do Copilot' : '') + (comVal ? '; ' + comVal + ' vereditos validados' : '') + (semLead ? '; ' + semLead + ' leads que não estão na base' : '') + '.';
 }
 function importarTranscricoes(linhas) {
   var cab = linhas[0].map(colunaKey), ci = cab.indexOf('id') >= 0 ? cab.indexOf('id') : cab.indexOf('iddaligacao'), ct = cab.indexOf('texto') >= 0 ? cab.indexOf('texto') : cab.indexOf('transcricao'), lidas = 0;
@@ -4602,7 +4658,7 @@ function iaLerParecer(texto) {
 }
 function iaAnalise(l) {
   var a = estado.ia.analises[l.codigoNorm];
-  if (!a) { a = estado.ia.analises[l.codigoNorm] = { comp: '', correto: '', arg: '', via: '', qualOk: '', qualCerta: '', qualIA: '', situ: [], porque: [], porqueTxt: '', motivoReal: '', evid: [], obs: '', parecer: '', por: '', em: 0 }; }
+  if (!a) { a = estado.ia.analises[l.codigoNorm] = { comp: '', correto: '', arg: '', via: '', qualOk: '', qualCerta: '', qualIA: '', cop: null, val: null, situ: [], porque: [], porqueTxt: '', motivoReal: '', evid: [], obs: '', parecer: '', por: '', em: 0 }; }
   return a;
 }
 /* Conformidade da IA, como no site: % de “Sim” entre os itens respondidos (parcial vale meio ponto; sem como avaliar / não se aplica ficam de fora) */
@@ -4641,6 +4697,7 @@ function iaFiltrados() {
     if (u.filtro === 'ana') return !!st;
     if (u.filtro === 'todos') return true;
     if (u.filtro === 'transc') return iaTranscDoLead(l).length > 0;
+    if (u.filtro === 'diverge') return iaDiverge(estado.ia.analises[l.codigoNorm]);
     return st === u.filtro;
   }).sort(iaComparar);
 }
@@ -4659,15 +4716,20 @@ function iaStats() {
   t.ana = t.sim + t.nao + t.duvida; t.pend = t.total - t.ana;
   return t;
 }
+function iaColsCopilot(a) {
+  var R = { sim: 'SIM', nao: 'NÃO', duvida: 'SEM DADOS' }, c = a.cop, v = a.val;
+  return [c ? R[c.correto] || '' : '', c ? c.conf : '', c ? { sim: 'SIM', nao: 'NÃO' }[c.qualOk] || '' : '', c ? c.qualSug : '', c ? (c.comp ? IA_COMP[c.comp].rot.toUpperCase() : '') : '', c ? c.motivo : '', c ? c.evid : '', c ? c.perc : '',
+    !c ? '' : a.via === 'copilot' ? 'Só Copilot' : iaDiverge(a) ? 'Divergem' : (a.correto && c.correto ? 'Concordam' : ''), v ? R[v.v] || '' : '', v ? v.conf : '', v ? v.txt : ''];
+}
 function iaCSV() {
-  var cab = ['Data da análise', 'Analista', 'Lead', 'Telefone', 'Link Dryve', 'Data perdido', 'Motivo registrado', 'Detalhe do motivo', 'Origem', 'Origem da análise', 'Qualificação da IA', 'Qualificação da IA correta?', 'Qualificação correta (se errada)', 'Motivo correto?', 'IA apresentou o serviço e qualificou (SDR)', 'Situação da ligação', 'Conformidade da IA (%)', 'Por quê', 'Motivo sugerido', 'Evidências', 'Ligações IA', 'Maior fala IA (s)', 'Última qualificação IA', 'Comportamento da IA (analista)', 'Sinal do painel', 'Parecer da IA', 'Observação'];
+  var cab = ['Data da análise', 'Analista', 'Lead', 'Telefone', 'Link Dryve', 'Data perdido', 'Motivo registrado', 'Detalhe do motivo', 'Origem', 'Origem da análise', 'Qualificação da IA', 'Qualificação da IA correta?', 'Qualificação correta (se errada)', 'Motivo correto?', 'IA apresentou o serviço e qualificou (SDR)', 'Situação da ligação', 'Conformidade da IA (%)', 'Por quê', 'Motivo sugerido', 'Evidências', 'Ligações IA', 'Maior fala IA (s)', 'Última qualificação IA', 'Comportamento da IA (analista)', 'Sinal do painel', 'Parecer da IA', 'Observação', 'Copilot: Correto', 'Copilot: Confirmou ser motorista de app', 'Copilot: Qualificação da IA correta', 'Copilot: Qualificação sugerida', 'Copilot: Comportamento da IA', 'Copilot: Motivo sugerido', 'Copilot: Evidência literal do cliente', 'Copilot: Percepção da auditoria', 'Comparação manual × Copilot', 'Veredito final (validado)', 'Confiança', 'Comentário da validação'];
   var linhas = [cab.join(';')];
   estado.ia.leads.forEach(function (l) {
     var a = estado.ia.analises[l.codigoNorm]; if (!iaStatus(a)) return;
     var ult = l.ligacoes.length ? l.ligacoes[l.ligacoes.length - 1].qual : '';
     linhas.push([a.em ? dataBR(dataISO(new Date(a.em))) : '', a.por, l.codigo, formatTel(l.tel), urlPadraoDryve(l.uuid), l.dataPerdido ? dataBR(l.dataPerdido) : '', l.motivo, l.detalhes, l.origem, a.via === 'transcricao' ? 'Via transcrição' : a.via === 'copilot' ? 'Via Copilot' : 'Manual', a.qualIA || iaQualPrincipal(l), { sim: 'Sim', nao: 'Não' }[a.qualOk] || 'Sim', a.qualOk === 'nao' ? a.qualCerta : '',
       { sim: 'Sim', nao: 'Não', duvida: 'Sem como avaliar' }[a.correto], { sim: 'Sim', parcial: 'Parcialmente', nao: 'Não', na: 'Não deu tempo (cliente desligou)' }[a.arg] || '', a.situ.join(' | '), iaConformidade(a) === null ? '' : iaConformidade(a), a.porque.concat(a.porqueTxt ? [a.porqueTxt] : []).join(' | '), a.motivoReal, a.evid.join(' | '),
-      l.ligacoes.length, l.ligacoes.reduce(function (m, g) { return Math.max(m, g.fala); }, 0), ult, a.comp ? IA_COMP[a.comp].rot : '', iaNotaGeral(l) ? IA_COMP[iaNotaGeral(l)].rot : '', a.parecer.replace(/\s+/g, ' ').trim(), a.obs].map(campoCSV).join(';'));
+      l.ligacoes.length, l.ligacoes.reduce(function (m, g) { return Math.max(m, g.fala); }, 0), ult, a.comp ? IA_COMP[a.comp].rot : '', iaNotaGeral(l) ? IA_COMP[iaNotaGeral(l)].rot : '', a.parecer.replace(/\s+/g, ' ').trim(), a.obs].concat(iaColsCopilot(a)).map(campoCSV).join(';'));
   });
   return '\uFEFF' + linhas.join('\r\n') + '\r\n';
 }
@@ -4707,7 +4769,7 @@ function iaResumoTexto() {
   return ['Validação de perdido (' + dataBR(dataISO(new Date())) + '):', 'Leads na base: ' + t.total + ' · analisados: ' + t.ana + ' · pendentes: ' + t.pend,
     'Motivo “Motorista de App” correto: ' + t.sim + ' (' + pct(t.sim) + ')', 'Incorreto: ' + t.nao + ' (' + pct(t.nao) + ')', 'Sem como avaliar: ' + t.duvida + ' (' + pct(t.duvida) + ')',
     'Comportamento da IA nas análises: boa ' + t.comp.boa + ' · média ' + t.comp.media + ' · ruim ' + t.comp.ruim, 'Principais razões do erro: ' + top(t.porque), 'Motivos sugeridos: ' + top(t.motivos),
-    '', 'Qualificação da IA marcada como errada: ' + t.qualErrada + ' de ' + t.ana + ' análises', 'Análises manuais: ' + t.man + ' · aceitas via transcrição: ' + t.viaT + ' · importadas do Copilot: ' + t.viaC,
+    '', 'Qualificação da IA marcada como errada: ' + t.qualErrada + ' de ' + t.ana + ' análises', 'Copilot: ' + estado.ia.leads.filter(function (x) { var q = estado.ia.analises[x.codigoNorm]; return q && q.cop; }).length + ' pareceres · divergem da sua análise: ' + estado.ia.leads.filter(function (x) { return iaDiverge(estado.ia.analises[x.codigoNorm]); }).length, 'Veredito final validado: ' + (function () { var c = { sim: 0, nao: 0, duvida: 0 }; estado.ia.leads.forEach(function (x) { var q = estado.ia.analises[x.codigoNorm]; if (q && q.val && q.val.v) c[q.val.v]++; }); return c.sim + c.nao + c.duvida ? 'correto ' + c.sim + ' · incorreto ' + c.nao + ' · sem dados ' + c.duvida : 'nenhum importado'; })(), 'Análises manuais: ' + t.man + ' · aceitas via transcrição: ' + t.viaT + ' · importadas do Copilot: ' + t.viaC,
     t.auto.total ? 'Análise automática por transcrição (' + t.auto.total + ' leads): ' + t.auto.sim + ' provavelmente corretos · ' + t.auto.nao + ' incorretos · ' + t.auto.duvida + ' a conferir' + (t.auto.comp ? ' · coincide com a sua análise manual em ' + t.auto.igual + ' de ' + t.auto.comp + ' (' + fmtPct(t.auto.igual / t.auto.comp * 100) + ')' : '') : 'Análise por transcrição: nenhuma transcrição importada.'].join('\n');
 }
 function iaFilaAudios(min) {
@@ -4728,7 +4790,7 @@ function iaRodarLote() {
   iaLote = { rodando: true, parar: false }; log.replaceChildren(); barra.hidden = false; parar.hidden = false; btn.disabled = true;
   var feitos = 0, pulados = 0, i = 0, modoNav = !iaToken;
   function nota(t) { log.insertBefore(el('li', null, t), log.firstChild); }
-  function fim(msg) { iaLote.rodando = false; iaLote.manual = null; $('#au-proxima').hidden = true; btn.disabled = false; parar.hidden = true; nota(msg); iaAudioInfo(); iaRenderLista(); }
+  function fim(msg) { clearTimeout(iaAbaTimer); setTimeout(iaFecharAba, 3000); iaLote.rodando = false; iaLote.manual = null; $('#au-proxima').hidden = true; btn.disabled = false; parar.hidden = true; nota(msg); iaAudioInfo(); iaRenderLista(); }
   function pausarManual() {
     var pb = $('#au-proxima'); pb.hidden = false; pb.textContent = '⬇ Baixar próxima (' + (fila.length - i) + ' restantes)';
     nota('O navegador bloqueou abrir várias abas sozinho. Opções: (1) clique no ícone de pop-up na barra de endereço e escolha “Sempre permitir” e depois ▶ Baixar lote de novo; ou (2) clique em “Baixar próxima” para cada arquivo (um clique por download).');
@@ -4737,7 +4799,7 @@ function iaRodarLote() {
       var gm = fila[i]; var w = iaAbrirDownload(gm);
       if (!w) { toast('O navegador ainda está bloqueando pop-ups: permita para este arquivo (ícone na barra de endereço).', { tipo: 'aviso' }); return; }
       i++; estado.ia.baixados[gm.id] = 1; feitos++; salvarIA(); bi.style.width = Math.round(i / fila.length * 100) + '%';
-      nota(i + '/' + fila.length + ' ⬇ aba aberta (' + (gm.rec ? gm.rec.replace(/\//g, '_') : gm.id) + ')');
+      nota(i + '/' + fila.length + ' ⬇ download pedido (' + (gm.rec ? gm.rec.replace(/\//g, '_') : gm.id) + ')');
       pb.textContent = i >= fila.length ? '✓ Terminar' : '⬇ Baixar próxima (' + (fila.length - i) + ' restantes)'; iaAudioInfo();
     };
   }
@@ -4748,7 +4810,7 @@ function iaRodarLote() {
     function viaNavegador() {
       var w = iaAbrirDownload(g);
       if (!w) { i--; bi.style.width = Math.round(i / fila.length * 100) + '%'; pausarManual(); return; }
-      estado.ia.baixados[g.id] = 1; feitos++; salvarIA(); nota(i + '/' + fila.length + ' ⬇ aba aberta para baixar (' + (g.rec ? g.rec.replace(/\//g, '_') : g.id) + ')');
+      estado.ia.baixados[g.id] = 1; feitos++; salvarIA(); nota(i + '/' + fila.length + ' ⬇ download pedido (' + (g.rec ? g.rec.replace(/\//g, '_') : g.id) + ')');
       setTimeout(proximo, 2500);
     }
     if (modoNav) { viaNavegador(); return; }
@@ -4758,7 +4820,7 @@ function iaRodarLote() {
       setTimeout(proximo, 1200);
     }, function (e) {
       if (e.pular) { pulados++; nota(i + '/' + fila.length + ' sem gravação, pulei.'); setTimeout(proximo, 600); return; }
-      if (e.rede) { modoNav = true; nota('O navegador não deixa ler o áudio por aqui; passei para o modo “abrir cada gravação no 3C” (usa o seu login do 3C; uma aba a cada 2,5 s). Se bloquear, use o botão “Baixar próxima”.'); viaNavegador(); return; }
+      if (e.rede) { modoNav = true; nota('O navegador não deixa ler o áudio por aqui; passei para o modo “abrir cada gravação no 3C” (usa o seu login do 3C; uma única aba é reaproveitada, um arquivo a cada 2,5 s). Se bloquear, use o botão “Baixar próxima”.'); viaNavegador(); return; }
       fim('Parei na ' + i + 'ª: ' + e.message + ' (' + feitos + ' baixadas antes).');
     });
   }
@@ -4814,7 +4876,7 @@ function iaRenderLista() {
   cont.replaceChildren.apply(cont, lista.slice(0, 400).map(function (l) {
     var st = iaStatus(estado.ia.analises[l.codigoNorm]), ult = l.ligacoes.length ? l.ligacoes[l.ligacoes.length - 1].qual : '';
     return el('button', { type: 'button', class: 'ia-item' + (u.sel === l.codigoNorm ? ' sel' : ''), dataset: { cod: l.codigoNorm } },
-      el('b', null, semaforo(iaNotaGeral(l)), l.codigo, ' ', tag(IA_ROTULO[st], IA_COR[st])),
+      el('b', null, semaforo(iaNotaGeral(l)), l.codigo, ' ', tag(IA_ROTULO[st], IA_COR[st]), iaDiverge(estado.ia.analises[l.codigoNorm]) ? ' ' : '', iaDiverge(estado.ia.analises[l.codigoNorm]) ? tag('DIVERGE DO COPILOT', 'amarelo') : null),
       el('span', null, (formatTel(l.tel) || 'sem telefone') + (iaMaiorFala(l) ? ' · maior fala ' + fmtSeg(iaMaiorFala(l)) : '')),
       el('span', null, l.ligacoes.length + ' ' + plural(l.ligacoes.length, 'ligação IA', 'ligações IA') + (ult && ult !== '-' ? ' · ' + ult : '') + (l.dataPerdido ? ' · perdido ' + dataBR(l.dataPerdido).slice(0, 5) : '')));
   }));
@@ -4868,6 +4930,18 @@ function iaRenderDetalhe() {
   var blocoNao = el('div', { style: 'display:grid;gap:10px', hidden: a.correto !== 'nao' },
     el('div', { class: 'rotulo' }, 'POR QUE NÃO ESTÁ CORRETO?'), opcoes('porque', IA_PORQUES, a.porque), porqueTxt,
     el('div', { class: 'campo' }, el('label', null, 'Motivo correto (sugerido)'), motivo));
+  var copBox = null;
+  if (a.cop || a.val) {
+    var rotv = { sim: 'CORRETO', nao: 'INCORRETO', duvida: 'SEM DADOS' }, dv = iaDiverge(a);
+    copBox = el('div', { class: 'ia-auto ' + (dv ? 'duvida' : (a.cop && a.cop.correto) || 'duvida') },
+      a.cop ? el('div', null, el('div', { class: 'rotulo' }, 'PARECER DO COPILOT (a partir da transcrição)'),
+        el('b', null, (rotv[a.cop.correto] || '—') + (a.cop.conf ? ' · confirmou app: ' + a.cop.conf : '')), dv ? ' ' : '', dv ? tag('DIVERGE DA SUA ANÁLISE', 'amarelo') : null,
+        el('ul', { class: 'frases', style: 'margin:6px 0 0' },
+          a.cop.qualOk ? el('li', null, 'Qualificação da IA: ' + (a.cop.qualOk === 'sim' ? 'certa' : 'errada' + (a.cop.qualSug ? ' → ' + a.cop.qualSug : ''))) : null,
+          a.cop.comp ? el('li', null, 'Comportamento da IA: ' + IA_COMP[a.cop.comp].rot) : null, a.cop.motivo ? el('li', null, 'Motivo sugerido: ' + a.cop.motivo) : null,
+          a.cop.evid ? el('li', null, 'Evidência do cliente: “' + a.cop.evid + '”') : null, a.cop.perc ? el('li', null, a.cop.perc) : null)) : null,
+      a.val ? el('div', { style: 'margin-top:8px;border-top:1px dashed var(--linha);padding-top:8px' }, el('div', { class: 'rotulo' }, 'VEREDITO FINAL (VALIDADO)'), el('b', null, (rotv[a.val.v] || '—') + (a.val.conf ? ' · confiança ' + a.val.conf : '')), a.val.txt ? el('p', { class: 'dica', style: 'margin:4px 0 0' }, a.val.txt) : null) : null);
+  }
   var au = iaAutoAnalise(l), autoBox = null;
   if (au) {
     autoBox = el('div', { class: 'ia-auto ' + au.v },
@@ -5014,7 +5088,7 @@ function iaRenderDetalhe() {
           if (i === 0) d.open = true; return d;
         })) : null),
     el('article', { class: 'card', style: 'display:grid;gap:14px' },
-      autoBox,
+      copBox, autoBox,
       el('div', { class: 'card-cab', style: 'margin:0' }, el('h3', null, 'Auditoria de Perdido · IA Natasha'), el('div', { class: 'acoes' }, confChip, a.correto ? tag(IA_ROTULO[a.correto], IA_COR[a.correto]) : null)),
       rapidasBox, el('div', { class: 'rotulo' }, 'CHECKLIST COMPLETO'), checklist, blocoNao,
       el('div', { style: 'display:grid;gap:8px' }, el('div', { class: 'rotulo' }, 'O QUE VOCÊ CONFERIU'), opcoes('evid', IA_EVIDENCIAS, a.evid)),
@@ -5206,6 +5280,7 @@ async function processarArquivos(arquivos) {
     if (tipo === 'kanban') { linha('↻ ' + f.name + ' — kanban de leads'); await importarKanbanLinhas(linhas, f.name); }
     else if (tipo === 'auditorias') { linha('↻ ' + f.name + ' — auditorias do mês'); await importarBase('', linhas); }
     else if (tipo === 'iaperdidos') { linha('↻ ' + f.name + ' — ' + importarIAPerdidos(linhas, f.name)); }
+    else if (tipo === 'analisespainel') { linha('↻ ' + f.name + ' — ' + importarAnalisesPainel(linhas)); }
     else if (tipo === 'parecercopilot') { linha('↻ ' + f.name + ' — ' + importarParecerCopilot(linhas)); }
     else if (tipo === 'transcricoes') { linha('↻ ' + f.name + ' — ' + importarTranscricoes(linhas)); }
     else if (tipo === 'chamadasia') { linha('↻ ' + f.name + ' — ' + importarChamadasIA(linhas)); }
