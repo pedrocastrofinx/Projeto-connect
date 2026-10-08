@@ -34,7 +34,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-URL_GRAVACAO = "https://app.3c.plus/api/v1/calls/{id}/recording"
+BASES = ["https://app.3c.plus", "https://finx.3c.plus"]  # a API pode responder pelo domínio da empresa; o script tenta os dois
+URL_GRAVACAO = "/api/v1/calls/{id}/recording"
 
 
 def segundos(v):
@@ -130,27 +131,28 @@ def achar_na_pasta(arquivos, id_, rec):
     return None
 
 
-def baixar(id_, token, destino):
-    """Tenta o token como cabeçalho Bearer e, se o 3C recusar, como api_token na URL."""
-    url = URL_GRAVACAO.format(id=urllib.parse.quote(id_))
-    tentativas = [
-        (url, {"Authorization": "Bearer " + token}),
-        (url + "?api_token=" + urllib.parse.quote(token), {}),
-    ]
+def baixar(id_, token, destino, bases):
+    """Usa o SEU token (nunca cookies do navegador). Tenta cada domínio e cada forma de enviar o token;
+    se o 3C responder 401/403, é falta de permissão da conta: o script não tenta contornar."""
+    caminho = URL_GRAVACAO.format(id=urllib.parse.quote(id_))
     ultimo = None
-    for u, cab in tentativas:
-        try:
-            req = urllib.request.Request(u, headers=dict(cab, **{"User-Agent": "finx-transcrever"}))
-            with urllib.request.urlopen(req, timeout=60) as resp:
-                dados = resp.read()
-            if len(dados) < 1000:
-                raise ValueError("resposta pequena demais para ser áudio")
-            with open(destino, "wb") as f:
-                f.write(dados)
-            return destino
-        except (urllib.error.HTTPError, urllib.error.URLError, ValueError) as e:
-            ultimo = e
-    raise RuntimeError("não consegui baixar (%s)" % ultimo)
+    for base in bases:
+        url = base.rstrip("/") + caminho
+        for u, cab in ((url, {"Authorization": "Bearer " + token}), (url + "?api_token=" + urllib.parse.quote(token), {})):
+            try:
+                req = urllib.request.Request(u, headers=dict(cab, **{"User-Agent": "finx-transcrever"}))
+                with urllib.request.urlopen(req, timeout=60) as resp:
+                    dados = resp.read()
+                if len(dados) < 1000:
+                    raise ValueError("resposta pequena demais para ser áudio")
+                with open(destino, "wb") as f:
+                    f.write(dados)
+                return destino
+            except urllib.error.HTTPError as e:
+                ultimo = "HTTP %s em %s" % (e.code, base)
+            except (urllib.error.URLError, ValueError) as e:
+                ultimo = "%s em %s" % (e, base)
+    raise RuntimeError("não consegui baixar (%s). Se for 401/403, a sua conta não tem permissão: peça ao administrador do 3C." % ultimo)
 
 
 def carregar_modelo(nome):
@@ -180,7 +182,8 @@ def main():
     ap = argparse.ArgumentParser(description="Transcreve as ligações da IA para o painel FINX.")
     ap.add_argument("--csv", help="CSV da telefonia (Relatório de Ligações do 3C Plus)")
     ap.add_argument("--xlsx", help="planilha agente IA perdidos por motivo (opcional)")
-    ap.add_argument("--token", help="token do 3C Plus para baixar as gravações")
+    ap.add_argument("--token", help="o SEU token de API do 3C Plus, para baixar as gravações")
+    ap.add_argument("--base", help="domínio do 3C da sua empresa (ex.: https://finx.3c.plus); por padrão tenta app.3c.plus e finx.3c.plus")
     ap.add_argument("--pasta", help="pasta com áudios já baixados")
     ap.add_argument("--min", type=int, default=10, help="mínimo de segundos de fala (padrão 10)")
     ap.add_argument("--max", type=int, default=0, help="limitar a quantidade (0 = todas)")
@@ -236,7 +239,7 @@ def main():
                     caminho = achar_na_pasta(arquivos, id_, v["rec"]) if a.pasta else None
                     if not caminho and a.token:
                         destino = os.path.join(a.audios, id_ + ".mp3")
-                        caminho = destino if os.path.exists(destino) else baixar(id_, a.token, destino)
+                        caminho = destino if os.path.exists(destino) else baixar(id_, a.token, destino, ([a.base] if a.base else []) + BASES)
                     if not caminho:
                         raise RuntimeError("áudio não encontrado na pasta")
                     texto = transcrever(modelo, caminho)
