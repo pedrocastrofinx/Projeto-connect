@@ -376,7 +376,7 @@ def main():
 
     feitas = ja_feitas(a.saida)
     fila = sorted(((k, v) for k, v in ligacoes.items() if v["dur"] >= a.min and k not in feitas), key=(lambda kv: (-int(dia_iso(kv[1].get("quando")).replace("-", "") or 0), -kv[1]["dur"])) if a.ordem == "dia" else (lambda kv: -kv[1]["dur"]))
-    if a.max:
+    if a.max and not (a.pasta and not a.listar):
         fila = fila[: a.max]
     total_s = sum(v["dur"] for _, v in fila)
     print("%d ligações lidas · %d já transcritas · %d na fila (>= %d s de fala, cerca de %.1f h de conversa)" % (len(ligacoes), len(feitas), len(fila), a.min, total_s / 3600))
@@ -385,6 +385,13 @@ def main():
         return
 
     arquivos = indexar_pasta(a.pasta) if a.pasta else []
+    if a.pasta and not a.listar:
+        # com a pasta de áudios, a fila passa a ser só o que TEM áudio (as mais longas/de hoje primeiro entre elas)
+        com_audio = [(k, v) for k, v in fila if achar_na_pasta(arquivos, k, v["rec"])]
+        print("%d áudios na pasta; %d deles casam com ligações da fila (as demais ligações ficam para quando você baixar mais)." % (len(arquivos), len(com_audio)))
+        fila = com_audio[: a.max] if a.max else com_audio
+        if not fila:
+            sys.exit("Nenhum áudio da pasta casa com as ligações. Confira se os nomes são os originais do 3C (aaaa_mm_dd_telefone-código.mp3).")
     if a.listar:
         faltam = [(k, v) for k, v in fila if not (a.pasta and achar_na_pasta(arquivos, k, v["rec"]))][: a.listar]
         print("\nPara baixar no 3C (filtre pelo telefone e clique na setinha de download). Ordem: %s" % ("hoje primeiro, depois ontem, anteontem…; em cada dia, as mais longas primeiro" if a.ordem == "dia" else "das mais longas para as mais curtas"))
