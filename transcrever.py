@@ -188,8 +188,11 @@ def carregar_modelo(nome):
         return WhisperModel(nome, device="cpu", compute_type="int8")
 
 
-def transcrever(modelo, caminho):
-    segmentos, _ = modelo.transcribe(caminho, language="pt", vad_filter=True, beam_size=1, condition_on_previous_text=False)
+DICA = "Ligação da IA Natasha, da Dryve Assinaturas de Veículos, com um cliente. Fala de motorista de aplicativo, Uber, 99, assinatura de carro, financiamento, aluguel."
+
+
+def transcrever(modelo, caminho, dica=False):
+    segmentos, _ = modelo.transcribe(caminho, language="pt", vad_filter=True, beam_size=1, condition_on_previous_text=False, initial_prompt=(DICA if dica else None))
     return " ".join(s.text.strip() for s in segmentos).strip()
 
 
@@ -347,6 +350,7 @@ def main():
     ap.add_argument("--planilha", default="transcricoes_completo.xlsx", help="planilha final (número do lead + informações + transcrição), gerada ao terminar")
     ap.add_argument("--so-planilha", action="store_true", help="não transcreve: só monta a planilha a partir do --saida já existente")
     ap.add_argument("--todas-colunas", action="store_true", help="inclui na planilha final todas as colunas da planilha agente IA perdidos (menos nome/CPF do cliente)")
+    ap.add_argument("--dica", action="store_true", help="ajuda o programa a acertar nomes como Dryve Assinaturas, Uber, 99 (teste com o testar_audio.py --dica antes)")
     ap.add_argument("--simular", action="store_true", help="não transcreve de verdade (teste do fluxo)")
     a = ap.parse_args()
 
@@ -425,7 +429,7 @@ def main():
                         caminho = destino if os.path.exists(destino) else baixar(id_, a.token, destino, ([a.base] if a.base else []) + BASES)
                     if not caminho:
                         raise RuntimeError("áudio não encontrado na pasta")
-                    texto = transcrever(modelo, caminho)
+                    texto = transcrever(modelo, caminho, a.dica)
                 w.writerow([id_, v["dur"], texto])
                 f.flush()
                 feitas_agora += 1

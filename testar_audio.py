@@ -6,13 +6,18 @@ Teste rápido: transcreve UM áudio e mostra o texto na tela (não gera arquivo,
 
 Na primeira vez baixa o modelo de voz (~500 MB, precisa de internet). Depois roda offline.
 Opcional: --modelo tiny|base|small|medium  (small é o padrão)
+          --dica   ajuda o programa a acertar nomes como "Dryve Assinaturas", Uber, 99 (compare com e sem)
 """
 import sys
 import time
 
 
+DICA = "Ligação da IA Natasha, da Dryve Assinaturas de Veículos, com um cliente. Fala de motorista de aplicativo, Uber, 99, assinatura de carro, financiamento, aluguel."
+
+
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    usar_dica = "--dica" in sys.argv
     modelo = "small"
     if "--modelo" in sys.argv:
         modelo = sys.argv[sys.argv.index("--modelo") + 1]
@@ -32,7 +37,7 @@ def main():
         m = WhisperModel(modelo, device="cpu", compute_type="int8")
     t1 = time.time()
     print("Modelo pronto em %.0f s. Transcrevendo %s ..." % (t1 - t0, args[0]))
-    segs, info = m.transcribe(args[0], language="pt", vad_filter=True, beam_size=1, condition_on_previous_text=False)
+    segs, info = m.transcribe(args[0], language="pt", vad_filter=True, beam_size=1, condition_on_previous_text=False, initial_prompt=(DICA if usar_dica else None))
     texto = []
     for s in segs:
         print("[%5.1fs] %s" % (s.start, s.text.strip()))
