@@ -179,6 +179,12 @@ input[type=checkbox],input[type=radio]{width:18px;height:18px;accent-color:var(-
 .ia-sinal{border-radius:12px;padding:10px 14px;font-weight:600;font-size:.92rem}
 .ia-sinal.ok{background:var(--azul-cl);color:var(--azul-esc)}
 .ia-sinal.aviso{background:var(--amarelo-cl);color:var(--amarelo-esc)}
+.ia-inicio{display:grid;gap:12px;margin-bottom:14px;border:2px solid var(--azul);background:linear-gradient(135deg,#F4F8FF,#fff)}
+.ia-inicio .btn-grande{font-size:1.15rem;padding:16px 26px}
+.ia-inicio.vazio-ia{border-style:dashed;text-align:center;justify-items:center;cursor:default}
+.ia-inicio.vazio-ia.sobre{background:#D8E6FF}
+#aba-ia.ia-foco .filtros-card,#aba-ia.ia-foco #ia-lista,#aba-ia.ia-foco #ia-resumo,#aba-ia.ia-foco #ia-rel,#aba-ia.ia-foco #ia-rel-tit{display:none}
+#aba-ia.ia-foco .ia-grid{grid-template-columns:minmax(0,1fr)}
 .ia-ck{display:grid;gap:8px}
 .ia-ck-lin{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:#F7FAFF;border:1.5px solid #D5E1F7;border-radius:12px;padding:10px 14px}
 .ia-ck-lin>div:first-child{flex:1 1 160px;min-width:0}
@@ -590,6 +596,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
     <!-- ===================== ANÁLISE IA · VALIDAÇÃO DE PERDIDO ===================== -->
     <section class="aba" id="aba-ia" data-aba="ia" aria-label="Análise IA Natasha: validação de perdido" hidden>
       <div class="secao-titulo"><h2>Análise IA Natasha · Validação de perdido</h2><span id="ia-sub"></span></div>
+      <div id="ia-inicio"></div>
       <div class="grid-resumo" id="ia-resumo"></div>
       <div class="card filtros-card">
         <div class="linha-form">
@@ -611,7 +618,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
         <div id="ia-lista" class="ia-lista" aria-label="Leads para analisar"></div>
         <div id="ia-det"></div>
       </div>
-      <div class="secao-titulo"><h2>Relatório de validação</h2><span>Base padrão para exportar</span></div>
+      <div class="secao-titulo" id="ia-rel-tit"><h2>Relatório de validação</h2><span>Base padrão para exportar</span></div>
       <div id="ia-rel"></div>
     </section>
 
@@ -4291,7 +4298,34 @@ function iaResumoTexto() {
     'Motivo “Motorista de App” correto: ' + t.sim + ' (' + pct(t.sim) + ')', 'Incorreto: ' + t.nao + ' (' + pct(t.nao) + ')', 'Sem como avaliar: ' + t.duvida + ' (' + pct(t.duvida) + ')',
     'Comportamento da IA nas análises: boa ' + t.comp.boa + ' · média ' + t.comp.media + ' · ruim ' + t.comp.ruim, 'Principais razões do erro: ' + top(t.porque), 'Motivos sugeridos: ' + top(t.motivos)].join('\n');
 }
-function iaRenderLateral() { iaRenderResumo(); iaRenderLista(); iaRenderRelatorio(); }
+function iaRenderLateral() { iaRenderInicio(); iaRenderResumo(); iaRenderLista(); iaRenderRelatorio(); }
+/* Cartão de partida: sem base → soltar a planilha aqui; com base → botão “Fazer auditorias” que abre o próximo lead pendente já com o telefone copiado */
+function iaIniciar() {
+  var u = estado.ui.ia, prox = estado.ia.leads.filter(function (x) { return !iaStatus(estado.ia.analises[x.codigoNorm]); })[0];
+  if (!prox) { toast('Todos os leads já foram analisados. 🎉'); return; }
+  u.filtro = 'pend'; u.busca = ''; u.foco = true; u.sel = prox.codigoNorm; renderIA();
+  if (prox.tel && estado.ia.autoCopiar) copiarTexto(formatTel(prox.tel)).then(function () { toast('Telefone copiado: ' + formatTel(prox.tel)); });
+  var d = $('#ia-det'); if (d && d.scrollIntoView) d.scrollIntoView({ block: 'start' });
+}
+function iaRenderInicio() {
+  var u = estado.ui.ia, box = $('#ia-inicio'), t = iaStats();
+  $('#aba-ia').classList.toggle('ia-foco', !!u.foco && t.total > 0);
+  box.className = 'card ia-inicio';
+  if (!t.total) {
+    box.classList.add('vazio-ia');
+    box.replaceChildren(el('div', { style: 'font-size:2rem' }, '📂'), el('h3', { style: 'margin:0' }, 'Carregue a planilha dos perdidos'),
+      el('p', { class: 'dica', style: 'margin:0;max-width:560px' }, 'Solte aqui o arquivo “agente IA perdidos por motivo” (.xlsx) — e, se quiser, o CSV da telefonia. Depois é só clicar em “Fazer auditorias”: cada lead já vem com o telefone. Fica salvo neste navegador.'),
+      el('button', { type: 'button', class: 'btn btn-primario btn-grande', onclick: function () { $('#file-multi').click(); } }, '📂 Escolher a planilha'));
+    return;
+  }
+  var pct = Math.round(t.ana / t.total * 100);
+  box.replaceChildren(
+    el('div', { style: 'display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline' }, el('b', null, t.ana + ' de ' + t.total + ' auditorias feitas'), el('span', { class: 'dica' }, t.pend ? 'faltam ' + t.pend : 'tudo preenchido 🎉')),
+    el('div', { class: 'barra' + (t.pend ? '' : ' completa') }, el('i', { style: 'width:' + pct + '%' })),
+    el('div', { class: 'acoes' },
+      t.pend ? el('button', { type: 'button', class: 'btn btn-primario btn-grande', onclick: iaIniciar }, (t.ana ? '▶ Continuar auditorias' : '▶ Fazer auditorias') + ' · próximo lead') : null,
+      u.foco ? el('button', { type: 'button', class: 'btn btn-linha', onclick: function () { u.foco = false; renderIA(); } }, '☰ Ver lista e filtros') : null));
+}
 function iaRenderResumo() {
   var t = iaStats(), pct = function (n) { return t.ana ? fmtPct(n / t.ana * 100) : '—'; };
   $('#ia-sub').textContent = estado.ia.importadoEm ? 'Base de ' + dataHoraBR(estado.ia.importadoEm) + (estado.ia.arquivo ? ' · ' + estado.ia.arquivo : '') : 'Nenhum arquivo importado';
@@ -4377,7 +4411,7 @@ function iaRenderDetalhe() {
     var prox = estado.ia.leads.filter(function (x) { return !iaStatus(estado.ia.analises[x.codigoNorm]) && x.codigoNorm !== l.codigoNorm; })[0];
     u.sel = prox ? prox.codigoNorm : l.codigoNorm; iaRenderDetalhe(); iaRenderLateral();
     if (prox && estado.ia.autoCopiar && prox.tel) copiarTexto(formatTel(prox.tel)).then(function () { toast('Próximo telefone copiado: ' + formatTel(prox.tel)); });
-    if (!prox) toast('Todos os leads foram analisados. 🎉');
+    if (!prox) { toast('Todos os leads foram analisados. 🎉'); u.foco = false; renderIA(); }
   }
   function aplicarRapida(i) {
     var r = IA_RAPIDAS[i]; if (!r) return;
@@ -4746,7 +4780,7 @@ function ligarEventos() {
   window.addEventListener('message', function (e) { if (e.origin === origemSite()) receberDoSite(e.data); });
   dz.addEventListener('click', function () { multi.click(); });
   dz.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); multi.click(); } });
-  multi.addEventListener('change', function (e) { var fs = Array.from(e.target.files); e.target.value = ''; if (fs.length) processarArquivos(fs); });
+  multi.addEventListener('change', function (e) { var fs = Array.from(e.target.files); e.target.value = ''; if (fs.length) processarArquivos(fs).then(function () { if (estado.ui.aba === 'ia') toast($('#dz-log').textContent.slice(0, 220) || 'Arquivo lido.'); }); });
   ['dragenter', 'dragover'].forEach(function (n) { dz.addEventListener(n, function (e) { e.preventDefault(); dz.classList.add('sobre'); }); });
   dz.addEventListener('dragleave', function () { dz.classList.remove('sobre'); });
   dz.addEventListener('drop', function (e) { e.preventDefault(); dz.classList.remove('sobre'); var fs = Array.from(e.dataTransfer.files); if (fs.length) processarArquivos(fs); });
@@ -4755,6 +4789,16 @@ function ligarEventos() {
   window.addEventListener('drop', function (e) { e.preventDefault(); });
   $('#b-site').addEventListener('click', function () { atualizarDoSite(false); });
   ligarEventosIA();
+  (function () {
+    var box = $('#ia-inicio');
+    ['dragenter', 'dragover'].forEach(function (n) { box.addEventListener(n, function (e) { e.preventDefault(); box.classList.add('sobre'); }); });
+    box.addEventListener('dragleave', function () { box.classList.remove('sobre'); });
+    box.addEventListener('drop', function (e) {
+      e.preventDefault(); box.classList.remove('sobre');
+      var fs = Array.from(e.dataTransfer.files); if (!fs.length) return;
+      processarArquivos(fs).then(function () { toast($('#dz-log').textContent.slice(0, 220) || 'Arquivo lido.'); });
+    });
+  })();
   $('#b-colar').addEventListener('click', colarBase);
   $('#b-arq').addEventListener('click', function () { $('#file-base').click(); });
   $('#file-base').addEventListener('change', function (e) { var f = e.target.files[0]; e.target.value = ''; importarArquivoBase(f); });
