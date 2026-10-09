@@ -68,6 +68,11 @@ h1,h2,h3,h4,p{margin:0}
 .rel-data{font-size:.82rem;opacity:.88;text-transform:capitalize}
 .topo-chips{display:flex;gap:8px;flex-wrap:wrap}
 .chip-topo{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);padding:4px 11px;border-radius:99px;font-size:.78rem;font-weight:600;white-space:nowrap}
+.chip-analista{display:inline-flex;align-items:center;gap:6px}
+.topo .chip-analista select{width:auto;min-height:0;background:transparent;border:0;border-radius:0;color:#fff;font-weight:700;font-size:.78rem;padding:2px 0;max-width:210px;cursor:pointer;outline:0}
+.chip-analista select option{color:#16233B;background:#fff}
+.chip-analista:focus-within{outline:2px solid #fff;outline-offset:2px}
+tr.sel-analista td{background:var(--azul-cl)}
 
 /* ---------- Layout e navegação ---------- */
 .layout{max-width:1440px;margin:0 auto;padding:20px;display:grid;grid-template-columns:210px minmax(0,1fr);gap:24px;align-items:start}
@@ -494,6 +499,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
       <div class="rel-data" id="rel-data"></div>
     </div>
     <div class="topo-chips">
+      <label class="chip-topo chip-analista" id="chip-analista" for="sel-analista" title="De quem é a meta mostrada: de um analista ou do time todo" hidden><span aria-hidden="true">👤</span><select id="sel-analista" aria-label="Analista da meta"></select></label>
       <button type="button" class="btn-tema" id="btn-tema" aria-label="Alternar modo escuro"></button>
       <span class="chip-topo" id="chip-mes" title="Mês atual"></span>
       <span class="chip-topo" id="chip-uteis" title="Dias úteis (segunda a sexta) restantes até o final do mês"></span>
@@ -520,6 +526,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
     <!-- ===================== VISÃO GERAL ===================== -->
     <section class="aba" id="aba-geral" data-aba="geral" aria-label="Visão geral" hidden>
       <div id="ov-backup"></div>
+      <div id="ov-analista"></div>
       <div id="ov-hero"></div>
       <div class="secao-titulo"><h2>Metas do dia</h2><span id="ov-metas-sub"></span></div>
       <div class="grid-metas" id="ov-metas"></div>
@@ -562,6 +569,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
     <!-- ===================== EQUIPE ===================== -->
     <section class="aba" id="aba-equipe" data-aba="equipe" aria-label="Cobertura da equipe" hidden>
       <div class="secao-titulo"><h2>Cobertura da equipe</h2><span id="eq-mes"></span></div>
+      <div id="eq-analistas" style="margin-bottom:16px"></div>
       <div class="grid-resumo" id="eq-resumo"></div>
       <div id="eq-foco" style="margin-top:16px"></div>
       <div id="eq-nivel" style="margin-top:16px"></div>
@@ -740,7 +748,8 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
       <div class="secao-titulo"><h2>Configurações</h2><span>Tudo é salvo neste navegador</span></div>
       <form class="card" id="cfg-form" novalidate style="display:grid;gap:18px">
         <div>
-          <h3 class="rotulo" style="margin-bottom:8px">METAS DIÁRIAS</h3>
+          <h3 class="rotulo" style="margin-bottom:8px">METAS DIÁRIAS (POR ANALISTA)</h3>
+          <div class="campo" style="margin-bottom:12px"><label for="c-analistas">Analistas (um nome por linha). A meta abaixo vale para cada analista; no “Time” ela é multiplicada pelo número de analistas.</label><textarea id="c-analistas" rows="4" maxlength="1600" spellcheck="false"></textarea></div>
           <div class="cfg-grid">
             <div class="campo"><label for="c-rotina">Rotina</label><input type="number" id="c-rotina" min="0" max="9999" step="1" inputmode="numeric"></div>
             <div class="campo"><label for="c-doc">Documentação</label><input type="number" id="c-doc" min="0" max="9999" step="1" inputmode="numeric"></div>
@@ -913,8 +922,10 @@ var ACOES_ETAPA = ['auto', 'rotina', 'documentacao', 'perdido', 'ignorar'];
 var DRYVE_BASE = 'https://app.dryve.pro/dashboard/opportunities';
 var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 var PENALIDADE_CLOSER = 3;       /* desconto por lead já escolhido do mesmo closer (espalha o plano entre a equipe) */
+var ANALISTAS_PADRAO = ['Alexandre Gomes da Silva', 'Anderson Nascimento Domingos', 'Guilherme Ribeiro da Silva', 'Pedro Henrique de Castro'];
 var CONFIG_PADRAO = {
   metas: { rotina: 30, documentacao: 8, perdido: 6 },
+  analistas: ANALISTAS_PADRAO.slice(),
   horarios: { inicio: '09:00', fim: '18:00', almocoInicio: '12:00', almocoFim: '13:00' },
   metaMensalPadrao: 1,
   plano: { janelaPerdido: 30, apenasMes: true, etapas: {}, dryveUsers: '9ce01eb9-513f-4411-abd2-cc0483b987eb' },
@@ -1038,9 +1049,9 @@ var Armazenamento = {
 var estado = {
   auditorias: [], operadores: [], baseLeads: [], chamadas: [], ia: null, kanban: { importadoEm: 0, arquivo: '', leads: [] }, config: null,
   rev: 0, registrando: false, diaRender: '', minutoRender: -1,
-  ultimoOperadorId: '', ultimoTipo: '', avisoBackupFechado: false,
+  ultimoOperadorId: '', ultimoTipo: '', ultimoAnalista: '', avisoBackupFechado: false,
   ui: {
-    aba: 'geral',
+    aba: 'geral', analista: '',
     equipe: { busca: '', filtro: 'todos', ordem: 'nome', dir: 'asc' },
     hist: { q: '', ini: '', fim: '', op: '', tipo: '', lead: '', soRep: false, ordem: 'tempo', dir: 'desc', pag: 1, tam: 25 },
     plano: { dia: '', tipo: '', closer: '', ajustes: false, pulados: [] },
@@ -1077,6 +1088,16 @@ function inteiroEntre(v, min, max) {
 function urlLeadValida(u) { return typeof u === 'string' && u.length <= 300 && /^https?:\/\/[^\s]+$/i.test(u.trim()) && u.indexOf('{lead}') !== -1; }
 function siteUrlValida(u) { return typeof u === 'string' && u.length <= 300 && /^https?:\/\/[^\s]+$/i.test(u.trim()); }
 function apiSiteValida(u) { return typeof u === 'string' && u.length <= 200 && /^(\/[A-Za-z0-9_.\-\/]*|https?:\/\/[^\s]+)$/.test(u.trim()); }
+/* Lista de analistas: sem repetição (ignora acento e maiúsculas), até 20 nomes */
+function sanitizarAnalistas(lista) {
+  var vistos = new Set(), out = [];
+  lista.forEach(function (n) {
+    var nome = limparTexto(n).slice(0, 80), k = normBusca(nome);
+    if (!nome || vistos.has(k) || out.length >= 20) return;
+    vistos.add(k); out.push(nome);
+  });
+  return out;
+}
 function mesclarConfig(c) {
   var p = copiar(CONFIG_PADRAO);
   if (!c || typeof c !== 'object') return p;
@@ -1087,6 +1108,7 @@ function mesclarConfig(c) {
   Object.keys(h2).forEach(function (k) { if (typeof h[k] === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(h[k])) h2[k] = h[k]; });
   if (horariosCoerentes(h2)) p.horarios = h2;
   var mm = inteiroEntre(c.metaMensalPadrao, 0, 999); if (mm !== null) p.metaMensalPadrao = mm;
+  if (Array.isArray(c.analistas)) p.analistas = sanitizarAnalistas(c.analistas);
   var pl = c.plano && typeof c.plano === 'object' ? c.plano : {};
   var jp = inteiroEntre(pl.janelaPerdido, 1, KANBAN_RETENCAO_DIAS); if (jp !== null) p.plano.janelaPerdido = jp;
   if (typeof pl.apenasMes === 'boolean') p.plano.apenasMes = pl.apenasMes;
@@ -1127,6 +1149,7 @@ function sanitizarAuditoria(x) {
     data: data, hora: hora,
     operadorId: typeof x.operadorId === 'string' && x.operadorId ? x.operadorId : null,
     operadorNome: nome, lead: lead, leadNorm: leadNorm, tipo: tipo,
+    analista: limparTexto(x.analista).slice(0, 80),
     obs: limparTexto(x.obs).slice(0, 300),
     criadoEm: Number.isFinite(x.criadoEm) ? x.criadoEm : 0
   };
@@ -1759,6 +1782,8 @@ function carregarTudo() {
   if (re.valor) {
     estado.ultimoOperadorId = typeof re.valor.ultimoOperadorId === 'string' ? re.valor.ultimoOperadorId : '';
     estado.ultimoTipo = normalizarTipo(re.valor.ultimoTipo) || '';
+    estado.ultimoAnalista = limparTexto(re.valor.ultimoAnalista).slice(0, 80);
+    estado.ui.analista = limparTexto(re.valor.analista).slice(0, 80);
   }
   /* Grava as listas padrão apenas quando a chave ainda não existia: nunca duplica operadores */
   if (ro.novo) salvarOperadores();
@@ -1784,7 +1809,7 @@ function salvarBase() { estado.rev++; return salvarChave(CH.base, estado.baseLea
 function salvarKanban() { return salvarChave(CH.kanban, estado.kanban); }
 function salvarConfig() { return salvarChave(CH.cfg, estado.config); }
 function salvarEstadoUI() {
-  Armazenamento.gravar(CH.estado, JSON.stringify({ ultimoOperadorId: estado.ultimoOperadorId, ultimoTipo: estado.ultimoTipo }));
+  Armazenamento.gravar(CH.estado, JSON.stringify({ ultimoOperadorId: estado.ultimoOperadorId, ultimoTipo: estado.ultimoTipo, ultimoAnalista: estado.ultimoAnalista, analista: estado.ui.analista }));
 }
 function atualizarSalvo() {
   var v = Number(Armazenamento.ler(CH.salvo));
@@ -1914,10 +1939,26 @@ function ocorrenciasLead(leadNorm, excluirId) {
 }
 
 /* ---- Metas do dia ---- */
-function contagemDia(data) {
+/* Analista da meta: '' = Time (todos). Sem informar, vale o analista escolhido no topo. */
+function listaAnalistas() { return estado.config.analistas || []; }
+function analistaVisao() { var a = estado.ui.analista; return a && listaAnalistas().indexOf(a) !== -1 ? a : ''; }
+function rotuloVisao(analista) {
+  if (analista === undefined) analista = analistaVisao();
+  return analista || 'Time (' + Math.max(1, listaAnalistas().length) + ' ' + plural(listaAnalistas().length, 'analista', 'analistas') + ')';
+}
+/* A meta configurada vale por analista; o Time soma a de todos */
+function metasEfetivas(analista) {
+  if (analista === undefined) analista = analistaVisao();
+  var n = analista ? 1 : Math.max(1, listaAnalistas().length), m = {};
+  TIPOS_ORDEM.forEach(function (t) { m[t] = estado.config.metas[t] * n; });
+  return m;
+}
+function contagemDia(data, analista) {
+  if (analista === undefined) analista = analistaVisao();
   var c = { rotina: 0, documentacao: 0, perdido: 0, total: 0, operadores: new Set(), repetidos: 0, registros: [] };
   estado.auditorias.forEach(function (a) {
     if (a.data !== data) return;
+    if (analista && a.analista !== analista) return;
     c[a.tipo]++; c.total++;
     if (a.operadorId) c.operadores.add(a.operadorId);
     if (ehRepetido(a)) c.repetidos++;
@@ -1926,8 +1967,8 @@ function contagemDia(data) {
   c.registros.sort(porTempoAsc);
   return c;
 }
-function calcMetas(c) {
-  var metas = estado.config.metas, out = { tipos: {}, metaTotal: 0, feitoValido: 0, faltaTotal: 0, excedente: 0 };
+function calcMetas(c, analista) {
+  var metas = metasEfetivas(analista), out = { tipos: {}, metaTotal: 0, feitoValido: 0, faltaTotal: 0, excedente: 0 };
   TIPOS_ORDEM.forEach(function (t) {
     var meta = metas[t], real = c[t];
     var falta = Math.max(0, meta - real), exc = Math.max(0, real - meta);
@@ -2010,7 +2051,7 @@ function contextoDia(agora) {
 function calcPrevisao(ctx) {
   var r = ctx.ritmo, real = ctx.real, hr = ctx.hr, m = ctx.m;
   if (r.estado === 'concluida') {
-    var hh = horaConclusao(ctx.c.registros, estado.config.metas);
+    var hh = horaConclusao(ctx.c.registros, metasEfetivas());
     return { nivel: 'ok', titulo: hh ? hh.slice(0, 5) : 'Concluída', texto: hh ? 'Meta concluída às ' + hh.slice(0, 5) + '.' : 'Meta concluída.' };
   }
   if (r.estado === 'encerrado') return { nivel: 'critico', titulo: 'Encerrado', texto: 'Expediente encerrado.' };
@@ -2485,6 +2526,24 @@ function renderCabecalho(agora) {
   $('#rel-data').textContent = DIAS_SEMANA[agora.getDay()] + ', ' + dataBR(dataISO(agora));
   $('#chip-mes').textContent = '📅 ' + maiusc(MESES[agora.getMonth()]);
   $('#chip-uteis').textContent = '⏳ ' + uteis + ' ' + plural(uteis, 'dia útil restante', 'dias úteis restantes');
+  renderSeletorAnalista();
+}
+/* Seletor do topo: analista (meta só dele) ou Time. Só refaz as opções quando a lista muda, para não fechar o menu aberto. */
+function renderSeletorAnalista() {
+  var sel = $('#sel-analista'), nomes = listaAnalistas(), chip = $('#chip-analista');
+  chip.hidden = !nomes.length;
+  var assinatura = nomes.join('|');
+  if (sel.dataset.assinatura !== assinatura) {
+    sel.dataset.assinatura = assinatura;
+    sel.replaceChildren(opcao('', 'Time (todos)'));
+    nomes.forEach(function (n) { sel.appendChild(opcao(n, n)); });
+  }
+  sel.value = analistaVisao();
+}
+function escolherAnalista(nome) {
+  estado.ui.analista = nome || '';
+  if (nome) estado.ultimoAnalista = nome;
+  salvarEstadoUI(); renderTudo();
 }
 function atualizarRelogio(agora) {
   var s = estado.config.mostrarSegundos;
@@ -2679,11 +2738,25 @@ function renderAvisoBackup() {
       el('button', { type: 'button', class: 'btn btn-linha btn-peq', onclick: function () { estado.avisoBackupFechado = true; renderAvisoBackup(); } }, 'Dispensar'))));
 }
 
+/* Registros de hoje feitos antes de existir o analista só aparecem no Time: oferece atribuí-los a quem está selecionado */
+function renderAvisoSemAnalista(hojeStr) {
+  var cont = $('#ov-analista'), an = analistaVisao();
+  var orfaos = an ? estado.auditorias.filter(function (a) { return a.data === hojeStr && !a.analista; }) : [];
+  if (!orfaos.length) { cont.replaceChildren(); return; }
+  cont.replaceChildren(el('div', { class: 'banner amarelo' },
+    el('span', null, orfaos.length + ' ' + plural(orfaos.length, 'registro de hoje está', 'registros de hoje estão') + ' sem analista (feitos antes desta opção) e só aparecem no Time.'),
+    el('span', { class: 'acoes' },
+      el('button', { type: 'button', class: 'btn btn-primario btn-peq', onclick: function () {
+        orfaos.forEach(function (a) { a.analista = an; });
+        salvarAuditorias(); renderTudo(); toast(orfaos.length + ' ' + plural(orfaos.length, 'registro atribuído', 'registros atribuídos') + ' a ' + an + '.');
+      } }, 'Atribuir a ' + an.split(' ')[0]))));
+}
 function renderGeral() {
   var ctx = contextoDia(new Date());
   renderAvisoBackup();
   $('#ov-hero').replaceChildren(construirHero(ctx));
-  $('#ov-metas-sub').textContent = DIAS_SEMANA[ctx.agora.getDay()] + ', ' + dataBR(ctx.hojeStr);
+  $('#ov-metas-sub').textContent = (listaAnalistas().length ? rotuloVisao() + ' · ' : '') + DIAS_SEMANA[ctx.agora.getDay()] + ', ' + dataBR(ctx.hojeStr);
+  renderAvisoSemAnalista(ctx.hojeStr);
   var icones = { rotina: '↻', documentacao: '🗎', perdido: '⚑' };
   var cards = TIPOS_ORDEM.map(function (t) { return construirCardMeta(TIPOS[t].titulo, ctx.m.tipos[t], icones[t]); });
   cards.push(construirCardMeta('Total do dia', ctx.m.total, '∑'));
@@ -2719,6 +2792,9 @@ function criarFormRegistro() {
   refs.btnRepetir = el('button', { type: 'button', class: 'btn btn-linha', title: 'Seleciona o operador da última auditoria registrada', onclick: repetirUltimoOperador }, '↺ Repetir último operador');
   refs.btnDesfazer = el('button', { type: 'button', class: 'btn btn-linha', title: 'Remove o último registro feito', onclick: desfazerUltimo }, '⎌ Desfazer último registro');
   f.appendChild(el('div', { class: 'card-cab', style: 'margin:0' }, el('h3', null, 'Registro rápido'), el('span', { class: 'dica' }, 'Data e hora são automáticas')));
+  refs.fAnalista = el('select', { id: 'f-analista' });
+  refs.fAnalistaCampo = campoModal('Analista (quem está auditando)', refs.fAnalista, 'f-analista');
+  f.appendChild(refs.fAnalistaCampo);
   f.appendChild(campoModal('Operador', refs.fOperador, 'f-operador'));
   refs.fLink = el('a', { class: 'btn btn-sec', target: '_blank', rel: 'noopener noreferrer', hidden: true, 'aria-label': 'Abrir o lead no Dryve (nova aba)', title: 'Abrir este lead no Dryve (nova aba)' }, '↗ Dryve');
   f.appendChild(el('div', { class: 'campo' }, el('label', { for: 'f-lead' }, 'Lead ou ID do lead'), el('div', { class: 'input-com-botao' }, refs.fLead, refs.fLink)));
@@ -2739,6 +2815,11 @@ function criarFormRegistro() {
   refs.fLead.addEventListener('input', aoDigitarLead);
   refs.fOperador.addEventListener('change', function () {
     estado.ultimoOperadorId = refs.fOperador.value; salvarEstadoUI(); esconderErroForm();
+  });
+  /* Trocar o analista no formulário muda também a meta mostrada, a menos que a visão esteja no Time */
+  refs.fAnalista.addEventListener('change', function () {
+    estado.ultimoAnalista = refs.fAnalista.value; esconderErroForm();
+    if (analistaVisao() && refs.fAnalista.value) escolherAnalista(refs.fAnalista.value); else salvarEstadoUI();
   });
   TIPOS_ORDEM.forEach(function (t) {
     refs.fTipos[t].addEventListener('change', function () { estado.ultimoTipo = t; salvarEstadoUI(); atualizarDicaLead(); });
@@ -2796,6 +2877,11 @@ function atualizarForm() {
   refs.fOperador.replaceChildren(opcao('', ativos.length ? 'Selecione o operador' : 'Nenhum operador ativo'));
   ativos.forEach(function (o) { refs.fOperador.appendChild(opcao(o.id, o.nome, o.id === atual)); });
   if (!ativos.some(function (o) { return o.id === atual; })) refs.fOperador.value = '';
+  var nomesAn = listaAnalistas(), anAtual = analistaVisao() || refs.fAnalista.value || estado.ultimoAnalista;
+  refs.fAnalistaCampo.hidden = !nomesAn.length;
+  refs.fAnalista.replaceChildren(opcao('', 'Selecione o analista'));
+  nomesAn.forEach(function (n) { refs.fAnalista.appendChild(opcao(n, n, n === anAtual)); });
+  if (nomesAn.indexOf(anAtual) === -1) refs.fAnalista.value = '';
   var c = contagemDia(dataISO(new Date())), m = calcMetas(c);
   TIPOS_ORDEM.forEach(function (t) { refs.fTiposInfo[t].textContent = m.tipos[t].real + '/' + m.tipos[t].meta + ' hoje'; });
   if (!tipoSelecionado() && estado.ultimoTipo && refs.fTipos[estado.ultimoTipo]) refs.fTipos[estado.ultimoTipo].checked = true;
@@ -3286,8 +3372,31 @@ function construirCadencia(agora) {
       el('tbody', null, corpo))),
     el('p', { class: 'dica', style: 'margin:0' }, 'Cadência: leads em que o operador ligou pelo menos ' + cfg.ligacoes + ' vezes no dia OU teve uma ligação efetiva (conta como cadência feita). Efetiva: pelo menos uma ligação de ' + fmtSeg(cfg.efetivaSeg) + ' ou mais com o lead no dia. “No ritmo”: cadência ≥ 70% e efetivas ≥ 40%. Piores primeiro. Só operadores ativos.'));
 }
+/* Metas de hoje de cada analista e do Time; clicar na linha troca a visão do painel */
+function construirAnalistas(hojeStr) {
+  var nomes = listaAnalistas(), atual = analistaVisao();
+  if (!nomes.length) return el('div');
+  function linha(rotulo, analista, destaque) {
+    var c = contagemDia(hojeStr, analista), m = calcMetas(c, analista);
+    var cels = TIPOS_ORDEM.map(function (t) { return el('td', null, celulaMeta({ feito: m.tipos[t].real, meta: m.tipos[t].meta, falta: m.tipos[t].falta })); });
+    cels.push(el('td', null, celulaMeta({ feito: m.total.real, meta: m.total.meta, falta: m.total.falta })));
+    return el('tr', { class: analista === atual ? 'sel-analista' : '' },
+      el('td', null, el('b', null, rotulo), destaque ? el('div', { class: 'dica' }, destaque) : null), cels,
+      el('td', null, analista === atual ? tag('NA TELA', 'azul') : el('button', { type: 'button', class: 'btn btn-linha btn-peq', onclick: function () { escolherAnalista(analista); } }, 'Ver')));
+  }
+  var linhas = nomes.map(function (n) { return linha(n, n); });
+  linhas.push(linha('Time', '', nomes.length + ' ' + plural(nomes.length, 'analista', 'analistas') + ' × meta'));
+  var orfaos = estado.auditorias.filter(function (a) { return a.data === hojeStr && (!a.analista || nomes.indexOf(a.analista) === -1); }).length;
+  return el('div', { class: 'card' },
+    el('div', { class: 'card-cab' }, el('h3', null, 'Metas de hoje por analista'), el('span', { class: 'dica' }, dataBR(hojeStr))),
+    el('div', { class: 'tabela-wrap' }, el('table', { class: 'pl-metas' },
+      el('thead', null, el('tr', null, ['Analista'].concat(TIPOS_ORDEM.map(function (t) { return TIPOS[t].titulo; }), ['Total', '']).map(function (t) { return el('th', { scope: 'col' }, el('span', null, t)); }))),
+      el('tbody', null, linhas))),
+    el('p', { class: 'dica', style: 'margin:8px 0 0' }, 'A meta diária vale para cada analista; o Time soma a de todos.' + (orfaos ? ' ' + orfaos + ' ' + plural(orfaos, 'registro de hoje sem analista da lista conta', 'registros de hoje sem analista da lista contam') + ' só no Time.' : '')));
+}
 function renderEquipe() {
   var agora = new Date(), eq = calcEquipe(dataISO(agora)), r = eq.resumo;
+  $('#eq-analistas').replaceChildren(construirAnalistas(dataISO(agora)));
   $('#eq-foco').replaceChildren(construirFoco(eq));
   $('#eq-nivel').replaceChildren(construirNivelamento(agora, eq));
   $('#eq-cad').replaceChildren(construirCadencia(agora));
@@ -3318,7 +3427,7 @@ function linhaHistorico(a, compacta) {
   var cels = [];
   if (!compacta) cels.push(el('td', { class: 'num' }, dataBR(a.data)));
   cels.push(el('td', { class: 'num' }, a.hora));
-  cels.push(el('td', null, nomeOperadorAtual(a)));
+  cels.push(el('td', null, nomeOperadorAtual(a), a.analista ? el('div', { class: 'dica' }, 'por ' + a.analista) : null));
   cels.push(el('td', { class: 'lead' }, a.lead, ' ', linkLeadDryve(a.lead, '↗', 'link-mini', '')));
   cels.push(el('td', null, tag(TIPOS[a.tipo].rotulo, 'azul')));
   cels.push(el('td', { class: 'obs' }, a.obs));
@@ -3326,7 +3435,7 @@ function linhaHistorico(a, compacta) {
   cels.push(acoes);
   return el('tr', { class: rep ? 'rep' : '' }, cels);
 }
-function textoBusca(a) { return normBusca(a.operadorNome + ' ' + a.lead + ' ' + a.obs); }
+function textoBusca(a) { return normBusca(a.operadorNome + ' ' + a.lead + ' ' + a.obs + ' ' + (a.analista || '')); }
 function filtrarHistorico() {
   var f = estado.ui.hist, idx = indiceLeads();
   var q = normBusca(f.q), qn = normLead(f.q), ln = normLead(f.lead);
@@ -3404,7 +3513,7 @@ function relatorioDiario(dataStr) {
   var ativos = estado.operadores.filter(function (o) { return o.ativo; });
   var trab = ativos.filter(function (o) { return c.operadores.has(o.id); }).length;
   function linha(rot, x) { return rot + ': ' + x.real + '/' + x.meta + (x.exc > 0 ? ' (+' + x.exc + ' excedente)' : ''); }
-  var linhas = ['Resumo de ' + dataBR(dataStr) + ':'];
+  var linhas = ['Resumo de ' + dataBR(dataStr) + (listaAnalistas().length ? ' — ' + rotuloVisao() : '') + ':'];
   TIPOS_ORDEM.forEach(function (t) { linhas.push(linha(TIPOS[t].titulo, m.tipos[t])); });
   linhas.push('Total: ' + c.total + '/' + m.metaTotal + (m.excedente > 0 ? ' (+' + m.excedente + ' excedente)' : ''));
   linhas.push('Operadores trabalhados: ' + trab + ' de ' + ativos.length);
@@ -3460,6 +3569,7 @@ function renderConfig() {
   var c = estado.config;
   $('#c-rotina').value = c.metas.rotina; $('#c-doc').value = c.metas.documentacao; $('#c-perd').value = c.metas.perdido;
   $('#c-mensal').value = c.metaMensalPadrao;
+  $('#c-analistas').value = listaAnalistas().join('\n');
   $('#c-ini').value = c.horarios.inicio; $('#c-fim').value = c.horarios.fim;
   $('#c-alm-ini').value = c.horarios.almocoInicio; $('#c-alm-fim').value = c.horarios.almocoFim;
   $('#c-url').value = c.urlLead;
@@ -3570,8 +3680,10 @@ async function registrarDoForm() {
   var opId = refs.fOperador.value, tipo = tipoSelecionado();
   var lead = limparTexto(refs.fLead.value), obs = limparTexto(refs.fObs.value);
   var op = estado.operadores.find(function (o) { return o.id === opId; });
+  var analista = listaAnalistas().indexOf(refs.fAnalista.value) !== -1 ? refs.fAnalista.value : '';
   var erro = null, foco = null;
-  if (!op) { erro = 'Selecione o operador auditado.'; foco = refs.fOperador; }
+  if (listaAnalistas().length && !analista) { erro = 'Selecione o analista que está auditando.'; foco = refs.fAnalista; }
+  else if (!op) { erro = 'Selecione o operador auditado.'; foco = refs.fOperador; }
   else if (!op.ativo) { erro = 'Este operador está inativo. Reative-o na aba Equipe ou escolha outro.'; foco = refs.fOperador; }
   else if (!lead) { erro = 'Informe o lead ou ID do lead.'; foco = refs.fLead; }
   else if (!normLead(lead)) { erro = 'O lead precisa conter letras ou números.'; foco = refs.fLead; }
@@ -3595,11 +3707,11 @@ async function registrarDoForm() {
     }
     var reg = {
       id: novoId('a'), data: dataISO(agora), hora: horaISO(agora),
-      operadorId: op.id, operadorNome: op.nome, lead: lead, leadNorm: leadNorm, tipo: tipo, obs: obs, criadoEm: agora.getTime()
+      operadorId: op.id, operadorNome: op.nome, lead: lead, leadNorm: leadNorm, tipo: tipo, analista: analista, obs: obs, criadoEm: agora.getTime()
     };
     estado.auditorias.push(reg);
     salvarAuditorias();
-    estado.ultimoOperadorId = op.id; estado.ultimoTipo = tipo; salvarEstadoUI();
+    estado.ultimoOperadorId = op.id; estado.ultimoTipo = tipo; if (analista) estado.ultimoAnalista = analista; salvarEstadoUI();
     refs.fLead.value = ''; refs.fObs.value = ''; refs.fDica.hidden = true;
     renderTudo();
     tocar('ok');
@@ -3653,6 +3765,9 @@ async function editarRegistro(id) {
   estado.operadores.slice().sort(function (x, y) { return x.nome.localeCompare(y.nome, 'pt-BR'); }).forEach(function (o) {
     selOp.appendChild(opcao(o.id, o.nome + (o.ativo ? '' : ' (inativo)'), o.id === a.operadorId));
   });
+  var selAn = el('select', { id: 'e-analista' }, opcao('', '— sem analista —', !a.analista));
+  if (a.analista && listaAnalistas().indexOf(a.analista) === -1) selAn.appendChild(opcao(a.analista, a.analista + ' (removido da lista)', true));
+  listaAnalistas().forEach(function (n) { selAn.appendChild(opcao(n, n, n === a.analista)); });
   var lead = el('input', { type: 'text', id: 'e-lead', maxlength: '120', value: a.lead });
   var tipo = el('select', { id: 'e-tipo' }, TIPOS_ORDEM.map(function (t) { return opcao(t, TIPOS[t].rotulo, t === a.tipo); }));
   var data = el('input', { type: 'date', id: 'e-data', value: a.data });
@@ -3660,6 +3775,7 @@ async function editarRegistro(id) {
   var obs = el('input', { type: 'text', id: 'e-obs', maxlength: '300', value: a.obs });
   var msg = el('div', { class: 'erro-form', role: 'alert', hidden: true });
   var corpo = [
+    listaAnalistas().length || a.analista ? campoModal('Analista', selAn, 'e-analista') : null,
     campoModal('Operador', selOp, 'e-op'), campoModal('Lead', lead, 'e-lead'), campoModal('Tipo', tipo, 'e-tipo'),
     el('div', { class: 'linha-form' }, campoModal('Data', data, 'e-data'), campoModal('Hora', hora, 'e-hora')),
     campoModal('Observação', obs, 'e-obs'), msg
@@ -3683,6 +3799,7 @@ async function editarRegistro(id) {
   });
   if (r !== true || !novo) return;
   a.lead = novo.l; a.leadNorm = normLead(novo.l); a.tipo = tipo.value; a.data = data.value; a.hora = novo.h; a.obs = limparTexto(obs.value);
+  a.analista = selAn.value;
   if (selOp.value !== '__atual') {
     var op = estado.operadores.find(function (o) { return o.id === selOp.value; });
     a.operadorId = op.id; a.operadorNome = op.nome;
@@ -3773,9 +3890,9 @@ function campoCSV(v) {
   return s;
 }
 function gerarCSV(lista) {
-  var linhas = [['Data', 'Hora', 'Operador', 'Lead', 'Tipo', 'Observação', 'Lead repetido'].join(';')];
+  var linhas = [['Data', 'Hora', 'Operador', 'Lead', 'Tipo', 'Observação', 'Lead repetido', 'Analista'].join(';')];
   lista.forEach(function (a) {
-    linhas.push([dataBR(a.data), a.hora, nomeOperadorAtual(a), a.lead, TIPOS[a.tipo].rotulo, a.obs, ehRepetido(a) ? 'Sim' : 'Não'].map(campoCSV).join(';'));
+    linhas.push([dataBR(a.data), a.hora, nomeOperadorAtual(a), a.lead, TIPOS[a.tipo].rotulo, a.obs, ehRepetido(a) ? 'Sim' : 'Não', a.analista || ''].map(campoCSV).join(';'));
   });
   return '﻿' + linhas.join('\r\n') + '\r\n';
 }
@@ -3825,7 +3942,7 @@ function analisarCSV(texto) {
   if (linhas.length > 100001) return { erro: 'O arquivo possui linhas demais (máximo de 100.000 registros).' };
   var cab = linhas[0].map(function (c) { return normBusca(c); });
   var col = {};
-  [['data', 'data'], ['hora', 'hora'], ['operador', 'operador'], ['lead', 'lead'], ['tipo', 'tipo'], ['obs', 'observacao']].forEach(function (p) { col[p[0]] = cab.indexOf(p[1]); });
+  [['data', 'data'], ['hora', 'hora'], ['operador', 'operador'], ['lead', 'lead'], ['tipo', 'tipo'], ['obs', 'observacao'], ['analista', 'analista']].forEach(function (p) { col[p[0]] = cab.indexOf(p[1]); });
   var faltando = ['data', 'hora', 'operador', 'lead', 'tipo'].filter(function (k) { return col[k] < 0; });
   if (faltando.length) return { erro: 'Cabeçalho inválido. Colunas obrigatórias ausentes: ' + faltando.join(', ') + '. Esperado: Data;Hora;Operador;Lead;Tipo;Observação;Lead repetido.' };
   var existentes = new Set(estado.auditorias.map(chaveDup)), vistos = new Set();
@@ -3837,7 +3954,7 @@ function analisarCSV(texto) {
     var l = linhas[i];
     var a = sanitizarAuditoria({
       data: parseDataCSV(cel(l, 'data')), hora: cel(l, 'hora'), operadorNome: cel(l, 'operador'), lead: cel(l, 'lead'),
-      tipo: cel(l, 'tipo'), obs: cel(l, 'obs'), criadoEm: 0
+      tipo: cel(l, 'tipo'), obs: cel(l, 'obs'), analista: cel(l, 'analista'), criadoEm: 0
     });
     if (!a) { res.invalidos++; if (res.amostras.length < 3) res.amostras.push('linha ' + (i + 1)); continue; }
     a.id = novoId('a'); a.operadorId = null;
@@ -4040,7 +4157,7 @@ function registrarDoPlano(it) {
   if (ocorrenciasTotais(it.lead.codigoNorm).length) { toast('O lead ' + it.lead.codigo + ' já tem auditoria registrada.', { tipo: 'aviso' }); renderTudo(); return; }
   var agora = new Date();
   var reg = { id: novoId('a'), data: dataISO(agora), hora: horaISO(agora), operadorId: it.op.id, operadorNome: it.op.nome,
-    lead: it.lead.codigo, leadNorm: it.lead.codigoNorm, tipo: it.tipo, obs: 'Plano semanal', criadoEm: agora.getTime() };
+    lead: it.lead.codigo, leadNorm: it.lead.codigoNorm, tipo: it.tipo, analista: analistaVisao() || (listaAnalistas().indexOf(estado.ultimoAnalista) !== -1 ? estado.ultimoAnalista : ''), obs: 'Plano semanal', criadoEm: agora.getTime() };
   estado.auditorias.push(reg); salvarAuditorias();
   estado.ultimoOperadorId = it.op.id; estado.ultimoTipo = it.tipo; salvarEstadoUI();
   renderTudo(); tocar('ok');
@@ -5587,6 +5704,7 @@ function salvarFormConfig() {
   if (msg) { erro.textContent = msg; erro.hidden = false; tocar('erro'); return; }
   erro.hidden = true;
   estado.config.metas = metas; estado.config.horarios = hor; estado.config.metaMensalPadrao = mensal;
+  estado.config.analistas = sanitizarAnalistas($('#c-analistas').value.split(/\r?\n/));
   estado.config.urlLead = url; estado.config.apiSite = api.replace(/\/+$/, ''); estado.config.siteUrl = site; estado.config.cadencia = { ligacoes: cadN, efetivaSeg: cadS, ignorarRepetidas: $('#c-cad-rep').checked };
   estado.config.mostrarSegundos = $('#c-seg').checked; estado.config.sons = $('#c-som').checked; estado.config.confirmarExclusao = $('#c-conf').checked;
   salvarConfig(); aplicarConfigNaUI(); renderTudo();
@@ -5626,7 +5744,7 @@ async function apagarTudo() {
   if (r !== true) return;
   estado.auditorias = []; estado.operadores = operadoresPadrao(); estado.config = copiar(CONFIG_PADRAO); estado.baseLeads = []; estado.chamadas = []; estado.ia = iaVazio();
   estado.kanban = { importadoEm: 0, arquivo: '', leads: [] };
-  estado.ultimoOperadorId = ''; estado.ultimoTipo = '';
+  estado.ultimoOperadorId = ''; estado.ultimoTipo = ''; estado.ultimoAnalista = ''; estado.ui.analista = '';
   salvarAuditorias(); salvarOperadores(); salvarConfig(); salvarBase(); salvarKanban(); salvarChamadas(); salvarIA(); salvarEstadoUI();
   Armazenamento.remover(CH.backup);
   aplicarConfigNaUI(); renderTudo(); toast('Todos os dados foram apagados.');
@@ -5636,6 +5754,7 @@ async function apagarTudo() {
    10. EVENTOS E INICIALIZAÇÃO
    ===================================================== */
 function ligarEventos() {
+  $('#sel-analista').addEventListener('change', function (e) { escolherAnalista(e.target.value); });
   $$('.nav-btn').forEach(function (b) { b.addEventListener('click', function () { mostrarAba(b.dataset.aba, { focarLead: b.dataset.aba === 'registrar' }); }); });
 
   /* Equipe */
