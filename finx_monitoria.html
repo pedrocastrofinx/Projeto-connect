@@ -481,6 +481,26 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
   .menu,.topo,.voltar-topo,.toasts{display:none !important}
 }
 /* ---------- Natasha WhatsApp ---------- */
+.wh-wiz{display:grid;gap:16px;max-width:760px;margin:0 auto 18px;padding:22px}
+.wh-topo{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.wh-tag{display:inline-block;background:var(--azul-cl);color:var(--azul);font-weight:800;font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;padding:4px 11px;border-radius:99px}
+.wh-prog{height:6px;background:var(--cinza-cl);border-radius:99px;overflow:hidden}
+.wh-prog i{display:block;height:100%;width:0;background:var(--azul);border-radius:99px;transition:width .25s}
+.wh-resp{display:flex;flex-wrap:wrap;gap:6px}
+.wh-resp:empty{display:none}
+.wh-resp button{border:1px solid var(--linha);background:var(--sup2);color:var(--azul-esc);border-radius:99px;padding:4px 11px;font-size:.8rem;font-weight:700;cursor:pointer}
+.wh-resp button:hover{background:var(--azul-hover)}
+.wh-resp button small{font-weight:600;color:var(--muted);margin-right:4px}
+.wh-passo{display:grid;gap:14px;animation:whEntra .2s ease-out}
+.wh-passo[hidden]{display:none}
+@keyframes whEntra{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.wh-q{font-size:1.35rem;color:var(--azul-esc);margin:6px 0 0}
+.wh-q small{font-size:.8rem;font-weight:600;color:var(--muted)}
+.wh-passo input[type=text]{font-size:1.15rem;min-height:52px}
+.wh-passo .chip-tipo span{min-height:64px;justify-content:center;font-size:1rem}
+.wh-rodape{display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--linha);padding-top:12px}
+.wh-det{margin:0 auto 14px;max-width:1100px}
+@media (prefers-reduced-motion:reduce){.wh-passo{animation:none}}
 .wh-opcoes{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
 .wh-opcoes.duas{grid-template-columns:repeat(2,minmax(0,1fr))}
 .wh-opcoes .chip-tipo span{padding:11px 8px}
@@ -762,71 +782,96 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
     <!-- ===================== NATASHA WHATSAPP ===================== -->
     <section class="aba" id="aba-whats" data-aba="whats" aria-label="Análise Natasha WhatsApp" hidden>
       <div class="secao-titulo"><h2>Análise Natasha · WhatsApp</h2><span id="wh-sub"></span></div>
-      <div class="card" style="margin-bottom:16px" id="wh-fila-card">
-        <div class="card-cab" style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap">
-          <h3 style="margin:0">Fila de números a analisar</h3>
+      <div class="acoes" style="margin-bottom:14px">
+        <button type="button" class="btn btn-primario btn-peq" id="wh-xlsx">⭳ Exportar Excel</button>
+        <button type="button" class="btn btn-sec btn-peq" id="wh-csv">⭳ CSV</button>
+        <button type="button" class="btn btn-sec btn-peq" id="wh-importar">⭱ Importar Excel / CSV</button>
+      </div>
+
+      <form id="wh-form" class="card wh-wiz" autocomplete="off" novalidate>
+        <div class="wh-topo">
+          <div><span class="wh-tag" id="wh-form-tit">Nova análise</span> <span class="dica" id="wh-passo-txt"></span></div>
+          <button type="button" class="btn btn-linha btn-peq" id="wh-cancelar" hidden>Cancelar edição</button>
+        </div>
+        <div class="wh-prog" aria-hidden="true"><i id="wh-prog"></i></div>
+        <div class="wh-resp" id="wh-resp" aria-label="Respostas até agora"></div>
+
+        <div class="wh-passo" data-passo="numero">
+          <h3 class="wh-q">Qual é o número?</h3>
+          <input type="text" id="wh-numero" inputmode="tel" maxlength="40" placeholder="Ex.: 11 91234-5678" aria-label="Número">
+          <div class="acoes"><button type="button" class="btn btn-primario" data-wh="continuar">Continuar →</button></div>
+        </div>
+        <div class="wh-passo" data-passo="planilha" hidden>
+          <h3 class="wh-q">Em qual planilha está?</h3>
+          <div class="wh-opcoes" role="radiogroup" aria-label="Planilha" id="wh-planilha"></div>
+        </div>
+        <div class="wh-passo" data-passo="status" hidden>
+          <h3 class="wh-q">Qual o status no Dryve Pro?</h3>
+          <div class="wh-opcoes duas" role="radiogroup" aria-label="Status no Dryve Pro" id="wh-status"></div>
+        </div>
+        <div class="wh-passo" data-passo="statusok" hidden>
+          <h3 class="wh-q">O status está correto?</h3>
+          <div class="wh-opcoes duas" role="radiogroup" aria-label="Status correto" id="wh-statusok"></div>
+        </div>
+        <div class="wh-passo" data-passo="motivo" hidden>
+          <h3 class="wh-q">Qual o motivo do perdido?</h3>
+          <div class="wh-opcoes duas" role="radiogroup" aria-label="Motivo do perdido" id="wh-motivo"></div>
+        </div>
+        <div class="wh-passo" data-passo="outro" hidden>
+          <h3 class="wh-q">Qual é o motivo?</h3>
+          <input type="text" id="wh-outro" maxlength="120" placeholder="Escreva o motivo" aria-label="Outro motivo">
+          <div class="acoes"><button type="button" class="btn btn-primario" data-wh="continuar">Continuar →</button></div>
+        </div>
+        <div class="wh-passo" data-passo="motivook" hidden>
+          <h3 class="wh-q">O motivo está correto?</h3>
+          <div class="wh-opcoes duas" role="radiogroup" aria-label="Motivo correto" id="wh-motivook"></div>
+        </div>
+        <div class="wh-passo" data-passo="obs" hidden>
+          <h3 class="wh-q">Alguma observação? <small>(opcional)</small></h3>
+          <textarea id="wh-obs" rows="3" maxlength="600" placeholder="Opcional" aria-label="Observação"></textarea>
+          <div class="acoes">
+            <button type="submit" class="btn btn-primario" id="wh-salvar">✔ Salvar análise</button>
+            <span class="dica">Atalho: Ctrl + Enter</span>
+          </div>
+        </div>
+
+        <div class="wh-rodape">
+          <button type="button" class="btn btn-linha btn-peq" id="wh-voltar">← Voltar</button>
+          <button type="button" class="btn btn-linha btn-peq" id="wh-limpar">↺ Recomeçar</button>
+        </div>
+      </form>
+
+      <details class="card pl-ajustes wh-det" id="wh-fila-det">
+        <summary id="wh-fila-sum">Fila de números a analisar</summary>
+        <div style="display:grid;gap:10px;margin-top:12px">
+          <p class="dica" id="wh-fila-info" style="margin:0">Importe a planilha “telefones únicos”: entram só os números <b>sem esteira</b> e com nome <b>“Cliente”</b>. Clique num número para começar a análise dele.</p>
           <div class="acoes">
             <button type="button" class="btn btn-sec btn-peq" id="wh-fila-imp">⭱ Importar telefones únicos (.xlsx)</button>
             <button type="button" class="btn btn-linha btn-peq" id="wh-fila-limpar" hidden>Limpar fila</button>
           </div>
+          <div class="acoes" id="wh-fila" style="max-height:200px;overflow:auto"></div>
         </div>
-        <p class="dica" id="wh-fila-info" style="margin:8px 0">Importe a planilha “telefones únicos”: entram só os números <b>sem esteira</b> e com nome <b>“Cliente”</b>. Clique em um número para preencher o formulário.</p>
-        <div class="acoes" id="wh-fila" style="max-height:180px;overflow:auto"></div>
-      </div>
-      <div class="card" style="margin-bottom:16px">
-        <form id="wh-form" autocomplete="off" novalidate class="wh-bloco">
-          <div class="card-cab" style="display:flex;justify-content:space-between;gap:10px;align-items:center">
-            <h3 id="wh-form-tit" style="margin:0">Nova análise</h3>
-            <button type="button" class="btn btn-linha btn-peq" id="wh-cancelar" hidden>Cancelar edição</button>
-          </div>
-          <div class="linha-form">
-            <div class="campo"><label for="wh-numero">Número</label><input type="text" id="wh-numero" inputmode="tel" maxlength="40" placeholder="Ex.: 11 91234-5678" required></div>
-          </div>
-          <div class="campo"><span class="rotulo" id="wh-l-planilha">Qual planilha</span>
-            <div class="wh-opcoes" role="radiogroup" aria-labelledby="wh-l-planilha" id="wh-planilha"></div></div>
-          <div class="campo"><span class="rotulo" id="wh-l-status">Status no Dryve Pro</span>
-            <div class="wh-opcoes duas" role="radiogroup" aria-labelledby="wh-l-status" id="wh-status"></div></div>
-          <div class="campo" id="wh-c-statusok" hidden><span class="rotulo" id="wh-l-statusok">O status está correto?</span>
-            <div class="wh-opcoes duas" role="radiogroup" aria-labelledby="wh-l-statusok" id="wh-statusok"></div></div>
-          <div class="wh-sub" id="wh-perdido" hidden>
-            <div class="campo"><span class="rotulo" id="wh-l-motivo">Motivo do perdido</span>
-              <div class="wh-opcoes duas" role="radiogroup" aria-labelledby="wh-l-motivo" id="wh-motivo"></div></div>
-            <div class="campo" id="wh-c-outro" hidden><label for="wh-outro">Qual é o motivo?</label><input type="text" id="wh-outro" maxlength="120" placeholder="Escreva o motivo"></div>
-            <div class="campo"><span class="rotulo" id="wh-l-motivook">O motivo está correto?</span>
-              <div class="wh-opcoes duas" role="radiogroup" aria-labelledby="wh-l-motivook" id="wh-motivook"></div></div>
-          </div>
-          <div class="campo"><label for="wh-obs">Observação (opcional)</label><textarea id="wh-obs" rows="2" maxlength="600" placeholder="Opcional"></textarea></div>
-          <div class="acoes">
-            <button type="submit" class="btn btn-primario" id="wh-salvar">✚ Salvar análise</button>
-            <button type="button" class="btn btn-linha" id="wh-limpar">Limpar</button>
-            <span class="dica">Atalho: Ctrl + Enter</span>
-          </div>
-        </form>
-      </div>
+      </details>
 
-      <div class="secao-titulo"><h2>Análises salvas</h2><span id="wh-cont"></span></div>
-      <div class="wh-resumo" id="wh-resumo"></div>
-      <div class="card" style="margin-bottom:12px">
-        <div class="wh-fil">
-          <div class="campo"><label for="wh-f-busca">Buscar número ou observação</label><input type="search" id="wh-f-busca" placeholder="Buscar"></div>
-          <div class="campo"><label for="wh-f-planilha">Planilha</label><select id="wh-f-planilha"></select></div>
-          <div class="campo"><label for="wh-f-status">Status Dryve Pro</label><select id="wh-f-status"><option value="">Todos</option><option value="perdido">Perdido</option><option value="nao_perdido">Não perdido</option></select></div>
-          <div class="campo"><label for="wh-f-ok">Correção</label><select id="wh-f-ok"><option value="">Todas</option><option value="erro">Com algo incorreto</option><option value="ok">Tudo correto</option></select></div>
+      <details class="card pl-ajustes wh-det" id="wh-salvas-det">
+        <summary id="wh-salvas-sum">Análises salvas</summary>
+        <div style="margin-top:12px">
+          <div class="wh-resumo" id="wh-resumo"></div>
+          <div class="wh-fil">
+            <div class="campo"><label for="wh-f-busca">Buscar número ou observação</label><input type="search" id="wh-f-busca" placeholder="Buscar"></div>
+            <div class="campo"><label for="wh-f-planilha">Planilha</label><select id="wh-f-planilha"></select></div>
+            <div class="campo"><label for="wh-f-status">Status Dryve Pro</label><select id="wh-f-status"><option value="">Todos</option><option value="perdido">Perdido</option><option value="nao_perdido">Não perdido</option></select></div>
+            <div class="campo"><label for="wh-f-ok">Correção</label><select id="wh-f-ok"><option value="">Todas</option><option value="erro">Com algo incorreto</option><option value="ok">Tudo correto</option></select></div>
+          </div>
+          <div class="acoes" style="margin-bottom:10px"><button type="button" class="btn btn-perigo-linha btn-peq" id="wh-apagar">Apagar todas</button><span class="dica" id="wh-cont"></span></div>
+          <div class="tabela-wrap" tabindex="0" aria-label="Análises do WhatsApp (role para ver mais)">
+            <table class="wh-tab"><thead><tr>
+              <th><span>Data</span></th><th><span>Número</span></th><th><span>Planilha</span></th><th><span>Status Dryve</span></th><th><span>Status correto</span></th>
+              <th><span>Motivo</span></th><th><span>Motivo correto</span></th><th><span>Observação</span></th><th><span>Ações</span></th>
+            </tr></thead><tbody id="wh-corpo"></tbody></table>
+          </div>
         </div>
-        <div class="acoes">
-          <button type="button" class="btn btn-primario" id="wh-xlsx">⭳ Exportar Excel (.xlsx)</button>
-          <button type="button" class="btn btn-sec" id="wh-csv">⭳ Exportar CSV</button>
-          <button type="button" class="btn btn-sec" id="wh-importar">⭱ Importar Excel / CSV</button>
-          <button type="button" class="btn btn-linha" id="wh-apagar">Apagar todas</button>
-          <span class="dica">Exporte para guardar uma cópia e importe de volta se os dados se perderem. A importação não duplica o que já existe.</span>
-        </div>
-      </div>
-      <div class="tabela-wrap" tabindex="0" aria-label="Análises do WhatsApp (role para ver mais)">
-        <table class="wh-tab"><thead><tr>
-          <th><span>Data</span></th><th><span>Número</span></th><th><span>Planilha</span></th><th><span>Status Dryve</span></th><th><span>Status correto</span></th>
-          <th><span>Motivo</span></th><th><span>Motivo correto</span></th><th><span>Observação</span></th><th><span>Ações</span></th>
-        </tr></thead><tbody id="wh-corpo"></tbody></table>
-      </div>
+      </details>
     </section>
 
     <section class="aba" id="aba-config" data-aba="config" aria-label="Configurações" hidden>
@@ -1134,7 +1179,7 @@ var Armazenamento = {
    3. ESTADO E SANITIZAÇÃO
    ===================================================== */
 var estado = {
-  auditorias: [], operadores: [], whats: [], whFila: { arquivo: '', importadoEm: 0, itens: [] }, whForm: null, whEdit: '', baseLeads: [], chamadas: [], ia: null, kanban: { importadoEm: 0, arquivo: '', leads: [] }, config: null,
+  auditorias: [], operadores: [], whats: [], whFila: { arquivo: '', importadoEm: 0, itens: [] }, whForm: null, whEdit: '', whPasso: 'numero', baseLeads: [], chamadas: [], ia: null, kanban: { importadoEm: 0, arquivo: '', leads: [] }, config: null,
   rev: 0, registrando: false, diaRender: '', minutoRender: -1,
   ultimoOperadorId: '', ultimoTipo: '', ultimoAnalista: '', avisoBackupFechado: false,
   ui: {
@@ -5914,20 +5959,62 @@ function whCriarRadios(cont, nome, lista, aoMudar) {
 }
 function whLer(nome) { var r = document.querySelector('input[name="wh-' + nome + '"]:checked'); return r ? r.value : ''; }
 function whMarcar(nome, v) { $$('input[name="wh-' + nome + '"]').forEach(function (r) { r.checked = r.value === v; }); }
-function whAtualizarForm() {
-  var st = whLer('status'), mo = whLer('motivo');
-  $('#wh-c-statusok').hidden = !st;
-  $('#wh-perdido').hidden = st !== 'perdido';
-  $('#wh-c-outro').hidden = st !== 'perdido' || mo !== 'outro';
+var WH_TITULOS = { numero: 'Número', planilha: 'Planilha', status: 'Status', statusok: 'Status correto', motivo: 'Motivo', outro: 'Motivo', motivook: 'Motivo correto', obs: 'Observação' };
+function whPassos() {
+  var p = ['numero', 'planilha', 'status', 'statusok'];
+  if (whLer('status') === 'perdido') { p.push('motivo'); if (whLer('motivo') === 'outro') p.push('outro'); p.push('motivook'); }
+  p.push('obs');
+  return p;
 }
+function whRespondido(p) {
+  if (p === 'numero') return !!limparTexto($('#wh-numero').value);
+  if (p === 'outro') return !!limparTexto($('#wh-outro').value);
+  if (p === 'obs') return true;
+  return !!whLer(p);
+}
+function whProximoPasso() {
+  var ps = whPassos();
+  for (var i = 0; i < ps.length; i++) if (!whRespondido(ps[i])) return ps[i];
+  return 'obs';
+}
+function whValorPasso(p) {
+  if (p === 'numero') return limparTexto($('#wh-numero').value);
+  if (p === 'outro') return limparTexto($('#wh-outro').value);
+  var v = whLer(p);
+  return p === 'planilha' ? whRotulo(WH_PLANILHAS, v) : p === 'status' ? whRotulo(WH_STATUS, v) : p === 'motivo' ? whRotulo(WH_MOTIVOS, v)
+    : v === 'sim' ? '✔ Correto' : v === 'nao' ? '✖ Incorreto' : '';
+}
+function whRender(foco) {
+  var ps = whPassos();
+  if (ps.indexOf(estado.whPasso) < 0) estado.whPasso = ps[0];
+  var i = ps.indexOf(estado.whPasso);
+  $$('.wh-passo').forEach(function (x) { x.hidden = x.dataset.passo !== estado.whPasso; });
+  $('#wh-prog').style.width = Math.round((i + 1) / ps.length * 100) + '%';
+  $('#wh-passo-txt').textContent = 'Passo ' + (i + 1) + ' de ' + ps.length;
+  $('#wh-voltar').hidden = i === 0;
+  var resp = $('#wh-resp'); resp.textContent = '';
+  ps.forEach(function (p) {
+    if (p === estado.whPasso || p === 'obs' || !whRespondido(p)) return;
+    resp.appendChild(el('button', { type: 'button', title: 'Mudar esta resposta', onclick: function () { estado.whPasso = p; whRender(true); } }, el('small', null, WH_TITULOS[p] + ':'), whValorPasso(p)));
+  });
+  if (foco) {
+    var campo = estado.whPasso === 'numero' ? $('#wh-numero') : estado.whPasso === 'outro' ? $('#wh-outro') : estado.whPasso === 'obs' ? $('#wh-obs') : null;
+    if (campo) campo.focus();
+  }
+}
+function whAvancar() { estado.whPasso = whProximoPasso(); whRender(true); }
+function whContinuar() {
+  if (!whRespondido(estado.whPasso)) { toast(estado.whPasso === 'numero' ? 'Informe o número.' : 'Escreva o motivo.', { tipo: 'aviso' }); return; }
+  whAvancar();
+}
+function whAtualizarForm() { whRender(); }
 function whLimparForm() {
-  estado.whEdit = '';
+  estado.whEdit = ''; estado.whPasso = 'numero';
   $('#wh-numero').value = ''; $('#wh-outro').value = ''; $('#wh-obs').value = '';
   ['planilha', 'status', 'statusok', 'motivo', 'motivook'].forEach(function (n) { whMarcar(n, ''); });
   $('#wh-form-tit').textContent = 'Nova análise';
-  $('#wh-salvar').textContent = '✚ Salvar análise';
   $('#wh-cancelar').hidden = true;
-  whAtualizarForm();
+  whRender(false);
 }
 function whEditar(id) {
   var a = estado.whats.find(function (x) { return x.id === id; });
@@ -5937,12 +6024,10 @@ function whEditar(id) {
   $('#wh-numero').value = a.numero; $('#wh-outro').value = a.motivoOutro; $('#wh-obs').value = a.obs;
   whMarcar('planilha', a.planilha); whMarcar('status', a.status); whMarcar('statusok', a.statusOk);
   whMarcar('motivo', a.motivo); whMarcar('motivook', a.motivoOk);
-  $('#wh-form-tit').textContent = 'Editando análise de ' + a.numero;
-  $('#wh-salvar').textContent = '💾 Salvar alterações';
+  $('#wh-form-tit').textContent = 'Editando';
   $('#wh-cancelar').hidden = false;
-  whAtualizarForm();
+  estado.whPasso = 'obs'; whRender(true);
   $('#wh-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  $('#wh-numero').focus();
 }
 function whSalvar() {
   var dados = {
@@ -5950,14 +6035,14 @@ function whSalvar() {
     motivo: whLer('motivo'), motivoOutro: $('#wh-outro').value, motivoOk: whLer('motivook'), obs: $('#wh-obs').value
   };
   function falta(msg, alvo) { toast(msg, { tipo: 'aviso' }); if (alvo) { var e = $(alvo); if (e) e.focus(); } return false; }
-  if (!limparTexto(dados.numero)) return falta('Informe o número.', '#wh-numero');
-  if (!dados.planilha) return falta('Escolha a planilha.');
-  if (!dados.status) return falta('Escolha o status no Dryve Pro.');
-  if (!dados.statusOk) return falta('Diga se o status está correto.');
+  if (!limparTexto(dados.numero)) { estado.whPasso = 'numero'; whRender(true); return falta('Informe o número.'); }
+  if (!dados.planilha) { estado.whPasso = 'planilha'; whRender(); return falta('Escolha a planilha.'); }
+  if (!dados.status) { estado.whPasso = 'status'; whRender(); return falta('Escolha o status no Dryve Pro.'); }
+  if (!dados.statusOk) { estado.whPasso = 'statusok'; whRender(); return falta('Diga se o status está correto.'); }
   if (dados.status === 'perdido') {
-    if (!dados.motivo) return falta('Escolha o motivo do perdido.');
-    if (dados.motivo === 'outro' && !limparTexto(dados.motivoOutro)) return falta('Escreva qual é o motivo.', '#wh-outro');
-    if (!dados.motivoOk) return falta('Diga se o motivo está correto.');
+    if (!dados.motivo) { estado.whPasso = 'motivo'; whRender(); return falta('Escolha o motivo do perdido.'); }
+    if (dados.motivo === 'outro' && !limparTexto(dados.motivoOutro)) { estado.whPasso = 'outro'; whRender(true); return falta('Escreva qual é o motivo.'); }
+    if (!dados.motivoOk) { estado.whPasso = 'motivook'; whRender(); return falta('Diga se o motivo está correto.'); }
   }
   var existente = estado.whEdit ? estado.whats.find(function (x) { return x.id === estado.whEdit; }) : null;
   if (existente) { dados.id = existente.id; dados.criadoEm = existente.criadoEm; }
@@ -5971,7 +6056,7 @@ function whSalvar() {
   var num = a.numero;
   whLimparForm(); renderWhats();
   toast(existente ? 'Análise de ' + num + ' atualizada.' : 'Análise de ' + num + ' salva.' + (repetido ? ' Atenção: já havia análise deste número nesta planilha.' : ''), { tipo: repetido ? 'aviso' : 'ok' });
-  $('#wh-numero').focus();
+  whRender(true);
   return true;
 }
 async function whExcluir(id) {
@@ -6011,6 +6096,7 @@ function whTagSN(v) { return v === 'sim' ? tag('Correto', 'verde') : v === 'nao'
 function renderWhats() {
   renderWhatsFila();
   var todas = estado.whats, lista = whFiltradas();
+  $('#wh-salvas-sum').textContent = 'Análises salvas · ' + todas.length;
   $('#wh-sub').textContent = 'Salvo neste navegador · ' + todas.length + ' ' + plural(todas.length, 'análise', 'análises');
   $('#wh-cont').textContent = lista.length === todas.length ? '' : 'Mostrando ' + lista.length + ' de ' + todas.length;
   var sel = $('#wh-f-planilha');
@@ -6230,13 +6316,14 @@ function renderWhatsFila() {
   var f = estado.whFila, pend = whFilaPendentes(), cont = $('#wh-fila');
   cont.textContent = '';
   $('#wh-fila-limpar').hidden = !f.itens.length;
+  $('#wh-fila-sum').textContent = 'Fila de números a analisar' + (f.itens.length ? ' · ' + pend.length + ' ' + plural(pend.length, 'pendente', 'pendentes') : '');
   if (f.itens.length) {
     $('#wh-fila-info').textContent = f.arquivo + ' · ' + f.itens.length + ' números na fila · ' + pend.length + ' ' + plural(pend.length, 'pendente', 'pendentes') + ' · ' + (f.itens.length - pend.length) + ' já analisados.';
   }
   pend.forEach(function (i) {
     cont.appendChild(el('button', { type: 'button', class: 'btn btn-linha btn-peq', title: i.plan ? 'Planilha: ' + whRotulo(WH_PLANILHAS, i.plan) : '', onclick: function () {
-      whLimparForm(); $('#wh-numero').value = i.tel; whMarcar('planilha', i.plan); whAtualizarForm();
-      $('#wh-form').scrollIntoView({ behavior: 'smooth', block: 'start' }); $('#wh-numero').focus();
+      whLimparForm(); $('#wh-numero').value = i.tel; whMarcar('planilha', i.plan);
+      estado.whPasso = whProximoPasso(); whRender(true); $('#wh-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
     } }, whFormatarTel(i.tel)));
   });
   if (f.itens.length && !pend.length) cont.appendChild(el('span', { class: 'dica' }, 'Todos os números da fila já foram analisados. ✔'));
@@ -6265,7 +6352,7 @@ async function importarWhatsFila(arquivo) {
     if (!ok) return;
   }
   estado.whFila = { arquivo: arquivo.name.slice(0, 120), importadoEm: Date.now(), itens: itens };
-  salvarWhatsFila(); renderWhats();
+  salvarWhatsFila(); renderWhats(); $('#wh-fila-det').open = true;
   toast(itens.length + ' de ' + total + ' números entraram na fila.');
 }
 
@@ -6276,11 +6363,15 @@ function ligarEventosWhats() {
     if (!(await confirmar({ titulo: 'Limpar a fila?', perigo: true, rotuloOk: 'Limpar', corpo: ['A fila de números será removida. As análises salvas não são afetadas.'] }))) return;
     estado.whFila = { arquivo: '', importadoEm: 0, itens: [] }; salvarWhatsFila(); renderWhats();
   });
-  whCriarRadios($('#wh-planilha'), 'planilha', WH_PLANILHAS, whAtualizarForm);
-  whCriarRadios($('#wh-status'), 'status', WH_STATUS, whAtualizarForm);
-  whCriarRadios($('#wh-statusok'), 'statusok', WH_SN, whAtualizarForm);
-  whCriarRadios($('#wh-motivo'), 'motivo', WH_MOTIVOS, function () { whAtualizarForm(); if (whLer('motivo') === 'outro') $('#wh-outro').focus(); });
-  whCriarRadios($('#wh-motivook'), 'motivook', WH_SN, whAtualizarForm);
+  whCriarRadios($('#wh-planilha'), 'planilha', WH_PLANILHAS, whAvancar);
+  whCriarRadios($('#wh-status'), 'status', WH_STATUS, function () { whMarcar('statusok', ''); whAvancar(); });
+  whCriarRadios($('#wh-statusok'), 'statusok', WH_SN, whAvancar);
+  whCriarRadios($('#wh-motivo'), 'motivo', WH_MOTIVOS, whAvancar);
+  whCriarRadios($('#wh-motivook'), 'motivook', WH_SN, whAvancar);
+  $$('[data-wh=continuar]').forEach(function (b) { b.addEventListener('click', whContinuar); });
+  $('#wh-voltar').addEventListener('click', function () { var ps = whPassos(), i = ps.indexOf(estado.whPasso); if (i > 0) { estado.whPasso = ps[i - 1]; whRender(true); } });
+  ['#wh-numero', '#wh-outro'].forEach(function (id) { $(id).addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.ctrlKey) { e.preventDefault(); whContinuar(); } }); });
+  whRender(false);
   $('#wh-form').addEventListener('submit', function (e) { e.preventDefault(); whSalvar(); });
   $('#wh-form').addEventListener('keydown', function (e) { if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); whSalvar(); } });
   $('#wh-limpar').addEventListener('click', whLimparForm);
