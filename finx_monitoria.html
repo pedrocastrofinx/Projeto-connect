@@ -846,6 +846,12 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
           <h3 class="wh-q">O motivo está correto?</h3>
           <div class="wh-opcoes duas" role="radiogroup" aria-label="Motivo correto" id="wh-motivook"></div>
         </div>
+        <div class="wh-passo" data-passo="motivocerto" hidden>
+          <h3 class="wh-q">Qual seria o motivo correto?</h3>
+          <input type="hidden" id="wh-cert">
+          <input type="search" id="wh-cert-busca" placeholder="Digite para buscar ou escrever outro motivo…" aria-label="Buscar motivo correto" style="font-size:1.05rem;min-height:50px">
+          <div class="wh-lista" id="wh-cert-lista" role="listbox" aria-label="Motivo correto"></div>
+        </div>
         <div class="wh-passo" data-passo="obs" hidden>
           <h3 class="wh-q">Alguma observação? <small>(opcional)</small></h3>
           <textarea id="wh-obs" rows="3" maxlength="600" placeholder="Opcional" aria-label="Observação"></textarea>
@@ -887,7 +893,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
           <div class="tabela-wrap" tabindex="0" aria-label="Análises do WhatsApp (role para ver mais)">
             <table class="wh-tab"><thead><tr>
               <th><span>Data</span></th><th><span>Número</span></th><th><span>Planilha</span></th><th><span>Status Dryve</span></th><th><span>Status correto</span></th>
-              <th><span>Motivo</span></th><th><span>Motivo correto</span></th><th><span>Observação</span></th><th><span>Ações</span></th>
+              <th><span>Motivo</span></th><th><span>Motivo correto?</span></th><th><span>Observação</span></th><th><span>Ações</span></th>
             </tr></thead><tbody id="wh-corpo"></tbody></table>
           </div>
         </div>
@@ -5935,7 +5941,7 @@ var WH_MOTIVOS_LISTA = ['Aprovou limite baixo', 'CNH vencida / Não possui CNH',
   'Reprovado na segunda análise', 'Reprovado no crédito', 'Score norte/nordeste', 'Sem retorno'];
 var WH_MOTIVOS = [{ v: 'app', r: 'Motorista de App' }, { v: 'outro', r: 'Outro' }];
 var WH_SN = [{ v: 'sim', r: '✔ Correto' }, { v: 'nao', r: '✖ Incorreto' }];
-var WH_CAB = ['Data', 'Hora', 'Número', 'Planilha', 'Status Dryve Pro', 'Etapa (se outro)', 'Por quê da etapa', 'Status correto', 'Motivo do perdido', 'Por quê do motivo', 'Motivo correto', 'Observação', 'ID'];
+var WH_CAB = ['Data', 'Hora', 'Número', 'Planilha', 'Status Dryve Pro', 'Etapa (se outro)', 'Por quê da etapa', 'Status correto', 'Motivo do perdido', 'Por quê do motivo', 'Motivo correto', 'Motivo certo (se incorreto)', 'Observação', 'ID'];
 var WH_FIL = { busca: '', planilha: '', status: '', ok: '' };
 
 function whRotulo(lista, v) { var x = lista.find(function (i) { return i.v === v; }); return x ? x.r : ''; }
@@ -5954,7 +5960,7 @@ function sanitizarWhats(x) {
     planilha: whEscolha(WH_PLANILHAS, x.planilha),
     status: whEscolha(WH_STATUS, x.status),
     statusOk: whEscolha(WH_SN, x.statusOk),
-    etapa: '', etapaPq: '', motivo: '', motivoOutro: '', motivoPq: '', motivoOk: '',
+    etapa: '', etapaPq: '', motivo: '', motivoOutro: '', motivoPq: '', motivoOk: '', motivoCerto: '',
     obs: limparTexto(x.obs).slice(0, 600)
   };
   if (a.status === 'nao_perdido') { a.etapa = whEscolha(WH_ETAPAS, x.etapa); a.etapaPq = limparTexto(x.etapaPq).slice(0, 300); }
@@ -5962,6 +5968,7 @@ function sanitizarWhats(x) {
     a.motivo = whEscolha(WH_MOTIVOS, x.motivo);
     if (a.motivo === 'outro') { a.motivoOutro = limparTexto(x.motivoOutro).slice(0, 120); a.motivoPq = limparTexto(x.motivoPq).slice(0, 300); }
     a.motivoOk = whEscolha(WH_SN, x.motivoOk);
+    if (a.motivoOk === 'nao') a.motivoCerto = limparTexto(x.motivoCerto).slice(0, 120);
   }
   return a;
 }
@@ -5988,13 +5995,13 @@ function whCriarRadios(cont, nome, lista, aoMudar) {
 }
 function whLer(nome) { var r = document.querySelector('input[name="wh-' + nome + '"]:checked'); return r ? r.value : ''; }
 function whMarcar(nome, v) { $$('input[name="wh-' + nome + '"]').forEach(function (r) { r.checked = r.value === v; }); }
-var WH_TITULOS = { numero: 'Número', planilha: 'Planilha', status: 'Status', etapa: 'Etapa', etapapq: 'Por quê (etapa)', statusok: 'Status correto', motivo: 'Motivo', qual: 'Qual', motivopq: 'Por quê (motivo)', motivook: 'Motivo correto', obs: 'Observação' };
-var WH_TEXTOS = { numero: '#wh-numero', etapapq: '#wh-epq', qual: '#wh-qual', motivopq: '#wh-mpq' };
+var WH_TITULOS = { numero: 'Número', planilha: 'Planilha', status: 'Status', etapa: 'Etapa', etapapq: 'Por quê (etapa)', statusok: 'Status correto', motivo: 'Motivo', qual: 'Qual', motivopq: 'Por quê (motivo)', motivook: 'Motivo correto', motivocerto: 'Motivo certo', obs: 'Observação' };
+var WH_TEXTOS = { numero: '#wh-numero', etapapq: '#wh-epq', qual: '#wh-qual', motivopq: '#wh-mpq', motivocerto: '#wh-cert' };
 function whPassos() {
   var p = ['numero', 'planilha', 'status'], st = whLer('status');
   if (st === 'nao_perdido') p.push('etapa', 'etapapq');
   p.push('statusok');
-  if (st === 'perdido') { p.push('motivo'); if (whLer('motivo') === 'outro') p.push('qual', 'motivopq'); p.push('motivook'); }
+  if (st === 'perdido') { p.push('motivo'); if (whLer('motivo') === 'outro') p.push('qual', 'motivopq'); p.push('motivook'); if (whLer('motivook') === 'nao') p.push('motivocerto'); }
   p.push('obs');
   return p;
 }
@@ -6014,14 +6021,20 @@ function whValorPasso(p) {
   return p === 'planilha' ? whRotulo(WH_PLANILHAS, v) : p === 'status' ? whRotulo(WH_STATUS, v) : p === 'motivo' ? whRotulo(WH_MOTIVOS, v) : p === 'etapa' ? whRotulo(WH_ETAPAS, v)
     : v === 'sim' ? '✔ Correto' : v === 'nao' ? '✖ Incorreto' : '';
 }
-function whRenderQual() {
-  var q = limparTexto($('#wh-qual-busca').value), n = normBusca(q), lista = $('#wh-qual-lista');
+function whRenderLista(busca, listaSel, hidden, opcoes) {
+  var q = limparTexto($(busca).value), n = normBusca(q), lista = $(listaSel);
   lista.textContent = '';
-  var achados = WH_MOTIVOS_LISTA.filter(function (m) { return !n || normBusca(m).indexOf(n) !== -1; });
-  function escolher(m) { $('#wh-qual').value = m; $('#wh-qual-busca').value = ''; whAvancar(); }
-  achados.forEach(function (m) { lista.appendChild(el('button', { type: 'button', role: 'option', onclick: function () { escolher(m); } }, m)); });
-  if (q && !WH_MOTIVOS_LISTA.some(function (m) { return normBusca(m) === n; })) lista.appendChild(el('button', { type: 'button', class: 'novo', onclick: function () { escolher(q); } }, 'Usar “' + q + '” como motivo'));
+  function escolher(m) { $(hidden).value = m; $(busca).value = ''; whAvancar(); }
+  opcoes.filter(function (m) { return !n || normBusca(m).indexOf(n) !== -1; }).forEach(function (m) {
+    lista.appendChild(el('button', { type: 'button', role: 'option', onclick: function () { escolher(m); } }, m));
+  });
+  if (q && !opcoes.some(function (m) { return normBusca(m) === n; })) lista.appendChild(el('button', { type: 'button', class: 'novo', onclick: function () { escolher(q); } }, 'Usar “' + q + '” como motivo'));
   if (!lista.children.length) lista.appendChild(el('span', { class: 'dica' }, 'Digite o motivo acima.'));
+}
+function whRenderQual() { whRenderLista('#wh-qual-busca', '#wh-qual-lista', '#wh-qual', WH_MOTIVOS_LISTA); }
+function whRenderCerto() {
+  var atual = whLer('motivo') === 'app' ? 'Motorista de App' : limparTexto($('#wh-qual').value);
+  whRenderLista('#wh-cert-busca', '#wh-cert-lista', '#wh-cert', ['Motorista de App'].concat(WH_MOTIVOS_LISTA).filter(function (m) { return normBusca(m) !== normBusca(atual); }));
 }
 function whRender(foco) {
   var ps = whPassos();
@@ -6037,8 +6050,9 @@ function whRender(foco) {
     resp.appendChild(el('button', { type: 'button', title: 'Mudar esta resposta', onclick: function () { estado.whPasso = p; whRender(true); } }, el('small', null, WH_TITULOS[p] + ':'), whValorPasso(p)));
   });
   if (estado.whPasso === 'qual') whRenderQual();
+  if (estado.whPasso === 'motivocerto') whRenderCerto();
   if (foco) {
-    var campo = { numero: '#wh-numero', etapapq: '#wh-epq', qual: '#wh-qual-busca', motivopq: '#wh-mpq', obs: '#wh-obs' }[estado.whPasso];
+    var campo = { numero: '#wh-numero', etapapq: '#wh-epq', qual: '#wh-qual-busca', motivopq: '#wh-mpq', motivocerto: '#wh-cert-busca', obs: '#wh-obs' }[estado.whPasso];
     if (campo) $(campo).focus();
   }
 }
@@ -6050,7 +6064,7 @@ function whContinuar() {
 function whAtualizarForm() { whRender(); }
 function whLimparForm() {
   estado.whEdit = ''; estado.whPasso = 'numero';
-  $('#wh-numero').value = ''; $('#wh-qual').value = ''; $('#wh-qual-busca').value = ''; $('#wh-epq').value = ''; $('#wh-mpq').value = ''; $('#wh-obs').value = '';
+  $('#wh-numero').value = ''; $('#wh-qual').value = ''; $('#wh-qual-busca').value = ''; $('#wh-cert').value = ''; $('#wh-cert-busca').value = ''; $('#wh-epq').value = ''; $('#wh-mpq').value = ''; $('#wh-obs').value = '';
   ['etapa', 'planilha', 'status', 'statusok', 'motivo', 'motivook'].forEach(function (n) { whMarcar(n, ''); });
   $('#wh-form-tit').textContent = 'Nova análise';
   $('#wh-cancelar').hidden = true;
@@ -6061,7 +6075,7 @@ function whEditar(id) {
   if (!a) return;
   whLimparForm();
   estado.whEdit = a.id;
-  $('#wh-numero').value = a.numero; $('#wh-qual').value = a.motivoOutro; $('#wh-epq').value = a.etapaPq; $('#wh-mpq').value = a.motivoPq; $('#wh-obs').value = a.obs;
+  $('#wh-numero').value = a.numero; $('#wh-qual').value = a.motivoOutro; $('#wh-cert').value = a.motivoCerto; $('#wh-epq').value = a.etapaPq; $('#wh-mpq').value = a.motivoPq; $('#wh-obs').value = a.obs;
   whMarcar('etapa', a.etapa); whMarcar('planilha', a.planilha); whMarcar('status', a.status); whMarcar('statusok', a.statusOk);
   whMarcar('motivo', a.motivo); whMarcar('motivook', a.motivoOk);
   $('#wh-form-tit').textContent = 'Editando';
@@ -6072,7 +6086,7 @@ function whEditar(id) {
 function whSalvar() {
   var dados = {
     numero: $('#wh-numero').value, planilha: whLer('planilha'), status: whLer('status'), statusOk: whLer('statusok'),
-    etapa: whLer('etapa'), etapaPq: $('#wh-epq').value, motivo: whLer('motivo'), motivoOutro: $('#wh-qual').value, motivoPq: $('#wh-mpq').value, motivoOk: whLer('motivook'), obs: $('#wh-obs').value
+    etapa: whLer('etapa'), etapaPq: $('#wh-epq').value, motivo: whLer('motivo'), motivoOutro: $('#wh-qual').value, motivoPq: $('#wh-mpq').value, motivoOk: whLer('motivook'), motivoCerto: $('#wh-cert').value, obs: $('#wh-obs').value
   };
   function falta(msg, alvo) { toast(msg, { tipo: 'aviso' }); if (alvo) { var e = $(alvo); if (e) e.focus(); } return false; }
   if (!limparTexto(dados.numero)) { estado.whPasso = 'numero'; whRender(true); return falta('Informe o número.'); }
@@ -6088,6 +6102,7 @@ function whSalvar() {
     if (dados.motivo === 'outro' && !limparTexto(dados.motivoOutro)) { estado.whPasso = 'qual'; whRender(true); return falta('Escolha qual é o motivo.'); }
     if (dados.motivo === 'outro' && !limparTexto(dados.motivoPq)) { estado.whPasso = 'motivopq'; whRender(true); return falta('Escreva o porquê do motivo.'); }
     if (!dados.motivoOk) { estado.whPasso = 'motivook'; whRender(); return falta('Diga se o motivo está correto.'); }
+    if (dados.motivoOk === 'nao' && !limparTexto(dados.motivoCerto)) { estado.whPasso = 'motivocerto'; whRender(true); return falta('Escolha qual seria o motivo correto.'); }
   }
   var existente = estado.whEdit ? estado.whats.find(function (x) { return x.id === estado.whEdit; }) : null;
   if (existente) { dados.id = existente.id; dados.criadoEm = existente.criadoEm; }
@@ -6173,7 +6188,7 @@ function renderWhats() {
       el('td', null, a.status === 'perdido' ? tag('Perdido', 'vermelho') : a.status ? [tag('Outro', 'cinza'), el('span', { class: 'wh-pq' }, (whRotulo(WH_ETAPAS, a.etapa) || '') + (a.etapaPq ? ' — ' + a.etapaPq : ''))] : '—'),
       el('td', null, whTagSN(a.statusOk)),
       el('td', null, motivo || '—', a.motivoPq ? el('span', { class: 'wh-pq' }, a.motivoPq) : null),
-      el('td', null, a.status === 'perdido' ? whTagSN(a.motivoOk) : el('span', { class: 'dica' }, '—')),
+      el('td', null, a.status === 'perdido' ? [whTagSN(a.motivoOk), a.motivoCerto ? el('span', { class: 'wh-pq' }, 'Certo: ' + a.motivoCerto) : null] : el('span', { class: 'dica' }, '—')),
       el('td', { class: 'obs' }, a.obs),
       el('td', { class: 'num' },
         el('button', { type: 'button', class: 'btn btn-linha btn-peq', onclick: function () { whEditar(a.id); } }, 'Editar'), ' ',
@@ -6188,7 +6203,7 @@ function whLinhasExport() {
     return [dataBR(dataISO(d)), horaISO(d), a.numero, whRotulo(WH_PLANILHAS, a.planilha), whRotulo(WH_STATUS, a.status),
       whRotulo(WH_ETAPAS, a.etapa), a.etapaPq,
       a.statusOk === 'sim' ? 'Sim' : a.statusOk === 'nao' ? 'Não' : '', whMotivoTexto(a), a.motivoPq,
-      a.status === 'perdido' ? (a.motivoOk === 'sim' ? 'Sim' : a.motivoOk === 'nao' ? 'Não' : '') : '', a.obs, a.id];
+      a.status === 'perdido' ? (a.motivoOk === 'sim' ? 'Sim' : a.motivoOk === 'nao' ? 'Não' : '') : '', a.motivoCerto, a.obs, a.id];
   });
 }
 function whNomeArquivo(ext) { var d = new Date(); return 'natasha_whatsapp_' + dataISO(d) + '_' + pad(d.getHours()) + pad(d.getMinutes()) + '.' + ext; }
@@ -6239,7 +6254,7 @@ function xmlEscapar(s) {
 function colLetra(i) { return String.fromCharCode(65 + i); }
 function gerarXlsxWhats() {
   var linhas = [WH_CAB].concat(whLinhasExport());
-  var larg = [12, 10, 18, 24, 16, 24, 36, 15, 30, 36, 15, 50, 22];
+  var larg = [12, 10, 18, 24, 16, 24, 36, 15, 30, 36, 15, 30, 50, 22];
   var sheet = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
     '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' +
     '<cols>' + larg.map(function (w, i) { return '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>'; }).join('') + '</cols><sheetData>' +
@@ -6303,6 +6318,7 @@ function analisarLinhasWhats(linhas) {
   var c = {
     data: col('data'), hora: col('hora'), numero: col('numero', 'telefone', 'whatsapp'), planilha: col('planilha'), status: col('status dryve pro', 'status dryve', 'status'),
     etapa: col('etapa (se outro)', 'etapa'), etapaPq: col('por que da etapa'), motivoPq: col('por que do motivo'),
+    motivoCerto: col('motivo certo (se incorreto)', 'motivo certo'),
     statusOk: col('status correto'), motivo: col('motivo do perdido', 'motivo'), motivoOk: col('motivo correto'), obs: col('observacao', 'observacoes'), id: col('id')
   };
   if (c.numero < 0 || c.status < 0) return { erro: 'Cabeçalho inválido. Esperado: ' + WH_CAB.join(';') + '.' };
@@ -6315,7 +6331,7 @@ function analisarLinhasWhats(linhas) {
     var status = whParseStatus(cel(l, c.status));
     var bruto = {
       id: cel(l, c.id), criadoEm: whParseQuando(cel(l, c.data), cel(l, c.hora)), numero: cel(l, c.numero), planilha: whParsePlanilha(cel(l, c.planilha)), status: status,
-      etapa: whParseEtapa(cel(l, c.etapa)), etapaPq: cel(l, c.etapaPq), motivoPq: cel(l, c.motivoPq),
+      etapa: whParseEtapa(cel(l, c.etapa)), etapaPq: cel(l, c.etapaPq), motivoPq: cel(l, c.motivoPq), motivoCerto: cel(l, c.motivoCerto),
       statusOk: whParseSN(cel(l, c.statusOk)), motivo: !motivoTxt ? '' : /motorista|\bapp\b/.test(mn) ? 'app' : 'outro', motivoOutro: motivoTxt, motivoOk: whParseSN(cel(l, c.motivoOk)), obs: cel(l, c.obs)
     };
     var a = sanitizarWhats(bruto);
@@ -6422,6 +6438,8 @@ function ligarEventosWhats() {
   $('#wh-voltar').addEventListener('click', function () { var ps = whPassos(), i = ps.indexOf(estado.whPasso); if (i > 0) { estado.whPasso = ps[i - 1]; whRender(true); } });
   $('#wh-numero').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.ctrlKey) { e.preventDefault(); whContinuar(); } });
   ['#wh-epq', '#wh-mpq'].forEach(function (id) { $(id).addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.ctrlKey && !e.shiftKey) { e.preventDefault(); whContinuar(); } }); });
+  $('#wh-cert-busca').addEventListener('input', whRenderCerto);
+  $('#wh-cert-busca').addEventListener('keydown', function (e) { if (e.key !== 'Enter') return; e.preventDefault(); var b = $('#wh-cert-lista button'); if (b) b.click(); });
   $('#wh-qual-busca').addEventListener('input', whRenderQual);
   $('#wh-qual-busca').addEventListener('keydown', function (e) {
     if (e.key !== 'Enter') return;
