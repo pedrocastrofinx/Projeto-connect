@@ -834,7 +834,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
         <div class="wh-passo" data-passo="etapapq" hidden>
           <h3 class="wh-q">Por quê está nessa etapa?</h3>
           <textarea id="wh-epq" rows="3" maxlength="300" placeholder="Explique o porquê" aria-label="Por quê da etapa"></textarea>
-          <div class="acoes"><button type="button" class="btn btn-primario" data-wh="continuar">Continuar →</button></div>
+          <div class="acoes"><button type="button" class="btn btn-primario" data-wh="continuar">Continuar →</button> <button type="button" class="btn btn-linha" data-wh="pular" hidden>Pular (opcional) →</button></div>
         </div>
         <div class="wh-passo" data-passo="statusok" hidden>
           <h3 class="wh-q">O status está correto?</h3>
@@ -849,11 +849,12 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
           <input type="hidden" id="wh-qual">
           <input type="search" id="wh-qual-busca" placeholder="Digite para buscar ou escrever outro motivo…" aria-label="Buscar motivo" style="font-size:1.05rem;min-height:50px">
           <div class="wh-lista" id="wh-qual-lista" role="listbox" aria-label="Motivos de perdido"></div>
+          <div class="acoes"><button type="button" class="btn btn-linha" data-wh="pular" hidden>Pular (opcional) →</button></div>
         </div>
         <div class="wh-passo" data-passo="motivopq" hidden>
           <h3 class="wh-q">Por quê?</h3>
           <textarea id="wh-mpq" rows="3" maxlength="300" placeholder="Explique o porquê desse motivo" aria-label="Por quê do motivo"></textarea>
-          <div class="acoes"><button type="button" class="btn btn-primario" data-wh="continuar">Continuar →</button></div>
+          <div class="acoes"><button type="button" class="btn btn-primario" data-wh="continuar">Continuar →</button> <button type="button" class="btn btn-linha" data-wh="pular" hidden>Pular (opcional) →</button></div>
         </div>
         <div class="wh-passo" data-passo="motivook" hidden>
           <h3 class="wh-q">O motivo está correto?</h3>
@@ -864,6 +865,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
           <input type="hidden" id="wh-cert">
           <input type="search" id="wh-cert-busca" placeholder="Digite para buscar ou escrever outro motivo…" aria-label="Buscar motivo correto" style="font-size:1.05rem;min-height:50px">
           <div class="wh-lista" id="wh-cert-lista" role="listbox" aria-label="Motivo correto"></div>
+          <div class="acoes"><button type="button" class="btn btn-linha" data-wh="pular" hidden>Pular (opcional) →</button></div>
         </div>
         <div class="wh-passo" data-passo="obs" hidden>
           <h3 class="wh-q">Alguma observação? <small>(opcional)</small></h3>
@@ -1219,7 +1221,7 @@ var Armazenamento = {
    3. ESTADO E SANITIZAÇÃO
    ===================================================== */
 var estado = {
-  auditorias: [], operadores: [], whats: [], whFila: { arquivo: '', importadoEm: 0, itens: [] }, whForm: null, whEdit: '', whPasso: 'numero', baseLeads: [], chamadas: [], ia: null, kanban: { importadoEm: 0, arquivo: '', leads: [] }, config: null,
+  auditorias: [], operadores: [], whats: [], whFila: { arquivo: '', importadoEm: 0, itens: [] }, whForm: null, whEdit: '', whPasso: 'numero', whPulou: {}, baseLeads: [], chamadas: [], ia: null, kanban: { importadoEm: 0, arquivo: '', leads: [] }, config: null,
   rev: 0, registrando: false, diaRender: '', minutoRender: -1,
   ultimoOperadorId: '', ultimoTipo: '', ultimoAnalista: '', avisoBackupFechado: false,
   ui: {
@@ -6033,7 +6035,10 @@ function whPassos() {
   p.push('obs');
   return p;
 }
+var WH_OPCIONAIS = ['etapapq', 'qual', 'motivopq', 'motivocerto'];
+function whOpcional(p) { return WH_OPCIONAIS.indexOf(p) >= 0; }
 function whRespondido(p) {
+  if (estado.whPulou[p] && whOpcional(p)) return true;
   if (WH_TEXTOS[p]) return !!limparTexto($(WH_TEXTOS[p]).value);
   if (p === 'obs') return true;
   return !!whLer(p);
@@ -6074,9 +6079,10 @@ function whRender(foco) {
   $('#wh-voltar').hidden = i === 0;
   var resp = $('#wh-resp'); resp.textContent = '';
   ps.forEach(function (p) {
-    if (p === estado.whPasso || p === 'obs' || !whRespondido(p)) return;
+    if (p === estado.whPasso || p === 'obs' || !whRespondido(p) || !whValorPasso(p)) return;
     resp.appendChild(el('button', { type: 'button', title: 'Mudar esta resposta', onclick: function () { estado.whPasso = p; whRender(true); } }, el('small', null, WH_TITULOS[p] + ':'), whValorPasso(p)));
   });
+  $$('[data-wh=pular]').forEach(function (b) { b.hidden = !whOpcional(estado.whPasso); });
   if (estado.whPasso === 'qual') whRenderQual();
   if (estado.whPasso === 'motivocerto') whRenderCerto();
   if (foco) {
@@ -6086,12 +6092,13 @@ function whRender(foco) {
 }
 function whAvancar() { estado.whPasso = whProximoPasso(); whRender(true); }
 function whContinuar() {
+  if (!whRespondido(estado.whPasso) && whOpcional(estado.whPasso)) estado.whPulou[estado.whPasso] = true;
   if (!whRespondido(estado.whPasso)) { toast(estado.whPasso === 'numero' ? 'Informe o número.' : 'Escreva o porquê.', { tipo: 'aviso' }); return; }
   whAvancar();
 }
 function whAtualizarForm() { whRender(); }
 function whLimparForm() {
-  estado.whEdit = ''; estado.whPasso = 'numero';
+  estado.whEdit = ''; estado.whPasso = 'numero'; estado.whPulou = {};
   $('#wh-numero').value = ''; $('#wh-semato').value = ''; $('#wh-qual').value = ''; $('#wh-qual-busca').value = ''; $('#wh-cert').value = ''; $('#wh-cert-busca').value = ''; $('#wh-epq').value = ''; $('#wh-mpq').value = ''; $('#wh-obs').value = '';
   ['semat', 'atend', 'etapa', 'planilha', 'status', 'statusok', 'motivo', 'motivook'].forEach(function (n) { whMarcar(n, ''); });
   $('#wh-form-tit').textContent = 'Nova análise';
@@ -6127,15 +6134,11 @@ function whSalvar() {
   if (!dados.status) { estado.whPasso = 'status'; whRender(); return falta('Escolha o status no Dryve Pro.'); }
   if (dados.status === 'nao_perdido') {
     if (!dados.etapa) { estado.whPasso = 'etapa'; whRender(); return falta('Escolha a etapa.'); }
-    if (!limparTexto(dados.etapaPq)) { estado.whPasso = 'etapapq'; whRender(true); return falta('Escreva o porquê da etapa.'); }
   }
   if (!dados.statusOk) { estado.whPasso = 'statusok'; whRender(); return falta('Diga se o status está correto.'); }
   if (dados.status === 'perdido') {
     if (!dados.motivo) { estado.whPasso = 'motivo'; whRender(); return falta('Escolha o motivo do perdido.'); }
-    if (dados.motivo === 'outro' && !limparTexto(dados.motivoOutro)) { estado.whPasso = 'qual'; whRender(true); return falta('Escolha qual é o motivo.'); }
-    if (dados.motivo === 'outro' && !limparTexto(dados.motivoPq)) { estado.whPasso = 'motivopq'; whRender(true); return falta('Escreva o porquê do motivo.'); }
     if (!dados.motivoOk) { estado.whPasso = 'motivook'; whRender(); return falta('Diga se o motivo está correto.'); }
-    if (dados.motivoOk === 'nao' && !limparTexto(dados.motivoCerto)) { estado.whPasso = 'motivocerto'; whRender(true); return falta('Escolha qual seria o motivo correto.'); }
   }
   var existente = estado.whEdit ? estado.whats.find(function (x) { return x.id === estado.whEdit; }) : null;
   if (existente) { dados.id = existente.id; dados.criadoEm = existente.criadoEm; }
@@ -6480,6 +6483,7 @@ function ligarEventosWhats() {
   whCriarRadios($('#wh-motivo'), 'motivo', WH_MOTIVOS, whAvancar);
   whCriarRadios($('#wh-motivook'), 'motivook', WH_SN, whAvancar);
   $$('[data-wh=continuar]').forEach(function (b) { b.addEventListener('click', whContinuar); });
+  $$('[data-wh=pular]').forEach(function (b) { b.addEventListener('click', function () { estado.whPulou[estado.whPasso] = true; whAvancar(); }); });
   $('#wh-voltar').addEventListener('click', function () { var ps = whPassos(), i = ps.indexOf(estado.whPasso); if (i > 0) { estado.whPasso = ps[i - 1]; whRender(true); } });
   ['#wh-numero', '#wh-semato'].forEach(function (id) { $(id).addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.ctrlKey) { e.preventDefault(); whContinuar(); } }); });
   ['#wh-epq', '#wh-mpq'].forEach(function (id) { $(id).addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.ctrlKey && !e.shiftKey) { e.preventDefault(); whContinuar(); } }); });
