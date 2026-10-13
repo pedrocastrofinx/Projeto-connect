@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aderência IA · WhatsApp</title>
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#0B1220; --sup:#121B2E; --sup2:#17233A; --borda:#26344F;
+  --texto:#E6ECF8; --muted:#9FB0CE; --azul:#2F6BFF; --azul-cl:#172745; --azul-hover:#223A66;
+  --verde:#22B866; --verde-cl:#0F2E1F; --verde-tx:#7BE0A6;
+  --amarelo:#F2A900; --amarelo-cl:#33290A; --amarelo-tx:#FFD76A;
+  --verm:#F0564A; --verm-cl:#361512; --verm-tx:#FF9C92;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--texto);font-family:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:15px;line-height:1.45}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid #6C9BFF;outline-offset:2px}
+h1,h2,h3,p{margin:0}
+.topo{background:var(--sup);border-bottom:1px solid var(--borda);position:sticky;top:0;z-index:20}
+.topo-in{max-width:760px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.marca b{display:block;font-size:1rem}
+.marca small{color:var(--muted)}
+.relogio{text-align:right;font-variant-numeric:tabular-nums}
+.relogio b{font-size:1.15rem;display:block}
+.relogio small{color:var(--muted)}
+main{max-width:760px;margin:0 auto;padding:18px 16px 60px;display:grid;gap:14px}
+.card{background:var(--sup);border:1px solid var(--borda);border-radius:12px;padding:22px 24px;display:grid;gap:16px}
+.titulo{border-top:6px solid var(--azul)}
+.titulo h1{font-size:1.45rem}
+.titulo p{color:var(--muted);font-size:.9rem}
+.linha{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.campo{display:grid;gap:4px}
+.campo label{font-size:.72rem;font-weight:700;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+input[type=text],input[type=search],input[type=date],select,textarea{width:100%;background:var(--sup2);border:1px solid var(--borda);border-radius:8px;min-height:42px;padding:8px 12px}
+input:focus,select:focus,textarea:focus{border-color:var(--azul);outline:0;box-shadow:0 0 0 3px rgba(47,107,255,.18)}
+textarea{resize:vertical}
+.btn{border:1px solid transparent;border-radius:8px;min-height:40px;padding:8px 16px;font-weight:700;background:var(--azul);color:#fff}
+.btn:hover{filter:brightness(1.1)}
+.btn.sec{background:var(--azul-cl);color:#CFE0FF}
+.btn.sec:hover{background:var(--azul-hover)}
+.btn.linha{background:transparent;border-color:var(--borda);color:var(--texto)}
+.btn.linha:hover{background:var(--sup2)}
+.btn.peq{min-height:32px;padding:4px 10px;font-size:.8rem}
+.btn.perigo{background:transparent;border-color:var(--verm-cl);color:var(--verm)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.topo-form{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.tag{border:1px solid var(--borda);color:var(--azul);border-radius:99px;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 10px}
+.prog{height:3px;background:var(--sup2);border-radius:99px;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--azul);transition:width .25s}
+.resp{display:flex;flex-wrap:wrap;gap:6px}
+.resp button{border:1px solid var(--borda);background:var(--sup2);border-radius:8px;padding:4px 10px;font-size:.76rem;font-weight:600}
+.resp button:hover{border-color:var(--azul)}
+.resp small{color:var(--muted);margin-right:4px}
+.q{font-size:1.3rem;font-weight:700}
+.dica{margin-top:6px;color:var(--muted);font-size:.88rem}
+.sug{display:inline-block;margin-top:8px;padding:3px 10px;border-radius:99px;font-size:.8rem;font-weight:700}
+.ops{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.op{display:flex;align-items:center;gap:12px;text-align:left;min-height:58px;padding:12px 16px;background:var(--sup2);border:1px solid var(--borda);border-radius:10px;font-weight:600;font-size:.93rem}
+.op:hover{border-color:var(--azul)}
+.op.on{background:var(--azul);border-color:var(--azul);color:#fff}
+.op .n{flex:none;width:22px;height:22px;border:1.5px solid var(--muted);border-radius:6px;display:grid;place-items:center;font-size:.72rem;font-weight:800;color:var(--muted)}
+.op.on .n{background:#fff;border-color:#fff;color:var(--azul)}
+.op small{display:block;font-weight:400;opacity:.8;font-size:.78rem}
+.op.verde.on{background:var(--verde);border-color:var(--verde)}
+.op.amar.on{background:var(--amarelo);border-color:var(--amarelo);color:#1a1200}
+.op.verm.on{background:var(--verm);border-color:var(--verm)}
+.aviso{background:var(--amarelo-cl);color:var(--amarelo-tx);border:1px solid #6B5316;border-radius:8px;padding:8px 12px;font-size:.86rem}
+.rodape{display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--borda);padding-top:14px;flex-wrap:wrap}
+.hint-teclas{color:var(--muted);font-size:.75rem}
+/* salvas */
+details.card>summary{cursor:pointer;font-weight:700;list-style:none}
+details.card[open]>summary{margin-bottom:6px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kpi{background:var(--sup2);border:1px solid var(--borda);border-radius:10px;padding:12px 14px}
+.kpi b{display:block;font-size:1.5rem}
+.kpi span{color:var(--muted);font-size:.78rem}
+.kpi.verde b{color:var(--verde-tx)}.kpi.amar b{color:var(--amarelo-tx)}.kpi.verm b{color:var(--verm-tx)}
+.top{display:grid;gap:6px;font-size:.86rem}
+.top div{display:flex;justify-content:space-between;gap:10px;background:var(--sup2);border:1px solid var(--borda);border-radius:8px;padding:6px 10px}
+.fil{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.tabela{overflow:auto;border:1px solid var(--borda);border-radius:10px}
+table{width:100%;border-collapse:collapse;font-size:.84rem}
+th{background:var(--sup2);color:var(--muted);font-size:.68rem;letter-spacing:.07em;text-transform:uppercase;text-align:left;padding:8px 10px;white-space:nowrap}
+td{padding:8px 10px;border-top:1px solid var(--borda);vertical-align:top}
+.pill{display:inline-block;border-radius:99px;padding:2px 9px;font-size:.72rem;font-weight:700;white-space:nowrap}
+.pill.verde{background:var(--verde-cl);color:var(--verde-tx)}
+.pill.amar{background:var(--amarelo-cl);color:var(--amarelo-tx)}
+.pill.verm{background:var(--verm-cl);color:var(--verm-tx)}
+.pill.cinza{background:var(--sup2);color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--verde);color:#fff;padding:10px 18px;border-radius:99px;font-weight:700;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+@media (max-width:560px){.card{padding:16px}.q{font-size:1.15rem}}
+</style>
+</head>
+<body>
+<header class="topo">
+  <div class="topo-in">
+    <div class="marca"><b>Aderência IA · WhatsApp</b><small>Checklist rápido de conversa</small></div>
+    <div class="relogio"><b id="hora">--:--:--</b><small id="data"></small></div>
+  </div>
+</header>
+
+<main>
+  <div class="card titulo">
+    <h1>Conversa da IA aderiu ao processo?</h1>
+    <p>Abra a conversa no WhatsApp, leia e responda uma pergunta por vez. Dá para usar as teclas <b>1–9</b> para escolher e <b>Enter</b> para continuar.</p>
+    <div class="campo" style="max-width:320px"><label for="analista">Analista (fica salvo)</label><input type="text" id="analista" maxlength="80" placeholder="Seu nome" autocomplete="off"></div>
+  </div>
+
+  <form id="form" class="card" autocomplete="off" novalidate>
+    <div class="topo-form">
+      <div><span class="tag" id="f-tag">Nova análise</span> <span class="dica" id="f-passo"></span></div>
+      <div><button type="button" class="btn sec peq" id="f-xlsx" title="Baixa as análises salvas em Excel">⭳ Excel</button> <button type="button" class="btn linha peq" id="f-cancelar" hidden>Cancelar edição</button></div>
+    </div>
+    <div class="prog" aria-hidden="true"><i id="f-prog"></i></div>
+    <div class="resp" id="f-resp" aria-label="Respostas até agora"></div>
+    <div id="f-corpo"></div>
+    <div class="rodape">
+      <div>
+        <button type="button" class="btn linha peq" id="f-voltar">← Voltar</button>
+        <button type="button" class="btn linha peq" id="f-limpar">↺ Recomeçar</button>
+      </div>
+      <span class="hint-teclas" id="f-teclas"></span>
+    </div>
+  </form>
+
+  <details class="card" id="salvas">
+    <summary id="s-sum">Análises salvas</summary>
+    <div class="kpis" id="s-kpis"></div>
+    <div class="fil">
+      <div class="campo"><label for="f-busca">Buscar número ou observação</label><input type="search" id="f-busca" placeholder="Buscar"></div>
+      <div class="campo"><label for="f-ver">Veredito</label><select id="f-ver"></select></div>
+      <div class="campo"><label for="f-aluc">Alucinação</label><select id="f-aluc"></select></div>
+    </div>
+    <div class="linha">
+      <span class="dica" id="s-cont"></span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" class="btn peq" id="s-xlsx">⭳ Exportar Excel (.xlsx)</button>
+        <button type="button" class="btn sec peq" id="s-csv">⭳ CSV</button>
+        <button type="button" class="btn sec peq" id="s-json">⭳ Backup (.json)</button>
+        <button type="button" class="btn sec peq" id="s-imp">⭱ Restaurar backup</button>
+        <button type="button" class="btn perigo peq" id="s-apagar">Apagar todas</button>
+        <input type="file" id="s-arq" accept=".json,application/json" hidden>
+      </div>
+    </div>
+    <div class="top" id="s-top"></div>
+    <div class="tabela">
+      <table><thead><tr><th>Data</th><th>Número</th><th>Veredito</th><th>Processo</th><th>Alucinou</th><th>Desfecho</th><th>Obs.</th><th>Ações</th></tr></thead><tbody id="s-corpo"></tbody></table>
+    </div>
+  </details>
+</main>
+
+<script>
+(function () {
+'use strict';
+
+var CHAVE = 'aderencia_ia_whats_v1';
+var CH_ANALISTA = 'aderencia_ia_whats_analista';
+
+/* ---------- Perguntas (edite aqui para mudar o checklist) ----------
+   tipo: 'um' (uma opção), 'multi' (várias), 'texto' (curto), 'longo' (parágrafo)
+   cor: verde = ótimo, amar = atenção, verm = problema
+   se(r): só aparece quando retorna true */
+var Q = [
+  { id: 'numero', tipo: 'texto', titulo: 'Qual é o número do lead?', ph: 'Ex.: 22 99964-0695', obrig: true,
+    rotulo: 'Número' },
+  { id: 'inicio', tipo: 'um', titulo: 'Como a conversa começou?', rotulo: 'Início', ops: [
+    { v: 'tpl_ok', t: 'Template: financiamento aprovado' },
+    { v: 'tpl_nao', t: 'Template: financiamento não aprovado' },
+    { v: 'lead', t: 'O lead chamou sozinho' },
+    { v: 'outro', t: 'Outro disparo / template' } ] },
+  { id: 'respondeu', tipo: 'um', titulo: 'O cliente conversou com a IA?',
+    dica: 'Só clicar nos botões do template (Confirmar / Encerrar) não conta como conversa.', rotulo: 'Cliente respondeu', ops: [
+    { v: 'sim', t: 'Sim, conversou' },
+    { v: 'botao', t: 'Só clicou nos botões do template' },
+    { v: 'nao', t: 'Não respondeu nada' } ] },
+  { id: 'apresentacao', tipo: 'um', titulo: 'A IA se apresentou direito?',
+    dica: 'Nome (Natasha), empresa (Dryve Assinatura) e objetivo; pediu o nome do cliente.', rotulo: 'Apresentação',
+    se: function (r) { return r.respondeu !== 'nao'; }, ops: [
+    { v: 'ok', t: 'Sim, completa', cor: 'verde' },
+    { v: 'parcial', t: 'Parcial (faltou algo)', cor: 'amar' },
+    { v: 'nao', t: 'Não se apresentou', cor: 'verm' } ] },
+  { id: 'processo', tipo: 'um', titulo: 'A IA seguiu o processo?', rotulo: 'Processo',
+    se: function (r) { return r.respondeu !== 'nao'; }, ops: [
+    { v: 'sim', t: 'Seguiu todo o fluxo', cor: 'verde' },
+    { v: 'desvio', t: 'Seguiu com desvios', cor: 'amar' },
+    { v: 'nao', t: 'Não seguiu', cor: 'verm' } ] },
+  { id: 'processo_onde', tipo: 'multi', titulo: 'Onde saiu do processo?', dica: 'Marque tudo que se aplica.', rotulo: 'Desvios',
+    se: function (r) { return r.respondeu !== 'nao' && (r.processo === 'desvio' || r.processo === 'nao'); }, ops: [
+    { v: 'nome', t: 'Não pediu / não usou o nome do cliente' },
+    { v: 'perfil', t: 'Não entendeu o perfil ou uso do carro' },
+    { v: 'opcoes', t: 'Não apresentou opções de carro' },
+    { v: 'dados', t: 'Não coletou os dados necessários' },
+    { v: 'loop', t: 'Repetiu pergunta / voltou etapa já feita' },
+    { v: 'humano', t: 'Não encaminhou ao consultor no momento certo' },
+    { v: 'cedo', t: 'Encerrou antes da hora' },
+    { v: 'ordem', t: 'Pulou ou trocou a ordem das etapas' },
+    { v: 'outro', t: 'Outro (descrever na observação)' } ] },
+  { id: 'aluc', tipo: 'um', titulo: 'A IA alucinou?', rotulo: 'Alucinação',
+    dica: 'Alucinar = afirmar algo sem base: preço, carro, prazo, regra, dado do cliente.',
+    se: function (r) { return r.respondeu !== 'nao'; }, ops: [
+    { v: 'nao', t: 'Não', cor: 'verde' },
+    { v: 'leve', t: 'Sim, leve (impreciso, sem impacto)', cor: 'amar' },
+    { v: 'grave', t: 'Sim, grave (inventou ou prometeu)', cor: 'verm' } ] },
+  { id: 'aluc_tipo', tipo: 'multi', titulo: 'O que ela inventou?', dica: 'Marque tudo que se aplica.', rotulo: 'Tipo de alucinação',
+    se: function (r) { return r.respondeu !== 'nao' && (r.aluc === 'leve' || r.aluc === 'grave'); }, ops: [
+    { v: 'preco', t: 'Preço / valor / parcela' },
+    { v: 'estoque', t: 'Carro, estoque ou disponibilidade' },
+    { v: 'condicao', t: 'Condição, prazo ou regra' },
+    { v: 'promessa', t: 'Prometeu algo que não pode cumprir' },
+    { v: 'dado', t: 'Dado errado do cliente ou da solicitação' },
+    { v: 'chute', t: 'Respondeu sem base (chutou)' },
+    { v: 'contradisse', t: 'Contradisse o que ela mesma disse' },
+    { v: 'outro', t: 'Outro (descrever na observação)' } ] },
+  { id: 'resposta', tipo: 'um', titulo: 'Ela respondeu o que o cliente perguntou?', rotulo: 'Resposta à dúvida',
+    se: function (r) { return r.respondeu === 'sim'; }, ops: [
+    { v: 'sim', t: 'Sim', cor: 'verde' },
+    { v: 'parcial', t: 'Parcialmente', cor: 'amar' },
+    { v: 'nao', t: 'Ignorou ou desviou', cor: 'verm' },
+    { v: 'semperg', t: 'Cliente não perguntou nada' } ] },
+  { id: 'tom', tipo: 'um', titulo: 'Como foi o tom?', rotulo: 'Tom',
+    se: function (r) { return r.respondeu !== 'nao'; }, ops: [
+    { v: 'bom', t: 'Natural e cordial', cor: 'verde' },
+    { v: 'robo', t: 'Robótico ou repetitivo', cor: 'amar' },
+    { v: 'ruim', t: 'Inadequado (insistente, seco, informal demais)', cor: 'verm' } ] },
+  { id: 'optout', tipo: 'um', titulo: 'O cliente mostrou desinteresse, pediu para parar ou disse que não era a pessoa?',
+    rotulo: 'Desinteresse', se: function (r) { return r.respondeu === 'sim'; }, ops: [
+    { v: 'nao', t: 'Não' },
+    { v: 'respeitou', t: 'Sim, e a IA respeitou e encerrou bem', cor: 'verde' },
+    { v: 'insistiu', t: 'Sim, mas a IA insistiu ou ignorou', cor: 'verm' } ] },
+  { id: 'humano', tipo: 'um', titulo: 'Precisava passar para um humano?', rotulo: 'Humano',
+    se: function (r) { return r.respondeu === 'sim'; }, ops: [
+    { v: 'nao', t: 'Não precisava' },
+    { v: 'escalou', t: 'Precisava e escalou', cor: 'verde' },
+    { v: 'nao_escalou', t: 'Precisava e não escalou', cor: 'verm' },
+    { v: 'desnec', t: 'Escalou sem necessidade', cor: 'amar' } ] },
+  { id: 'desfecho', tipo: 'um', titulo: 'Qual foi o desfecho da conversa?', rotulo: 'Desfecho', ops: [
+    { v: 'qualificado', t: 'Lead qualificado / avançou' },
+    { v: 'consultor', t: 'Encaminhado ao consultor' },
+    { v: 'encerrou_ok', t: 'Encerrado corretamente (sem interesse)' },
+    { v: 'encerrou_mal', t: 'Encerrado indevidamente', cor: 'verm' },
+    { v: 'parada', t: 'Conversa parada / em aberto' },
+    { v: 'sem', t: 'Sem conversa' } ] },
+  { id: 'veredito', tipo: 'um', titulo: 'No geral, a IA foi aderente?', rotulo: 'Veredito',
+    dica: function (r) { var s = sugestao(r); return 'Sugestão pelas respostas: ' + s.t; }, ops: [
+    { v: 'aderente', t: 'Aderente', cor: 'verde' },
+    { v: 'parcial', t: 'Parcialmente aderente', cor: 'amar' },
+    { v: 'nao', t: 'Não aderente', cor: 'verm' } ] },
+  { id: 'obs', tipo: 'longo', titulo: 'Trecho problemático ou observação', dica: 'Opcional. Cole a frase da IA que errou, se houver.',
+    rotulo: 'Observação', opcional: true }
+];
+
+var ROT = {
+  inicio: 'Como começou', veredito: { aderente: 'Aderente', parcial: 'Parcial', nao: 'Não aderente' },
+  aluc: { nao: 'Não', leve: 'Leve', grave: 'Grave' },
+  processo: { sim: 'Seguiu', desvio: 'Com desvios', nao: 'Não seguiu' }
+};
+
+function sugestao(r) {
+  if (r.respondeu === 'nao') return { v: 'aderente', t: 'sem conversa para avaliar', cor: 'cinza' };
+  if (r.aluc === 'grave' || r.processo === 'nao' || r.optout === 'insistiu' || r.humano === 'nao_escalou' || r.tom === 'ruim') return { v: 'nao', t: 'Não aderente', cor: 'verm' };
+  if (r.aluc === 'leve' || r.processo === 'desvio' || r.apresentacao !== 'ok' || r.resposta === 'parcial' || r.resposta === 'nao' || r.tom === 'robo' || r.humano === 'desnec' || r.desfecho === 'encerrou_mal') return { v: 'parcial', t: 'Parcialmente aderente', cor: 'amar' };
+  return { v: 'aderente', t: 'Aderente', cor: 'verde' };
+}
+
+/* ---------- utilitários ---------- */
+function $(s) { return document.querySelector(s); }
+function el(tag, attrs) {
+  var e = document.createElement(tag), i, k;
+  attrs = attrs || {};
+  for (k in attrs) { if (k === 'class') e.className = attrs[k]; else if (k.slice(0, 2) === 'on') e[k] = attrs[k]; else e.setAttribute(k, attrs[k]); }
+  for (i = 2; i < arguments.length; i++) { var c = arguments[i]; if (c === null || c === undefined) continue; e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); }
+  return e;
+}
+function pad(n) { return String(n).padStart(2, '0'); }
+function soDigitos(s) { return String(s || '').replace(/\D/g, ''); }
+function dataHoraBR(ms) { var d = new Date(ms); return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+function texto(q, v) {
+  if (v === undefined || v === null || v === '') return '';
+  if (q.tipo === 'multi') return v.map(function (x) { return optTxt(q, x); }).join(' | ');
+  if (q.tipo === 'um') return optTxt(q, v);
+  return String(v);
+}
+function optTxt(q, v) { var o = q.ops.filter(function (x) { return x.v === v; })[0]; return o ? o.t : v; }
+function qPorId(id) { return Q.filter(function (q) { return q.id === id; })[0]; }
+function guardar(chave, valor) { try { localStorage.setItem(chave, valor); } catch (e) { /* sem armazenamento */ } }
+function ler(chave) { try { return localStorage.getItem(chave); } catch (e) { return null; } }
+function toast(msg) { var t = el('div', { class: 'toast', role: 'status' }, msg); document.body.appendChild(t); setTimeout(function () { t.remove(); }, 2200); }
+
+/* ---------- estado ---------- */
+var salvas = [];
+try { salvas = JSON.parse(ler(CHAVE) || '[]'); if (!Array.isArray(salvas)) salvas = []; } catch (e) { salvas = []; }
+var r = {};          // respostas do formulário atual
+var editId = null;   // id sendo editado
+var passo = 0;       // índice da pergunta atual
+
+function persistir() { guardar(CHAVE, JSON.stringify(salvas)); }
+function visiveis() { return Q.filter(function (q) { return !q.se || q.se(r); }); }
+
+/* ---------- relógio ---------- */
+function relogio() {
+  var d = new Date();
+  $('#hora').textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+  $('#data').textContent = d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
+}
+relogio(); setInterval(relogio, 1000);
+
+$('#analista').value = ler(CH_ANALISTA) || '';
+$('#analista').addEventListener('input', function () { guardar(CH_ANALISTA, this.value.trim()); });
+
+/* ---------- formulário passo a passo ---------- */
+function respondida(q) { var v = r[q.id]; return Array.isArray(v) ? v.length > 0 : (v !== undefined && v !== ''); }
+
+function limparInvisiveis() {
+  Q.forEach(function (q) { if (q.se && !q.se(r)) delete r[q.id]; });
+}
+
+function render() {
+  var vis = visiveis();
+  if (passo >= vis.length) passo = vis.length - 1;
+  if (passo < 0) passo = 0;
+  var q = vis[passo], corpo = $('#f-corpo');
+  corpo.textContent = '';
+  $('#f-tag').textContent = editId ? 'Editando análise' : 'Nova análise';
+  $('#f-cancelar').hidden = !editId;
+  $('#f-passo').textContent = 'Pergunta ' + (passo + 1) + ' de ' + vis.length;
+  $('#f-prog').style.width = Math.round((passo / vis.length) * 100) + '%';
+  $('#f-voltar').disabled = passo === 0;
+
+  /* respostas anteriores (clicar volta para a pergunta) */
+  var resp = $('#f-resp'); resp.textContent = '';
+  vis.slice(0, passo).forEach(function (p, i) {
+    if (!respondida(p) || p.id === 'numero' && false) return;
+    var t = texto(p, r[p.id]);
+    if (t.length > 38) t = t.slice(0, 36) + '…';
+    resp.appendChild(el('button', { type: 'button', title: 'Voltar para esta pergunta', onclick: function () { passo = i; render(); } }, el('small', null, p.rotulo + ':'), t));
+  });
+
+  corpo.appendChild(el('h2', { class: 'q' }, q.titulo));
+  var dica = typeof q.dica === 'function' ? q.dica(r) : q.dica;
+  if (dica) corpo.appendChild(el('p', { class: 'dica' }, dica));
+  if (q.id === 'veredito') { var s = sugestao(r); corpo.appendChild(el('span', { class: 'sug pill ' + s.cor }, 'Sugestão: ' + s.t)); }
+  var area = el('div', { style: 'margin-top:14px;display:grid;gap:12px' });
+  corpo.appendChild(area);
+
+  var teclas = '';
+  if (q.tipo === 'um' || q.tipo === 'multi') {
+    var ops = el('div', { class: 'ops', role: q.tipo === 'um' ? 'radiogroup' : 'group' });
+    q.ops.forEach(function (o, i) {
+      var on = q.tipo === 'multi' ? (r[q.id] || []).indexOf(o.v) !== -1 : r[q.id] === o.v;
+      var b = el('button', { type: 'button', class: 'op ' + (o.cor || '') + (on ? ' on' : ''), 'aria-pressed': on ? 'true' : 'false', onclick: function () { escolher(q, o.v); } },
+        el('span', { class: 'n' }, on ? '✓' : String(i + 1)), el('span', null, o.t));
+      ops.appendChild(b);
+    });
+    area.appendChild(ops);
+    if (q.tipo === 'multi') {
+      area.appendChild(el('div', null, el('button', { type: 'button', class: 'btn', id: 'f-ok', onclick: avancar }, 'Continuar →')));
+      teclas = 'Teclas 1–' + q.ops.length + ' marcam · Enter continua';
+    } else teclas = 'Teclas 1–' + q.ops.length + ' escolhem e avançam';
+  } else {
+    var campo;
+    if (q.tipo === 'longo') campo = el('textarea', { id: 'f-campo', rows: '4', maxlength: '800', placeholder: 'Opcional' });
+    else campo = el('input', { type: 'text', id: 'f-campo', maxlength: '60', placeholder: q.ph || '', inputmode: q.id === 'numero' ? 'tel' : 'text' });
+    campo.value = r[q.id] || '';
+    campo.addEventListener('input', function () { r[q.id] = campo.value.trim(); if (q.id === 'numero') avisoDup(); });
+    area.appendChild(campo);
+    if (q.id === 'numero') area.appendChild(el('div', { class: 'aviso', id: 'f-dup', role: 'alert', hidden: 'hidden' }));
+    var aviso = el('div', { class: 'aviso', id: 'f-erro', role: 'alert', hidden: 'hidden' });
+    area.appendChild(aviso);
+    if (q.tipo === 'longo') area.appendChild(el('div', null, el('button', { type: 'submit', class: 'btn', id: 'f-salvar' }, '✔ Salvar análise'), ' ', el('span', { class: 'hint-teclas' }, 'Ctrl + Enter também salva')));
+    else area.appendChild(el('div', null, el('button', { type: 'button', class: 'btn', onclick: avancar }, 'Continuar →')));
+    teclas = q.tipo === 'longo' ? 'Ctrl + Enter salva' : 'Enter continua';
+    setTimeout(function () { campo.focus(); }, 0);
+    if (q.id === 'numero') avisoDup();
+  }
+  $('#f-teclas').textContent = teclas;
+  var topo = $('#form').getBoundingClientRect().top;
+  if (topo < 0) $('#form').scrollIntoView({ block: 'start' });
+}
+
+function avisoDup() {
+  var a = $('#f-dup'); if (!a) return;
+  var d = soDigitos(r.numero), ja = d.length >= 8 && salvas.filter(function (x) { return soDigitos(x.numero) === d && x.id !== editId; })[0];
+  if (ja) { a.textContent = 'Este número já foi analisado em ' + dataHoraBR(ja.criado) + (ja.analista ? ' por ' + ja.analista : '') + '. Você pode analisar de novo, se quiser.'; a.hidden = false; }
+  else a.hidden = true;
+}
+
+function escolher(q, v) {
+  if (q.tipo === 'multi') {
+    var l = r[q.id] || [], i = l.indexOf(v);
+    if (i === -1) l.push(v); else l.splice(i, 1);
+    r[q.id] = l; render();
+  } else {
+    r[q.id] = v; limparInvisiveis();
+    if (q.id === 'respondeu' && v === 'nao' && !r.veredito) { /* conversa vazia: vai direto ao desfecho */ }
+    avancar();
+  }
+}
+
+function avancar() {
+  var vis = visiveis(), q = vis[passo];
+  if (q.tipo === 'texto' && q.obrig) {
+    var v = (r[q.id] || '').trim();
+    if (soDigitos(v).length < 8) { var e = $('#f-erro'); e.textContent = 'Informe o número com DDD.'; e.hidden = false; $('#f-campo').focus(); return; }
+  }
+  limparInvisiveis();
+  vis = visiveis();
+  if (passo < vis.length - 1) { passo++; render(); }
+}
+
+function voltar() { if (passo > 0) { passo--; render(); } }
+
+function recomecar(pergunta) {
+  if (pergunta && Object.keys(r).length && !confirm('Descartar as respostas desta análise?')) return;
+  r = {}; editId = null; passo = 0; render();
+}
+
+function salvar() {
+  var vis = visiveis();
+  if (!r.numero || soDigitos(r.numero).length < 8) { passo = 0; render(); return; }
+  var faltam = vis.filter(function (q) { return !q.opcional && !respondida(q); })[0];
+  if (faltam) { passo = vis.indexOf(faltam); render(); toast('Falta responder: ' + faltam.rotulo); return; }
+  limparInvisiveis();
+  var reg = JSON.parse(JSON.stringify(r));
+  reg.analista = $('#analista').value.trim();
+  if (editId) {
+    var i = salvas.findIndex(function (x) { return x.id === editId; });
+    if (i !== -1) { reg.id = editId; reg.criado = salvas[i].criado; reg.editado = Date.now(); salvas[i] = reg; }
+  } else { reg.id = 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); reg.criado = Date.now(); salvas.unshift(reg); }
+  persistir();
+  var edit = !!editId;
+  r = {}; editId = null; passo = 0;
+  render(); listar();
+  toast(edit ? 'Análise atualizada' : 'Análise salva · ' + salvas.length + ' no total');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+$('#form').addEventListener('submit', function (e) { e.preventDefault(); salvar(); });
+$('#f-voltar').addEventListener('click', voltar);
+$('#f-limpar').addEventListener('click', function () { recomecar(true); });
+$('#f-cancelar').addEventListener('click', function () { recomecar(false); });
+
+document.addEventListener('keydown', function (e) {
+  var alvo = e.target, tag = alvo && alvo.tagName;
+  var vis = visiveis(), q = vis[passo];
+  if (!q) return;
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && passo === vis.length - 1) { e.preventDefault(); salvar(); return; }
+  var digitando = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+  if (digitando) {
+    if (e.key === 'Enter' && tag === 'INPUT' && alvo.id === 'f-campo') { e.preventDefault(); if (passo < vis.length - 1) avancar(); }
+    return;
+  }
+  if (!$('#form').contains(alvo) && alvo !== document.body) return;
+  if (q.ops && /^[1-9]$/.test(e.key) && q.ops[Number(e.key) - 1]) { e.preventDefault(); escolher(q, q.ops[Number(e.key) - 1].v); }
+  else if (e.key === 'Enter' && q.tipo === 'multi') { e.preventDefault(); avancar(); }
+});
+
+/* ---------- análises salvas ---------- */
+function pill(txt, cor) { return el('span', { class: 'pill ' + cor }, txt); }
+function corVeredito(v) { return v === 'aderente' ? 'verde' : v === 'parcial' ? 'amar' : v === 'nao' ? 'verm' : 'cinza'; }
+
+function filtradas() {
+  var b = $('#f-busca').value.trim().toLowerCase(), ver = $('#f-ver').value, al = $('#f-aluc').value, bd = soDigitos(b);
+  return salvas.filter(function (x) {
+    if (ver && x.veredito !== ver) return false;
+    if (al === 'sim' && !(x.aluc === 'leve' || x.aluc === 'grave')) return false;
+    if (al === 'grave' && x.aluc !== 'grave') return false;
+    if (b) {
+      var hit = (x.obs || '').toLowerCase().indexOf(b) !== -1 || (bd && soDigitos(x.numero).indexOf(bd) !== -1) || String(x.numero).toLowerCase().indexOf(b) !== -1;
+      if (!hit) return false;
+    }
+    return true;
+  });
+}
+
+function contar(lista, campo, multi) {
+  var m = {};
+  lista.forEach(function (x) { var v = x[campo]; if (!v) return; (multi ? v : [v]).forEach(function (k) { m[k] = (m[k] || 0) + 1; }); });
+  return Object.keys(m).map(function (k) { return [k, m[k]]; }).sort(function (a, b) { return b[1] - a[1]; });
+}
+
+function listar() {
+  var tot = salvas.length;
+  $('#s-sum').textContent = 'Análises salvas (' + tot + ')';
+  var fil = filtradas(), conv = salvas.filter(function (x) { return x.respondeu && x.respondeu !== 'nao'; });
+  var pc = function (n, d) { return d ? Math.round(n * 100 / d) + '%' : '–'; };
+  var ader = conv.filter(function (x) { return x.veredito === 'aderente'; }).length;
+  var par = conv.filter(function (x) { return x.veredito === 'parcial'; }).length;
+  var nao = conv.filter(function (x) { return x.veredito === 'nao'; }).length;
+  var alu = conv.filter(function (x) { return x.aluc === 'leve' || x.aluc === 'grave'; }).length;
+  var kp = $('#s-kpis'); kp.textContent = '';
+  [['Analisadas', tot, ''], ['Aderentes', pc(ader, conv.length), 'verde'], ['Parciais', pc(par, conv.length), 'amar'],
+   ['Não aderentes', pc(nao, conv.length), 'verm'], ['Alucinaram', pc(alu, conv.length), 'verm']].forEach(function (k) {
+    kp.appendChild(el('div', { class: 'kpi ' + k[2] }, el('b', null, String(k[1])), el('span', null, k[0])));
+  });
+
+  var top = $('#s-top'); top.textContent = '';
+  var falhas = contar(conv, 'processo_onde', true).slice(0, 4).map(function (p) { return ['Desvio: ' + optTxt(qPorId('processo_onde'), p[0]), p[1]]; })
+    .concat(contar(conv, 'aluc_tipo', true).slice(0, 4).map(function (p) { return ['Alucinação: ' + optTxt(qPorId('aluc_tipo'), p[0]), p[1]]; }));
+  if (falhas.length) {
+    top.appendChild(el('div', { class: 'dica', style: 'margin:0' }, 'Problemas mais frequentes'));
+    falhas.forEach(function (f) { top.appendChild(el('div', null, el('span', null, f[0]), el('b', null, String(f[1])))); });
+  }
+
+  $('#s-cont').textContent = fil.length === tot ? tot + ' análises' : fil.length + ' de ' + tot + ' análises';
+  var cb = $('#s-corpo'); cb.textContent = '';
+  if (!fil.length) cb.appendChild(el('tr', null, el('td', { colspan: '8', class: 'dica' }, 'Nenhuma análise ainda.')));
+  fil.forEach(function (x) {
+    var vq = qPorId('veredito'), dq = qPorId('desfecho');
+    var obs = x.obs ? (x.obs.length > 60 ? x.obs.slice(0, 58) + '…' : x.obs) : '';
+    cb.appendChild(el('tr', null,
+      el('td', null, dataHoraBR(x.criado)),
+      el('td', null, x.numero),
+      el('td', null, x.veredito ? pill(ROT.veredito[x.veredito], corVeredito(x.veredito)) : '–'),
+      el('td', null, x.processo ? pill(ROT.processo[x.processo], x.processo === 'sim' ? 'verde' : x.processo === 'desvio' ? 'amar' : 'verm') : '–'),
+      el('td', null, x.aluc ? pill(ROT.aluc[x.aluc], x.aluc === 'nao' ? 'verde' : x.aluc === 'leve' ? 'amar' : 'verm') : '–'),
+      el('td', null, x.desfecho ? optTxt(dq, x.desfecho) : '–'),
+      el('td', null, obs),
+      el('td', { style: 'white-space:nowrap' },
+        el('button', { type: 'button', class: 'btn linha peq', onclick: function () { editar(x.id); } }, 'Editar'), ' ',
+        el('button', { type: 'button', class: 'btn perigo peq', onclick: function () { excluir(x.id); } }, 'Excluir'))));
+  });
+}
+
+function opts(sel, lista) { sel.textContent = ''; lista.forEach(function (o) { sel.appendChild(el('option', { value: o[0] }, o[1])); }); }
+opts($('#f-ver'), [['', 'Todos'], ['aderente', 'Aderente'], ['parcial', 'Parcialmente aderente'], ['nao', 'Não aderente']]);
+opts($('#f-aluc'), [['', 'Todas'], ['sim', 'Com alucinação (leve ou grave)'], ['grave', 'Só alucinação grave']]);
+['#f-busca', '#f-ver', '#f-aluc'].forEach(function (s) { $(s).addEventListener('input', listar); });
+
+function editar(id) {
+  var x = salvas.filter(function (a) { return a.id === id; })[0]; if (!x) return;
+  r = JSON.parse(JSON.stringify(x)); delete r.id; delete r.criado; delete r.editado; delete r.analista;
+  editId = id; passo = 0; render();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function excluir(id) {
+  if (!confirm('Excluir esta análise?')) return;
+  salvas = salvas.filter(function (x) { return x.id !== id; }); persistir(); listar();
+  if (editId === id) recomecar(false);
+}
+$('#s-apagar').addEventListener('click', function () {
+  if (!salvas.length || !confirm('Apagar TODAS as ' + salvas.length + ' análises? Exporte um backup antes.')) return;
+  salvas = []; persistir(); listar();
+});
+
+/* ---------- exportar / backup ---------- */
+function baixar(nome, conteudo, tipo) {
+  var a = el('a', { href: URL.createObjectURL(new Blob([conteudo], { type: tipo })), download: nome });
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+}
+function csvCel(v) { v = String(v === undefined || v === null ? '' : v).replace(/\r?\n/g, ' '); return '"' + v.replace(/"/g, '""') + '"'; }
+$('#s-csv').addEventListener('click', function () {
+  var lista = filtradas(); if (!lista.length) { toast('Nada para exportar'); return; }
+  baixar(nomeArq('csv'), '\uFEFF' + linhasExport(lista).map(function (l) { return l.map(csvCel).join(';'); }).join('\r\n'), 'text/csv;charset=utf-8');
+});
+$('#s-json').addEventListener('click', function () {
+  if (!salvas.length) { toast('Nada para salvar'); return; }
+  baixar('backup_aderencia_ia_whatsapp.json', JSON.stringify(salvas, null, 1), 'application/json');
+});
+$('#s-imp').addEventListener('click', function () { $('#s-arq').click(); });
+$('#s-arq').addEventListener('change', function () {
+  var f = this.files[0]; this.value = ''; if (!f) return;
+  var fr = new FileReader();
+  fr.onload = function () {
+    try {
+      var l = JSON.parse(fr.result); if (!Array.isArray(l)) throw new Error('formato');
+      var ids = {}; salvas.forEach(function (x) { ids[x.id] = 1; });
+      var novas = l.filter(function (x) { return x && x.id && x.numero && !ids[x.id]; });
+      salvas = salvas.concat(novas).sort(function (a, b) { return b.criado - a.criado; });
+      persistir(); listar(); toast(novas.length + ' análises restauradas');
+    } catch (e) { toast('Arquivo de backup inválido'); }
+  };
+  fr.readAsText(f);
+});
+var CRC_TAB = null;
+function crc32(u8) {
+  if (!CRC_TAB) {
+    CRC_TAB = new Uint32Array(256);
+    for (var n = 0; n < 256; n++) { var c = n; for (var k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; CRC_TAB[n] = c >>> 0; }
+  }
+  var crc = 0xFFFFFFFF;
+  for (var i = 0; i < u8.length; i++) crc = CRC_TAB[(crc ^ u8[i]) & 0xFF] ^ (crc >>> 8);
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+function montarZip(arquivos) {
+  var enc = new TextEncoder(), partes = [], central = [], pos = 0;
+  arquivos.forEach(function (f) {
+    var nome = enc.encode(f.nome), dados = enc.encode(f.conteudo), crc = crc32(dados);
+    var loc = new DataView(new ArrayBuffer(30));
+    loc.setUint32(0, 0x04034b50, true); loc.setUint16(4, 20, true); loc.setUint16(6, 0x0800, true); loc.setUint16(8, 0, true);
+    loc.setUint16(10, 0, true); loc.setUint16(12, 0x0021, true); loc.setUint32(14, crc, true);
+    loc.setUint32(18, dados.length, true); loc.setUint32(22, dados.length, true); loc.setUint16(26, nome.length, true); loc.setUint16(28, 0, true);
+    partes.push(new Uint8Array(loc.buffer), nome, dados);
+    var cd = new DataView(new ArrayBuffer(46));
+    cd.setUint32(0, 0x02014b50, true); cd.setUint16(4, 20, true); cd.setUint16(6, 20, true); cd.setUint16(8, 0x0800, true); cd.setUint16(10, 0, true);
+    cd.setUint16(12, 0, true); cd.setUint16(14, 0x0021, true); cd.setUint32(16, crc, true);
+    cd.setUint32(20, dados.length, true); cd.setUint32(24, dados.length, true); cd.setUint16(28, nome.length, true);
+    cd.setUint32(42, pos, true);
+    central.push(new Uint8Array(cd.buffer), nome);
+    pos += 30 + nome.length + dados.length;
+  });
+  var tamCentral = central.reduce(function (s, p) { return s + p.length; }, 0);
+  var fim = new DataView(new ArrayBuffer(22));
+  fim.setUint32(0, 0x06054b50, true); fim.setUint16(8, arquivos.length, true); fim.setUint16(10, arquivos.length, true);
+  fim.setUint32(12, tamCentral, true); fim.setUint32(16, pos, true);
+  return new Blob(partes.concat(central, [new Uint8Array(fim.buffer)]), { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
+function xmlEscapar(s) {
+  return String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function colLetra(i) { return String.fromCharCode(65 + i); }
+function gerarXlsx(lista) {
+  var linhas = linhasExport(lista);
+  var larg = linhas[0].map(function (_, c) { var m = 10; linhas.forEach(function (l) { m = Math.max(m, Math.min(60, String(l[c]).length + 2)); }); return m; });
+  var sheet = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+    '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' +
+    '<cols>' + larg.map(function (w, i) { return '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>'; }).join('') + '</cols><sheetData>' +
+    linhas.map(function (l, r) {
+      return '<row r="' + (r + 1) + '">' + l.map(function (v, c) {
+        return '<c r="' + colLetra(c) + (r + 1) + '" t="inlineStr"' + (r === 0 ? ' s="1"' : '') + '><is><t xml:space="preserve">' + xmlEscapar(v) + '</t></is></c>';
+      }).join('') + '</row>';
+    }).join('') + '</sheetData></worksheet>';
+  var ns = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"', rel = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+  var cab = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  return montarZip([
+    { nome: '[Content_Types].xml', conteudo: cab + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>' },
+    { nome: '_rels/.rels', conteudo: cab + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="' + rel + '/officeDocument" Target="xl/workbook.xml"/></Relationships>' },
+    { nome: 'xl/workbook.xml', conteudo: cab + '<workbook ' + ns + ' xmlns:r="' + rel + '"><sheets><sheet name="Aderência IA WhatsApp" sheetId="1" r:id="rId1"/></sheets></workbook>' },
+    { nome: 'xl/_rels/workbook.xml.rels', conteudo: cab + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="' + rel + '/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="' + rel + '/styles" Target="styles.xml"/></Relationships>' },
+    { nome: 'xl/styles.xml', conteudo: cab + '<styleSheet ' + ns + '><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="49" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="49" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>' },
+    { nome: 'xl/worksheets/sheet1.xml', conteudo: sheet }
+  ]);
+}
+function linhasExport(lista) {
+  var cab = ['Data', 'Hora', 'Analista'].concat(Q.map(function (q) { return q.rotulo; }));
+  return [cab].concat(lista.map(function (x) {
+    var d = new Date(x.criado);
+    return [pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear(), pad(d.getHours()) + ':' + pad(d.getMinutes()), x.analista || '']
+      .concat(Q.map(function (q) { return texto(q, x[q.id]); }));
+  }));
+}
+function nomeArq(ext) { var d = new Date(); return 'aderencia_ia_whatsapp_' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '.' + ext; }
+function exportarXlsx() {
+  var lista = filtradas(); if (!lista.length) { toast('Nada para exportar'); return; }
+  var blob = gerarXlsx(lista), a = el('a', { href: URL.createObjectURL(blob), download: nomeArq('xlsx') });
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 3000);
+  toast(lista.length + ' análises exportadas em Excel');
+}
+$('#s-xlsx').addEventListener('click', exportarXlsx);
+$('#f-xlsx').addEventListener('click', exportarXlsx);
+
+render(); listar();
+})();
+</script>
+</body>
+</html>
