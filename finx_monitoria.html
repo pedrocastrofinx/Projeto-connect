@@ -6231,11 +6231,17 @@ function renderWhats() {
   var perd = todas.filter(function (a) { return a.status === 'perdido'; });
   var stOk = todas.filter(function (a) { return a.statusOk === 'sim'; }).length;
   var avaliados = perd.filter(function (a) { return a.motivoOk; }), moOk = avaliados.filter(function (a) { return a.motivoOk === 'sim'; }).length;
+  var realApp = perd.filter(function (a) { return a.motivo === 'app' && a.motivoOk === 'sim'; }).length;
+  var reais = {}, semReal = 0;
+  perd.forEach(function (a) { if (a.motivo === 'app' && a.motivoOk === 'sim') return; var k = a.motivoCerto || (a.motivo === 'outro' ? a.motivoOutro : ''); if (!k) { semReal++; return; } reais[k] = (reais[k] || 0) + 1; });
+  var topReal = Object.keys(reais).map(function (k) { return [k, reais[k]]; }).sort(function (x, y) { return y[1] - x[1]; })[0];
   var resumo = $('#wh-resumo'); resumo.textContent = '';
   [['Total analisado', String(todas.length), ''],
    ['Perdidos', String(perd.length), todas.length ? fmtPct(perd.length / todas.length * 100) + ' do total' : ''],
    ['Status correto', todas.length ? fmtPct(stOk / todas.length * 100) : '—', stOk + ' de ' + todas.length],
-   ['Motivo correto', avaliados.length ? fmtPct(moOk / avaliados.length * 100) : '—', moOk + ' de ' + avaliados.length + ' avaliados'],
+   ['Realmente motorista de app', String(realApp), perd.length ? fmtPct(realApp / perd.length * 100) + ' dos ' + perd.length + ' perdidos' : ''],
+   ['Não era motorista de app', String(perd.length - realApp), perd.length ? fmtPct((perd.length - realApp) / perd.length * 100) + ' dos ' + perd.length + ' perdidos' : ''],
+   ['Motivo real mais comum', topReal ? topReal[0] : '—', (topReal ? topReal[1] + ' ' + plural(topReal[1], 'caso', 'casos') : 'nenhum informado') + (semReal ? ' · ' + semReal + ' sem o motivo real informado' : '')],
    ['Sem atendimento', String(todas.filter(function (a) { return a.atend === 'nao'; }).length), ''],
    ['Com algo incorreto', String(todas.filter(whTemErro).length), '']
   ].forEach(function (c) { resumo.appendChild(el('div', { class: 'card' }, el('b', null, c[1]), el('span', null, c[0] + (c[2] ? ' · ' + c[2] : '')))); });
