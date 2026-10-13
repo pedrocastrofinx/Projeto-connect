@@ -525,6 +525,9 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
 .wh-resumo span{font-size:.8rem;color:var(--muted)}
 .wh-tab{min-width:1250px}
 .wh-tab td.lead{white-space:nowrap}
+.wh-tab td:last-child{position:sticky;right:0;z-index:1;background:var(--sup);box-shadow:-10px 0 10px -10px rgba(0,0,0,.5);white-space:nowrap}
+.wh-tab tr.rep td:last-child{background:var(--vermelho-cl)}
+.wh-tab th:last-child{position:sticky;right:0;z-index:3}
 .wh-fil{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-items:end;margin-bottom:12px}
 @media (max-width:560px){.wh-opcoes.duas{grid-template-columns:1fr}}
 </style>
