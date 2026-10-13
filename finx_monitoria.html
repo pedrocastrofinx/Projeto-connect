@@ -505,6 +505,14 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
 .wh-lista button.novo{border-style:dashed;color:var(--azul)}
 .wh-pq{display:block;font-size:.78rem;color:var(--muted);margin-top:2px}
 .wh-det{margin:0 auto 14px;max-width:1100px}
+.wh-aviso{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-top:8px;padding:10px 12px;border-radius:11px;background:#FEF0C7;color:#6B4500;border:1.5px solid #F5B301;font-weight:600;font-size:.9rem}
+.wh-aviso[hidden]{display:none}
+.wh-feitos{display:flex;flex-wrap:wrap;gap:6px}
+.wh-feito{display:inline-flex;align-items:center;gap:2px;border:1.5px solid var(--linha);border-radius:10px;background:var(--sup2);padding:2px 4px 2px 10px;font-size:.85rem;font-weight:700;color:var(--muted)}
+.wh-feito button{border:0;background:transparent;cursor:pointer;color:#B42318;font-weight:800;padding:4px 7px;border-radius:8px}
+.wh-feito button:hover,.wh-feito button:focus-visible{background:#FBD5D5}
+.wh-feito button.ed{color:var(--azul)}
+.wh-feito button.ed:hover,.wh-feito button.ed:focus-visible{background:var(--azul-hover)}
 @media (prefers-reduced-motion:reduce){.wh-passo{animation:none}}
 .wh-opcoes{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
 .wh-opcoes.duas{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -804,6 +812,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
         <div class="wh-passo" data-passo="numero">
           <h3 class="wh-q">Qual é o número?</h3>
           <input type="text" id="wh-numero" inputmode="tel" maxlength="40" placeholder="Ex.: 11 91234-5678" aria-label="Número">
+          <div class="wh-aviso" id="wh-dup" role="alert" hidden></div>
           <div class="acoes"><button type="button" class="btn btn-primario" data-wh="continuar">Continuar →</button></div>
         </div>
         <div class="wh-passo" data-passo="planilha" hidden>
@@ -6089,16 +6098,26 @@ function whRender(foco) {
     var campo = { numero: '#wh-numero', semato: '#wh-semato', etapapq: '#wh-epq', qual: '#wh-qual-busca', motivopq: '#wh-mpq', motivocerto: '#wh-cert-busca', obs: '#wh-obs' }[estado.whPasso];
     if (campo) $(campo).focus();
   }
+  whRenderDup();
 }
 function whAvancar() { estado.whPasso = whProximoPasso(); whRender(true); }
-function whContinuar() {
+async function whContinuar() {
   if (!whRespondido(estado.whPasso) && whOpcional(estado.whPasso)) estado.whPulou[estado.whPasso] = true;
   if (!whRespondido(estado.whPasso)) { toast(estado.whPasso === 'numero' ? 'Informe o número.' : 'Escreva o porquê.', { tipo: 'aviso' }); return; }
+  if (estado.whPasso === 'numero') {
+    var num = $('#wh-numero').value, dups = estado.whEdit ? [] : whDuplicadas(num);
+    if (dups.length && estado.whDupOk !== whChave(num)) {
+      var a = dups[dups.length - 1];
+      var ok = await confirmar({ titulo: 'Número já analisado', rotuloOk: 'Continuar mesmo assim', rotuloCancelar: 'Voltar', corpo: [el('p', null, 'O número ', el('b', null, num), ' já tem análise salva em ' + dataHoraBR(a.criadoEm) + ' (' + (whRotulo(WH_PLANILHAS, a.planilha) || 'sem planilha') + ').'), el('p', { class: 'dica' }, 'Para não duplicar, abra a análise existente (Editar) ou remova-a antes de refazer.')] });
+      if (!ok) { $('#wh-numero').focus(); return; }
+      estado.whDupOk = whChave(num);
+    }
+  }
   whAvancar();
 }
 function whAtualizarForm() { whRender(); }
 function whLimparForm() {
-  estado.whEdit = ''; estado.whPasso = 'numero'; estado.whPulou = {};
+  estado.whEdit = ''; estado.whPasso = 'numero'; estado.whPulou = {}; estado.whDupOk = '';
   $('#wh-numero').value = ''; $('#wh-semato').value = ''; $('#wh-qual').value = ''; $('#wh-qual-busca').value = ''; $('#wh-cert').value = ''; $('#wh-cert-busca').value = ''; $('#wh-epq').value = ''; $('#wh-mpq').value = ''; $('#wh-obs').value = '';
   ['semat', 'atend', 'etapa', 'planilha', 'status', 'statusok', 'motivo', 'motivook'].forEach(function (n) { whMarcar(n, ''); });
   $('#wh-form-tit').textContent = 'Nova análise';
@@ -6118,7 +6137,7 @@ function whEditar(id) {
   estado.whPasso = 'obs'; whRender(true);
   $('#wh-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
-function whSalvar() {
+async function whSalvar() {
   var dados = {
     numero: $('#wh-numero').value, planilha: whLer('planilha'), atend: whLer('atend'), atendMotivo: whLer('semat'), atendOutro: $('#wh-semato').value, status: whLer('status'), statusOk: whLer('statusok'),
     etapa: whLer('etapa'), etapaPq: $('#wh-epq').value, motivo: whLer('motivo'), motivoOutro: $('#wh-qual').value, motivoPq: $('#wh-mpq').value, motivoOk: whLer('motivook'), motivoCerto: $('#wh-cert').value, obs: $('#wh-obs').value
@@ -6144,14 +6163,17 @@ function whSalvar() {
   if (existente) { dados.id = existente.id; dados.criadoEm = existente.criadoEm; }
   var a = sanitizarWhats(dados);
   if (!a) return falta('Informe o número.', '#wh-numero');
-  var repetido = !existente && estado.whats.some(function (x) {
-    return x.planilha === a.planilha && x.numero.replace(/\D/g, '') === a.numero.replace(/\D/g, '') && a.numero.replace(/\D/g, '') !== '';
-  });
+  var dups = existente ? [] : whDuplicadas(a.numero), repetido = dups.length > 0;
+  if (repetido && estado.whDupOk !== whChave(a.numero)) {
+    var ult = dups[dups.length - 1];
+    var okDup = await confirmar({ titulo: 'Número duplicado', rotuloOk: 'Salvar mesmo assim', rotuloCancelar: 'Voltar e conferir', corpo: [el('p', null, 'O número ', el('b', null, a.numero), ' já foi analisado em ' + dataHoraBR(ult.criadoEm) + ' (' + (whRotulo(WH_PLANILHAS, ult.planilha) || 'sem planilha') + ').'), el('p', { class: 'dica' }, 'Salvar agora cria uma segunda análise do mesmo número. Se foi engano, volte e abra a análise existente.')] });
+    if (!okDup) { estado.whPasso = 'numero'; whRender(true); return false; }
+  }
   if (existente) estado.whats[estado.whats.indexOf(existente)] = a; else estado.whats.push(a);
   salvarWhats();
   var num = a.numero;
   whLimparForm(); renderWhats();
-  toast(existente ? 'Análise de ' + num + ' atualizada.' : 'Análise de ' + num + ' salva.' + (repetido ? ' Atenção: já havia análise deste número nesta planilha.' : ''), { tipo: repetido ? 'aviso' : 'ok' });
+  toast(existente ? 'Análise de ' + num + ' atualizada.' : 'Análise de ' + num + ' salva.' + (repetido ? ' Atenção: este número já tinha análise (duplicada).' : ''), { tipo: repetido ? 'aviso' : 'ok' });
   whRender(true);
   return true;
 }
@@ -6419,10 +6441,29 @@ function whFormatarTel(t) {
   if (d.length === 13 && d.indexOf('55') === 0) return '+55 ' + d.slice(2, 4) + ' ' + d.slice(4, 9) + '-' + d.slice(9);
   return t;
 }
-function whFilaPendentes() {
-  var feitos = new Set(estado.whats.map(function (a) { return whDigitos(a.numero); }));
-  return estado.whFila.itens.filter(function (i) { return !feitos.has(whDigitos(i.tel)); });
+/* Chave para comparar números: só dígitos, sem o 55 do país (11 91234-5678 = +55 11 91234-5678) */
+function whChave(s) { var d = whDigitos(s); if (d.length >= 12 && d.indexOf('55') === 0) d = d.slice(2); return d; }
+function whDuplicadas(numero, ignorarId) {
+  var k = whChave(numero);
+  if (k.length < 8) return [];
+  return estado.whats.filter(function (x) { return x.id !== ignorarId && whChave(x.numero) === k; });
 }
+function whRenderDup() {
+  var box = $('#wh-dup'); if (!box) return;
+  box.textContent = '';
+  var lista = whDuplicadas($('#wh-numero').value, estado.whEdit);
+  if (!lista.length) { box.hidden = true; return; }
+  var a = lista[lista.length - 1];
+  box.hidden = false;
+  box.appendChild(el('span', null, '⚠ Número duplicado: ' + (lista.length > 1 ? 'já há ' + lista.length + ' análises dele (a última em ' + dataHoraBR(a.criadoEm) + ')' : 'já foi analisado em ' + dataHoraBR(a.criadoEm)) + ' · ' + (whRotulo(WH_PLANILHAS, a.planilha) || 'sem planilha') + '.'));
+  box.appendChild(el('button', { type: 'button', class: 'btn btn-linha btn-peq', onclick: function () { whEditar(a.id); } }, 'Abrir essa análise'));
+  box.appendChild(el('button', { type: 'button', class: 'btn btn-perigo-linha btn-peq', onclick: function () { whExcluir(a.id); } }, 'Remover essa análise'));
+}
+function whFilaPendentes() {
+  var feitos = new Set(estado.whats.map(function (a) { return whChave(a.numero); }));
+  return estado.whFila.itens.filter(function (i) { return !feitos.has(whChave(i.tel)); });
+}
+var WH_FEITOS_ABERTO = false;
 function renderWhatsFila() {
   var f = estado.whFila, pend = whFilaPendentes(), cont = $('#wh-fila');
   cont.textContent = '';
@@ -6433,11 +6474,27 @@ function renderWhatsFila() {
   }
   pend.forEach(function (i) {
     cont.appendChild(el('button', { type: 'button', class: 'btn btn-linha btn-peq', title: i.plan ? 'Planilha: ' + whRotulo(WH_PLANILHAS, i.plan) : '', onclick: function () {
+      var txt = whFormatarTel(i.tel);
+      copiarTexto(txt).then(function (ok) { toast(ok ? 'Número copiado: ' + txt : 'Não consegui copiar automaticamente: ' + txt, { tipo: ok ? 'ok' : 'erro' }); });
       whLimparForm(); $('#wh-numero').value = i.tel; whMarcar('planilha', i.plan);
       estado.whPasso = whProximoPasso(); whRender(true); $('#wh-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
     } }, whFormatarTel(i.tel)));
   });
   if (f.itens.length && !pend.length) cont.appendChild(el('span', { class: 'dica' }, 'Todos os números da fila já foram analisados. ✔'));
+  var pendSet = new Set(pend.map(function (i) { return whChave(i.tel); }));
+  var feitos = f.itens.filter(function (i) { return !pendSet.has(whChave(i.tel)); });
+  if (feitos.length) {
+    var det = el('details', { style: 'width:100%;margin-top:6px' }, el('summary', { class: 'dica' }, 'Já analisados (' + feitos.length + ') — use o ✕ para remover a análise e devolver o número à fila'),
+      el('div', { class: 'wh-feitos', style: 'margin-top:8px' }, feitos.map(function (i) {
+        var a = whDuplicadas(i.tel).pop();
+        return el('span', { class: 'wh-feito' }, whFormatarTel(i.tel),
+          a ? el('button', { type: 'button', class: 'ed', title: 'Editar a análise deste número', 'aria-label': 'Editar a análise de ' + whFormatarTel(i.tel), onclick: function () { whEditar(a.id); } }, '✎') : null,
+          a ? el('button', { type: 'button', title: 'Remover a análise deste número (ele volta para pendentes)', 'aria-label': 'Remover a análise de ' + whFormatarTel(i.tel), onclick: function () { whExcluir(a.id); } }, '✕') : null);
+      })));
+    det.open = WH_FEITOS_ABERTO;
+    det.addEventListener('toggle', function () { WH_FEITOS_ABERTO = det.open; });
+    cont.appendChild(det);
+  }
 }
 async function importarWhatsFila(arquivo) {
   if (!arquivo) return;
@@ -6487,6 +6544,7 @@ function ligarEventosWhats() {
   $('#wh-voltar').addEventListener('click', function () { var ps = whPassos(), i = ps.indexOf(estado.whPasso); if (i > 0) { estado.whPasso = ps[i - 1]; whRender(true); } });
   ['#wh-numero', '#wh-semato'].forEach(function (id) { $(id).addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.ctrlKey) { e.preventDefault(); whContinuar(); } }); });
   ['#wh-epq', '#wh-mpq'].forEach(function (id) { $(id).addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.ctrlKey && !e.shiftKey) { e.preventDefault(); whContinuar(); } }); });
+  $('#wh-numero').addEventListener('input', whRenderDup);
   $('#wh-cert-busca').addEventListener('input', whRenderCerto);
   $('#wh-cert-busca').addEventListener('keydown', function (e) { if (e.key !== 'Enter') return; e.preventDefault(); var b = $('#wh-cert-lista button'); if (b) b.click(); });
   $('#wh-qual-busca').addEventListener('input', whRenderQual);
