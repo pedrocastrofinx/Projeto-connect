@@ -585,6 +585,29 @@ th{background:var(--sup2);color:var(--muted);font-size:.68rem;letter-spacing:.07
 
 /* só o formulário: sem cartões de resumo, gráficos e relatório */
 #ia-resumo,#ia-pend,#ia-dash,#ia-rel-tit,#ia-rel{display:none!important}
+
+/* ===== Estilo "formulário" (tipo Microsoft Forms, mais moderno): uma coluna, perguntas em cartões ===== */
+#aba-ia{max-width:760px;margin:0 auto}
+#aba-ia .secao-titulo{display:block;margin:0 0 14px;padding:22px 24px;background:var(--sup);border:1px solid var(--borda);border-top:6px solid var(--azul);border-radius:10px}
+#aba-ia .secao-titulo h2{font-size:1.5rem;font-weight:700}
+#aba-ia .secao-titulo span{display:none}
+#ia-inicio,#ia-audio,#aba-ia .filtros-card,#ia-lista,#ia-rel,#ia-rel-tit{display:none!important}
+.ia-foco #ia-inicio{display:none!important}
+#ia-det .ia-det{display:grid;gap:14px}
+#ia-det .ia-det>article.card:first-child>*:not(:first-child){display:none!important}
+#ia-det .ia-det>article.card:first-child .acoes .btn-linha{display:none}
+#ia-det .ia-det>article.card{background:transparent;border:0;padding:0;gap:12px}
+#ia-det .ia-det>article.card:first-child{background:var(--sup);border:1px solid var(--borda);border-radius:10px;padding:16px 20px}
+.ia-rapidas-box,#ia-det .card-cab,#ia-det .ia-auto{display:none!important}
+.ia-ck{display:grid;gap:12px}
+.ia-ck-lin{display:grid!important;gap:12px;padding:18px 20px;background:var(--sup);border:1px solid var(--borda);border-radius:10px}
+.ia-ck-lin select{width:100%;min-width:0}
+.ia-ck-lin>div>b{font-size:1rem}
+.ia-ck-lin>div>small{display:block;margin-top:4px;color:var(--muted);font-weight:400}
+#ia-det .ia-det>article.card:nth-child(2)>.rotulo,#ia-det .ia-det>article.card:nth-child(2)>div>.rotulo{font-size:.8rem}
+#ia-det .ia-det>article.card:nth-child(2)>div:not(.ia-ck):not(.acoes){background:var(--sup);border:1px solid var(--borda);border-radius:10px;padding:16px 20px}
+#ia-det .ia-det>article.card:nth-child(2)>.rotulo{display:none}
+.ia-ck-lin{grid-template-columns:minmax(0,1fr)!important}
 </style>
 </head>
 <body>
@@ -5690,7 +5713,7 @@ function iaRenderDetalhe() {
     iaGravar(l, a); toast(r.rot.replace(/^\S+\s/, '') + ' — salvo.'); proximo();
   }
   iaRapidaAtual = aplicarRapida;
-  var rapidasBox = el('div', { style: 'display:grid;gap:8px' },
+  var rapidasBox = el('div', { class: 'ia-rapidas-box', style: 'display:grid;gap:8px' },
     el('div', { class: 'rotulo' }, 'RESPOSTA RÁPIDA · 1 CLIQUE SALVA E VAI PARA O PRÓXIMO (teclas 1 a 8)'),
     el('div', { class: 'ia-rapidas' }, IA_RAPIDAS.map(function (r, i) {
       return el('button', { type: 'button', class: 'btn ' + (i === 0 ? 'btn-primario' : 'btn-linha'), onclick: function () { aplicarRapida(i); } }, (i + 1) + ' · ' + r.rot);
@@ -6821,7 +6844,7 @@ function iniciar() {
   }
   estado.diaRender = dataISO(hoje);
   estado.minutoRender = hoje.getHours() * 60 + hoje.getMinutes();
-  mostrarAba('ia', { semRolar: true });
+  mostrarAba('ia', { semRolar: true }); estado.ui.ia.foco = true; renderIA();
   renderTudo();
   setInterval(tick, 1000);
   /* Hospedado no site (pages.dev) ou com API absoluta configurada: atualiza sozinho ao abrir e a cada 15 minutos */
