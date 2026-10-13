@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Análise IA · WhatsApp</title>
-<script>(function(){var t='';try{t=localStorage.getItem('finx_tema')||''}catch(e){}if(t!=='claro'&&t!=='escuro')t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'escuro':'claro';document.documentElement.setAttribute('data-tema',t)})();</script>
+<script>document.documentElement.setAttribute('data-tema','escuro');</script>
 <style>
 /* =========================================================
    FINX · Painel de Auditorias e Metas
@@ -536,6 +536,52 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
 .layout{display:block!important;max-width:1180px;margin:0 auto}
 .aba:not(#aba-whats){display:none!important}
 .topo-chips{display:none!important}
+
+/* ===== Visual enxuto (inspirado no Locus): escuro, plano, azul de sempre ===== */
+:root[data-tema=escuro]{--bg:#0A0D13;--sup:#0F131B;--sup2:#141A26;--linha:#222B3B;--borda:#1D2536;--texto:#E8ECF4;--muted:#8A95AA;--azul:#2F6BFF;--azul-esc:#E8ECF4;--azul-cl:#14213D;--azul-med:#2B4577;--azul-hover:#1A2B4D;--cinza-cl:#1D2536;--raio:12px;--sombra:none}
+body{font-family:Inter,"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;font-size:14px;letter-spacing:.005em}
+.topo{position:static;background:var(--bg);color:var(--texto);border-bottom:1px solid var(--borda);box-shadow:none}
+.topo-in{max-width:1180px;padding:20px 24px;flex-wrap:nowrap;gap:16px}
+.marca>div{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.marca-nome{font-weight:700;font-size:1.15rem;letter-spacing:0}
+.marca-sub{font-size:.74rem;color:var(--muted);opacity:1}
+.relogio-bloco{display:flex;align-items:baseline;gap:12px;text-align:right}
+.rel-hora{font-size:.95rem;font-weight:600;color:var(--texto)}
+.rel-data{font-size:.74rem;color:var(--muted);opacity:1}
+.layout{padding:24px}
+.aba{animation:none}
+.secao-titulo{margin:4px 0 14px}
+.secao-titulo h2{font-size:1.05rem;font-weight:700;color:var(--texto)}
+.card,.tabela-wrap,.pl-ajustes{box-shadow:none;border-radius:12px}
+.btn{border-radius:8px;min-height:36px;padding:7px 14px;font-size:.84rem;font-weight:600;box-shadow:none}
+.btn-primario,.btn-primario:hover:not([disabled]){box-shadow:none}
+.btn-primario:hover:not([disabled]){background:#2559D8}
+.btn-sec{background:var(--sup2);color:var(--texto);border:1px solid var(--borda)}
+.btn-sec:hover:not([disabled]){background:var(--azul-hover)}
+.btn-linha{background:transparent;border:1px solid var(--borda);color:var(--texto)}
+.btn-linha:hover:not([disabled]){background:var(--sup2)}
+input[type=text],input[type=search],input[type=number],input[type=date],input[type=time],select,textarea{border:1px solid var(--borda);border-radius:8px;min-height:40px;padding:8px 12px;background:var(--sup2)}
+input:focus,select:focus,textarea:focus{border-color:var(--azul);outline:0;box-shadow:0 0 0 3px rgba(47,107,255,.18)}
+.wh-wiz{padding:22px;gap:14px}
+.wh-tag{background:transparent;border:1px solid var(--borda);color:var(--azul);border-radius:99px;font-size:.68rem;padding:3px 10px}
+.wh-prog{height:3px;background:var(--cinza-cl)}
+.wh-q{font-size:1.15rem;font-weight:700;color:var(--texto);margin:4px 0 0}
+.wh-passo input[type=text]{font-size:1rem;min-height:46px}
+.wh-resp button{border-radius:8px;background:var(--sup2);border:1px solid var(--borda);color:var(--texto);font-size:.76rem;font-weight:600}
+.chip-tipo span{border:1px solid var(--borda);border-radius:8px;background:var(--sup2);color:var(--texto);font-weight:600;transition:border-color .12s,background .12s}
+.chip-tipo:hover span{border-color:var(--azul)}
+.chip-tipo input:checked+span{background:var(--azul);border-color:var(--azul);color:#fff;box-shadow:none}
+.wh-passo .chip-tipo span{min-height:56px;font-size:.92rem}
+.wh-lista button{border:1px solid var(--borda);border-radius:8px;background:var(--sup2);color:var(--texto);font-weight:600;font-size:.9rem;padding:10px 14px}
+.wh-lista button:hover,.wh-lista button:focus-visible{background:var(--azul-hover);border-color:var(--azul)}
+.wh-rodape{border-top:1px solid var(--borda)}
+.wh-aviso{background:#2A210A;color:#FFD76A;border:1px solid #6B5316;border-radius:8px}
+.wh-feito{border:1px solid var(--borda);border-radius:8px;background:var(--sup2)}
+.wh-feito button{color:#F0564A}.wh-feito button:hover,.wh-feito button:focus-visible{background:#3A1815}
+.wh-feito button.ed{color:var(--azul)}
+th{background:var(--sup2);color:var(--muted);font-size:.68rem;letter-spacing:.07em;border-bottom:1px solid var(--borda)}
+.pl-ajustes summary{font-weight:600;color:var(--texto)}
+.wh-resumo .card,#wh-resumo .card{background:var(--sup2)}
 </style>
 </head>
 <body>
