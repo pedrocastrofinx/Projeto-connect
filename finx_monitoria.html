@@ -499,6 +499,11 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
 .wh-passo input[type=text]{font-size:1.15rem;min-height:52px}
 .wh-passo .chip-tipo span{min-height:64px;justify-content:center;font-size:1rem}
 .wh-rodape{display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--linha);padding-top:12px}
+.wh-lista{display:grid;gap:6px;max-height:300px;overflow:auto;padding:2px}
+.wh-lista button{text-align:left;border:1.5px solid var(--linha);background:var(--sup);color:var(--azul-esc);border-radius:11px;padding:11px 14px;font-weight:700;font-size:.98rem;cursor:pointer}
+.wh-lista button:hover,.wh-lista button:focus-visible{background:var(--azul-hover);border-color:var(--azul)}
+.wh-lista button.novo{border-style:dashed;color:var(--azul)}
+.wh-pq{display:block;font-size:.78rem;color:var(--muted);margin-top:2px}
 .wh-det{margin:0 auto 14px;max-width:1100px}
 @media (prefers-reduced-motion:reduce){.wh-passo{animation:none}}
 .wh-opcoes{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
@@ -510,7 +515,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
 .wh-resumo .card{padding:12px 14px}
 .wh-resumo b{display:block;font-size:1.5rem;color:var(--azul-esc)}
 .wh-resumo span{font-size:.8rem;color:var(--muted)}
-.wh-tab{min-width:1000px}
+.wh-tab{min-width:1100px}
 .wh-tab td.lead{white-space:nowrap}
 .wh-fil{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-items:end;margin-bottom:12px}
 @media (max-width:560px){.wh-opcoes.duas{grid-template-columns:1fr}}
@@ -806,8 +811,17 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
           <div class="wh-opcoes" role="radiogroup" aria-label="Planilha" id="wh-planilha"></div>
         </div>
         <div class="wh-passo" data-passo="status" hidden>
-          <h3 class="wh-q">Qual o status no Dryve Pro?</h3>
+          <h3 class="wh-q">Qual o status no Dryve Pro? <small>(perdido ou outro)</small></h3>
           <div class="wh-opcoes duas" role="radiogroup" aria-label="Status no Dryve Pro" id="wh-status"></div>
+        </div>
+        <div class="wh-passo" data-passo="etapa" hidden>
+          <h3 class="wh-q">Em qual etapa o lead está?</h3>
+          <div class="wh-opcoes" role="radiogroup" aria-label="Etapa no Dryve Pro" id="wh-etapa"></div>
+        </div>
+        <div class="wh-passo" data-passo="etapapq" hidden>
+          <h3 class="wh-q">Por quê está nessa etapa?</h3>
+          <textarea id="wh-epq" rows="3" maxlength="300" placeholder="Explique o porquê" aria-label="Por quê da etapa"></textarea>
+          <div class="acoes"><button type="button" class="btn btn-primario" data-wh="continuar">Continuar →</button></div>
         </div>
         <div class="wh-passo" data-passo="statusok" hidden>
           <h3 class="wh-q">O status está correto?</h3>
@@ -817,9 +831,15 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
           <h3 class="wh-q">Qual o motivo do perdido?</h3>
           <div class="wh-opcoes duas" role="radiogroup" aria-label="Motivo do perdido" id="wh-motivo"></div>
         </div>
-        <div class="wh-passo" data-passo="outro" hidden>
+        <div class="wh-passo" data-passo="qual" hidden>
           <h3 class="wh-q">Qual é o motivo?</h3>
-          <input type="text" id="wh-outro" maxlength="120" placeholder="Escreva o motivo" aria-label="Outro motivo">
+          <input type="hidden" id="wh-qual">
+          <input type="search" id="wh-qual-busca" placeholder="Digite para buscar ou escrever outro motivo…" aria-label="Buscar motivo" style="font-size:1.05rem;min-height:50px">
+          <div class="wh-lista" id="wh-qual-lista" role="listbox" aria-label="Motivos de perdido"></div>
+        </div>
+        <div class="wh-passo" data-passo="motivopq" hidden>
+          <h3 class="wh-q">Por quê?</h3>
+          <textarea id="wh-mpq" rows="3" maxlength="300" placeholder="Explique o porquê desse motivo" aria-label="Por quê do motivo"></textarea>
           <div class="acoes"><button type="button" class="btn btn-primario" data-wh="continuar">Continuar →</button></div>
         </div>
         <div class="wh-passo" data-passo="motivook" hidden>
@@ -5904,10 +5924,18 @@ var WH_PLANILHAS = [
   { v: 'pedidos_disparos', r: 'pedidos_disparos' },
   { v: 'ambas', r: 'Ambas' }
 ];
-var WH_STATUS = [{ v: 'perdido', r: 'Perdido' }, { v: 'nao_perdido', r: 'Não perdido' }];
+var WH_STATUS = [{ v: 'perdido', r: 'Perdido' }, { v: 'nao_perdido', r: 'Outro' }];
+var WH_ETAPAS = [
+  { v: 'pendente', r: 'Pendente de atendimento' }, { v: 'tentativa', r: 'Tentativa de contato' }, { v: 'efetivo', r: 'Contato efetivo' },
+  { v: 'locadora', r: 'Enviado para locadora' }, { v: 'reprovado', r: 'Reprovado' }, { v: 'tratado', r: 'Lead Tratado' }, { v: 'aprovado', r: 'Aprovado' }
+];
+var WH_MOTIVOS_LISTA = ['Aprovou limite baixo', 'CNH vencida / Não possui CNH', 'Contrato cancelado', 'Cotando / Pesquisando', 'Dados incorretos', 'Fechou direto na loja',
+  'Fraude', 'Grandes frotas', 'Limpeza de board', 'Modelo indisponível', 'Não fecha online', 'Não quer seguir com a Localiza', 'Não tem cartão de crédito',
+  'Não tem o valor da mensalidade', 'Preço não agradou', 'Preferiu comprar o carro', 'Proposta reprovada', 'Quilometragem não atendida', 'Renda insuficiente',
+  'Reprovado na segunda análise', 'Reprovado no crédito', 'Score norte/nordeste', 'Sem retorno'];
 var WH_MOTIVOS = [{ v: 'app', r: 'Motorista de App' }, { v: 'outro', r: 'Outro' }];
 var WH_SN = [{ v: 'sim', r: '✔ Correto' }, { v: 'nao', r: '✖ Incorreto' }];
-var WH_CAB = ['Data', 'Hora', 'Número', 'Planilha', 'Status Dryve Pro', 'Status correto', 'Motivo do perdido', 'Motivo correto', 'Observação', 'ID'];
+var WH_CAB = ['Data', 'Hora', 'Número', 'Planilha', 'Status Dryve Pro', 'Etapa (se outro)', 'Por quê da etapa', 'Status correto', 'Motivo do perdido', 'Por quê do motivo', 'Motivo correto', 'Observação', 'ID'];
 var WH_FIL = { busca: '', planilha: '', status: '', ok: '' };
 
 function whRotulo(lista, v) { var x = lista.find(function (i) { return i.v === v; }); return x ? x.r : ''; }
@@ -5926,12 +5954,13 @@ function sanitizarWhats(x) {
     planilha: whEscolha(WH_PLANILHAS, x.planilha),
     status: whEscolha(WH_STATUS, x.status),
     statusOk: whEscolha(WH_SN, x.statusOk),
-    motivo: '', motivoOutro: '', motivoOk: '',
+    etapa: '', etapaPq: '', motivo: '', motivoOutro: '', motivoPq: '', motivoOk: '',
     obs: limparTexto(x.obs).slice(0, 600)
   };
+  if (a.status === 'nao_perdido') { a.etapa = whEscolha(WH_ETAPAS, x.etapa); a.etapaPq = limparTexto(x.etapaPq).slice(0, 300); }
   if (a.status === 'perdido') {
     a.motivo = whEscolha(WH_MOTIVOS, x.motivo);
-    if (a.motivo === 'outro') a.motivoOutro = limparTexto(x.motivoOutro).slice(0, 120);
+    if (a.motivo === 'outro') { a.motivoOutro = limparTexto(x.motivoOutro).slice(0, 120); a.motivoPq = limparTexto(x.motivoPq).slice(0, 300); }
     a.motivoOk = whEscolha(WH_SN, x.motivoOk);
   }
   return a;
@@ -5959,16 +5988,18 @@ function whCriarRadios(cont, nome, lista, aoMudar) {
 }
 function whLer(nome) { var r = document.querySelector('input[name="wh-' + nome + '"]:checked'); return r ? r.value : ''; }
 function whMarcar(nome, v) { $$('input[name="wh-' + nome + '"]').forEach(function (r) { r.checked = r.value === v; }); }
-var WH_TITULOS = { numero: 'Número', planilha: 'Planilha', status: 'Status', statusok: 'Status correto', motivo: 'Motivo', outro: 'Motivo', motivook: 'Motivo correto', obs: 'Observação' };
+var WH_TITULOS = { numero: 'Número', planilha: 'Planilha', status: 'Status', etapa: 'Etapa', etapapq: 'Por quê (etapa)', statusok: 'Status correto', motivo: 'Motivo', qual: 'Qual', motivopq: 'Por quê (motivo)', motivook: 'Motivo correto', obs: 'Observação' };
+var WH_TEXTOS = { numero: '#wh-numero', etapapq: '#wh-epq', qual: '#wh-qual', motivopq: '#wh-mpq' };
 function whPassos() {
-  var p = ['numero', 'planilha', 'status', 'statusok'];
-  if (whLer('status') === 'perdido') { p.push('motivo'); if (whLer('motivo') === 'outro') p.push('outro'); p.push('motivook'); }
+  var p = ['numero', 'planilha', 'status'], st = whLer('status');
+  if (st === 'nao_perdido') p.push('etapa', 'etapapq');
+  p.push('statusok');
+  if (st === 'perdido') { p.push('motivo'); if (whLer('motivo') === 'outro') p.push('qual', 'motivopq'); p.push('motivook'); }
   p.push('obs');
   return p;
 }
 function whRespondido(p) {
-  if (p === 'numero') return !!limparTexto($('#wh-numero').value);
-  if (p === 'outro') return !!limparTexto($('#wh-outro').value);
+  if (WH_TEXTOS[p]) return !!limparTexto($(WH_TEXTOS[p]).value);
   if (p === 'obs') return true;
   return !!whLer(p);
 }
@@ -5978,11 +6009,19 @@ function whProximoPasso() {
   return 'obs';
 }
 function whValorPasso(p) {
-  if (p === 'numero') return limparTexto($('#wh-numero').value);
-  if (p === 'outro') return limparTexto($('#wh-outro').value);
+  if (WH_TEXTOS[p]) return limparTexto($(WH_TEXTOS[p]).value);
   var v = whLer(p);
-  return p === 'planilha' ? whRotulo(WH_PLANILHAS, v) : p === 'status' ? whRotulo(WH_STATUS, v) : p === 'motivo' ? whRotulo(WH_MOTIVOS, v)
+  return p === 'planilha' ? whRotulo(WH_PLANILHAS, v) : p === 'status' ? whRotulo(WH_STATUS, v) : p === 'motivo' ? whRotulo(WH_MOTIVOS, v) : p === 'etapa' ? whRotulo(WH_ETAPAS, v)
     : v === 'sim' ? '✔ Correto' : v === 'nao' ? '✖ Incorreto' : '';
+}
+function whRenderQual() {
+  var q = limparTexto($('#wh-qual-busca').value), n = normBusca(q), lista = $('#wh-qual-lista');
+  lista.textContent = '';
+  var achados = WH_MOTIVOS_LISTA.filter(function (m) { return !n || normBusca(m).indexOf(n) !== -1; });
+  function escolher(m) { $('#wh-qual').value = m; $('#wh-qual-busca').value = ''; whAvancar(); }
+  achados.forEach(function (m) { lista.appendChild(el('button', { type: 'button', role: 'option', onclick: function () { escolher(m); } }, m)); });
+  if (q && !WH_MOTIVOS_LISTA.some(function (m) { return normBusca(m) === n; })) lista.appendChild(el('button', { type: 'button', class: 'novo', onclick: function () { escolher(q); } }, 'Usar “' + q + '” como motivo'));
+  if (!lista.children.length) lista.appendChild(el('span', { class: 'dica' }, 'Digite o motivo acima.'));
 }
 function whRender(foco) {
   var ps = whPassos();
@@ -5997,21 +6036,22 @@ function whRender(foco) {
     if (p === estado.whPasso || p === 'obs' || !whRespondido(p)) return;
     resp.appendChild(el('button', { type: 'button', title: 'Mudar esta resposta', onclick: function () { estado.whPasso = p; whRender(true); } }, el('small', null, WH_TITULOS[p] + ':'), whValorPasso(p)));
   });
+  if (estado.whPasso === 'qual') whRenderQual();
   if (foco) {
-    var campo = estado.whPasso === 'numero' ? $('#wh-numero') : estado.whPasso === 'outro' ? $('#wh-outro') : estado.whPasso === 'obs' ? $('#wh-obs') : null;
-    if (campo) campo.focus();
+    var campo = { numero: '#wh-numero', etapapq: '#wh-epq', qual: '#wh-qual-busca', motivopq: '#wh-mpq', obs: '#wh-obs' }[estado.whPasso];
+    if (campo) $(campo).focus();
   }
 }
 function whAvancar() { estado.whPasso = whProximoPasso(); whRender(true); }
 function whContinuar() {
-  if (!whRespondido(estado.whPasso)) { toast(estado.whPasso === 'numero' ? 'Informe o número.' : 'Escreva o motivo.', { tipo: 'aviso' }); return; }
+  if (!whRespondido(estado.whPasso)) { toast(estado.whPasso === 'numero' ? 'Informe o número.' : 'Escreva o porquê.', { tipo: 'aviso' }); return; }
   whAvancar();
 }
 function whAtualizarForm() { whRender(); }
 function whLimparForm() {
   estado.whEdit = ''; estado.whPasso = 'numero';
-  $('#wh-numero').value = ''; $('#wh-outro').value = ''; $('#wh-obs').value = '';
-  ['planilha', 'status', 'statusok', 'motivo', 'motivook'].forEach(function (n) { whMarcar(n, ''); });
+  $('#wh-numero').value = ''; $('#wh-qual').value = ''; $('#wh-qual-busca').value = ''; $('#wh-epq').value = ''; $('#wh-mpq').value = ''; $('#wh-obs').value = '';
+  ['etapa', 'planilha', 'status', 'statusok', 'motivo', 'motivook'].forEach(function (n) { whMarcar(n, ''); });
   $('#wh-form-tit').textContent = 'Nova análise';
   $('#wh-cancelar').hidden = true;
   whRender(false);
@@ -6021,8 +6061,8 @@ function whEditar(id) {
   if (!a) return;
   whLimparForm();
   estado.whEdit = a.id;
-  $('#wh-numero').value = a.numero; $('#wh-outro').value = a.motivoOutro; $('#wh-obs').value = a.obs;
-  whMarcar('planilha', a.planilha); whMarcar('status', a.status); whMarcar('statusok', a.statusOk);
+  $('#wh-numero').value = a.numero; $('#wh-qual').value = a.motivoOutro; $('#wh-epq').value = a.etapaPq; $('#wh-mpq').value = a.motivoPq; $('#wh-obs').value = a.obs;
+  whMarcar('etapa', a.etapa); whMarcar('planilha', a.planilha); whMarcar('status', a.status); whMarcar('statusok', a.statusOk);
   whMarcar('motivo', a.motivo); whMarcar('motivook', a.motivoOk);
   $('#wh-form-tit').textContent = 'Editando';
   $('#wh-cancelar').hidden = false;
@@ -6032,16 +6072,21 @@ function whEditar(id) {
 function whSalvar() {
   var dados = {
     numero: $('#wh-numero').value, planilha: whLer('planilha'), status: whLer('status'), statusOk: whLer('statusok'),
-    motivo: whLer('motivo'), motivoOutro: $('#wh-outro').value, motivoOk: whLer('motivook'), obs: $('#wh-obs').value
+    etapa: whLer('etapa'), etapaPq: $('#wh-epq').value, motivo: whLer('motivo'), motivoOutro: $('#wh-qual').value, motivoPq: $('#wh-mpq').value, motivoOk: whLer('motivook'), obs: $('#wh-obs').value
   };
   function falta(msg, alvo) { toast(msg, { tipo: 'aviso' }); if (alvo) { var e = $(alvo); if (e) e.focus(); } return false; }
   if (!limparTexto(dados.numero)) { estado.whPasso = 'numero'; whRender(true); return falta('Informe o número.'); }
   if (!dados.planilha) { estado.whPasso = 'planilha'; whRender(); return falta('Escolha a planilha.'); }
   if (!dados.status) { estado.whPasso = 'status'; whRender(); return falta('Escolha o status no Dryve Pro.'); }
+  if (dados.status === 'nao_perdido') {
+    if (!dados.etapa) { estado.whPasso = 'etapa'; whRender(); return falta('Escolha a etapa.'); }
+    if (!limparTexto(dados.etapaPq)) { estado.whPasso = 'etapapq'; whRender(true); return falta('Escreva o porquê da etapa.'); }
+  }
   if (!dados.statusOk) { estado.whPasso = 'statusok'; whRender(); return falta('Diga se o status está correto.'); }
   if (dados.status === 'perdido') {
     if (!dados.motivo) { estado.whPasso = 'motivo'; whRender(); return falta('Escolha o motivo do perdido.'); }
-    if (dados.motivo === 'outro' && !limparTexto(dados.motivoOutro)) { estado.whPasso = 'outro'; whRender(true); return falta('Escreva qual é o motivo.'); }
+    if (dados.motivo === 'outro' && !limparTexto(dados.motivoOutro)) { estado.whPasso = 'qual'; whRender(true); return falta('Escolha qual é o motivo.'); }
+    if (dados.motivo === 'outro' && !limparTexto(dados.motivoPq)) { estado.whPasso = 'motivopq'; whRender(true); return falta('Escreva o porquê do motivo.'); }
     if (!dados.motivoOk) { estado.whPasso = 'motivook'; whRender(); return falta('Diga se o motivo está correto.'); }
   }
   var existente = estado.whEdit ? estado.whats.find(function (x) { return x.id === estado.whEdit; }) : null;
@@ -6125,9 +6170,9 @@ function renderWhats() {
       el('td', { class: 'num' }, dataHoraBR(a.criadoEm)),
       el('td', { class: 'lead' }, a.numero),
       el('td', null, whRotulo(WH_PLANILHAS, a.planilha) || '—'),
-      el('td', null, a.status === 'perdido' ? tag('Perdido', 'vermelho') : a.status ? tag('Não perdido', 'cinza') : '—'),
+      el('td', null, a.status === 'perdido' ? tag('Perdido', 'vermelho') : a.status ? [tag('Outro', 'cinza'), el('span', { class: 'wh-pq' }, (whRotulo(WH_ETAPAS, a.etapa) || '') + (a.etapaPq ? ' — ' + a.etapaPq : ''))] : '—'),
       el('td', null, whTagSN(a.statusOk)),
-      el('td', null, motivo || '—'),
+      el('td', null, motivo || '—', a.motivoPq ? el('span', { class: 'wh-pq' }, a.motivoPq) : null),
       el('td', null, a.status === 'perdido' ? whTagSN(a.motivoOk) : el('span', { class: 'dica' }, '—')),
       el('td', { class: 'obs' }, a.obs),
       el('td', { class: 'num' },
@@ -6141,7 +6186,8 @@ function whLinhasExport() {
   return estado.whats.slice().sort(function (x, y) { return x.criadoEm - y.criadoEm; }).map(function (a) {
     var d = new Date(a.criadoEm);
     return [dataBR(dataISO(d)), horaISO(d), a.numero, whRotulo(WH_PLANILHAS, a.planilha), whRotulo(WH_STATUS, a.status),
-      a.statusOk === 'sim' ? 'Sim' : a.statusOk === 'nao' ? 'Não' : '', whMotivoTexto(a),
+      whRotulo(WH_ETAPAS, a.etapa), a.etapaPq,
+      a.statusOk === 'sim' ? 'Sim' : a.statusOk === 'nao' ? 'Não' : '', whMotivoTexto(a), a.motivoPq,
       a.status === 'perdido' ? (a.motivoOk === 'sim' ? 'Sim' : a.motivoOk === 'nao' ? 'Não' : '') : '', a.obs, a.id];
   });
 }
@@ -6193,7 +6239,7 @@ function xmlEscapar(s) {
 function colLetra(i) { return String.fromCharCode(65 + i); }
 function gerarXlsxWhats() {
   var linhas = [WH_CAB].concat(whLinhasExport());
-  var larg = [12, 10, 18, 24, 18, 15, 28, 15, 50, 22];
+  var larg = [12, 10, 18, 24, 16, 24, 36, 15, 30, 36, 15, 50, 22];
   var sheet = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
     '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' +
     '<cols>' + larg.map(function (w, i) { return '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>'; }).join('') + '</cols><sheetData>' +
@@ -6235,7 +6281,7 @@ function whParsePlanilha(v) {
 function whParseStatus(v) {
   var n = normBusca(v);
   if (!n) return '';
-  if (/^nao\b|nao perd|sem perd/.test(n)) return 'nao_perdido';
+  if (/^nao\b|nao perd|sem perd|^outro/.test(n)) return 'nao_perdido';
   return n.indexOf('perd') !== -1 ? 'perdido' : '';
 }
 function whParseQuando(d, h) {
@@ -6249,12 +6295,14 @@ function whParseQuando(d, h) {
   var hh = normalizarHora(h) || '00:00:00', p = iso.split('-').map(Number), t = hh.split(':').map(Number);
   return new Date(p[0], p[1] - 1, p[2], t[0], t[1], t[2]).getTime();
 }
+function whParseEtapa(v) { var n = normBusca(v); var x = WH_ETAPAS.find(function (e) { return normBusca(e.r) === n; }); return x ? x.v : ''; }
 function analisarLinhasWhats(linhas) {
   if (!linhas || linhas.length < 2) return { erro: 'O arquivo não possui linhas de dados.' };
   var cab = linhas[0].map(function (c) { return normBusca(c); });
   function col() { for (var i = 0; i < arguments.length; i++) { var k = cab.indexOf(arguments[i]); if (k >= 0) return k; } return -1; }
   var c = {
     data: col('data'), hora: col('hora'), numero: col('numero', 'telefone', 'whatsapp'), planilha: col('planilha'), status: col('status dryve pro', 'status dryve', 'status'),
+    etapa: col('etapa (se outro)', 'etapa'), etapaPq: col('por que da etapa'), motivoPq: col('por que do motivo'),
     statusOk: col('status correto'), motivo: col('motivo do perdido', 'motivo'), motivoOk: col('motivo correto'), obs: col('observacao', 'observacoes'), id: col('id')
   };
   if (c.numero < 0 || c.status < 0) return { erro: 'Cabeçalho inválido. Esperado: ' + WH_CAB.join(';') + '.' };
@@ -6267,6 +6315,7 @@ function analisarLinhasWhats(linhas) {
     var status = whParseStatus(cel(l, c.status));
     var bruto = {
       id: cel(l, c.id), criadoEm: whParseQuando(cel(l, c.data), cel(l, c.hora)), numero: cel(l, c.numero), planilha: whParsePlanilha(cel(l, c.planilha)), status: status,
+      etapa: whParseEtapa(cel(l, c.etapa)), etapaPq: cel(l, c.etapaPq), motivoPq: cel(l, c.motivoPq),
       statusOk: whParseSN(cel(l, c.statusOk)), motivo: !motivoTxt ? '' : /motorista|\bapp\b/.test(mn) ? 'app' : 'outro', motivoOutro: motivoTxt, motivoOk: whParseSN(cel(l, c.motivoOk)), obs: cel(l, c.obs)
     };
     var a = sanitizarWhats(bruto);
@@ -6363,6 +6412,7 @@ function ligarEventosWhats() {
     if (!(await confirmar({ titulo: 'Limpar a fila?', perigo: true, rotuloOk: 'Limpar', corpo: ['A fila de números será removida. As análises salvas não são afetadas.'] }))) return;
     estado.whFila = { arquivo: '', importadoEm: 0, itens: [] }; salvarWhatsFila(); renderWhats();
   });
+  whCriarRadios($('#wh-etapa'), 'etapa', WH_ETAPAS, whAvancar);
   whCriarRadios($('#wh-planilha'), 'planilha', WH_PLANILHAS, whAvancar);
   whCriarRadios($('#wh-status'), 'status', WH_STATUS, function () { whMarcar('statusok', ''); whAvancar(); });
   whCriarRadios($('#wh-statusok'), 'statusok', WH_SN, whAvancar);
@@ -6370,7 +6420,14 @@ function ligarEventosWhats() {
   whCriarRadios($('#wh-motivook'), 'motivook', WH_SN, whAvancar);
   $$('[data-wh=continuar]').forEach(function (b) { b.addEventListener('click', whContinuar); });
   $('#wh-voltar').addEventListener('click', function () { var ps = whPassos(), i = ps.indexOf(estado.whPasso); if (i > 0) { estado.whPasso = ps[i - 1]; whRender(true); } });
-  ['#wh-numero', '#wh-outro'].forEach(function (id) { $(id).addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.ctrlKey) { e.preventDefault(); whContinuar(); } }); });
+  $('#wh-numero').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.ctrlKey) { e.preventDefault(); whContinuar(); } });
+  ['#wh-epq', '#wh-mpq'].forEach(function (id) { $(id).addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.ctrlKey && !e.shiftKey) { e.preventDefault(); whContinuar(); } }); });
+  $('#wh-qual-busca').addEventListener('input', whRenderQual);
+  $('#wh-qual-busca').addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    var b = $('#wh-qual-lista button'); if (b) b.click();
+  });
   whRender(false);
   $('#wh-form').addEventListener('submit', function (e) { e.preventDefault(); whSalvar(); });
   $('#wh-form').addEventListener('keydown', function (e) { if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); whSalvar(); } });
