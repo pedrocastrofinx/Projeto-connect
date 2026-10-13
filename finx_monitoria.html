@@ -811,8 +811,17 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
           <div class="wh-opcoes" role="radiogroup" aria-label="Planilha" id="wh-planilha"></div>
         </div>
         <div class="wh-passo" data-passo="atend" hidden>
-          <h3 class="wh-q">Houve atendimento? <small>(Não = só template, ou o cliente só clicou em botão como “Encerrar” e a IA respondeu)</small></h3>
+          <h3 class="wh-q">Houve atendimento pela IA?</h3>
           <div class="wh-opcoes" role="radiogroup" aria-label="Atendimento" id="wh-atend"></div>
+        </div>
+        <div class="wh-passo" data-passo="semat" hidden>
+          <h3 class="wh-q">Por que não houve atendimento?</h3>
+          <div class="wh-opcoes" role="radiogroup" aria-label="Motivo de não ter atendimento" id="wh-semat"></div>
+        </div>
+        <div class="wh-passo" data-passo="semato" hidden>
+          <h3 class="wh-q">Qual foi o motivo?</h3>
+          <input type="text" id="wh-semato" maxlength="120" placeholder="Escreva o motivo" aria-label="Outro motivo sem atendimento">
+          <div class="acoes"><button type="button" class="btn btn-primario" data-wh="continuar">Continuar →</button></div>
         </div>
         <div class="wh-passo" data-passo="status" hidden>
           <h3 class="wh-q">Qual o status no Dryve Pro? <small>(perdido ou outro)</small></h3>
@@ -5935,7 +5944,11 @@ var WH_PLANILHAS = [
   { v: 'pedidos_disparos', r: 'pedidos_disparos' },
   { v: 'ambas', r: 'Ambas' }
 ];
-var WH_ATEND = [{ v: 'sim', r: 'Sim, houve atendimento' }, { v: 'nao', r: 'Não, sem atendimento' }];
+var WH_ATEND = [{ v: 'sim', r: 'Sim, a IA atendeu' }, { v: 'nao', r: 'Não houve atendimento' }];
+var WH_SEMAT = [
+  { v: 'encerrou', r: 'Cliente encerrou o canal sem continuar' }, { v: 'semintera', r: 'Cliente não interagiu' },
+  { v: 'alucinou', r: 'IA alucinou / respondeu errado' }, { v: 'outro', r: 'Outro' }
+];
 function whAtendLegado(v) { return v === 'humano' ? 'sim' : (v === 'template' || v === 'botao' || v === 'ia') ? 'nao' : v; }
 var WH_STATUS = [{ v: 'perdido', r: 'Perdido' }, { v: 'nao_perdido', r: 'Outro' }];
 var WH_ETAPAS = [
@@ -5948,11 +5961,12 @@ var WH_MOTIVOS_LISTA = ['Aprovou limite baixo', 'CNH vencida / Não possui CNH',
   'Reprovado na segunda análise', 'Reprovado no crédito', 'Score norte/nordeste', 'Sem retorno'];
 var WH_MOTIVOS = [{ v: 'app', r: 'Motorista de App' }, { v: 'outro', r: 'Outro' }];
 var WH_SN = [{ v: 'sim', r: '✔ Correto' }, { v: 'nao', r: '✖ Incorreto' }];
-var WH_CAB = ['Data', 'Hora', 'Número', 'Planilha', 'Atendimento', 'Status Dryve Pro', 'Etapa (se outro)', 'Por quê da etapa', 'Status correto', 'Motivo do perdido', 'Por quê do motivo', 'Motivo correto', 'Motivo certo (se incorreto)', 'Observação', 'ID'];
+var WH_CAB = ['Data', 'Hora', 'Número', 'Planilha', 'Atendimento', 'Motivo sem atendimento', 'Status Dryve Pro', 'Etapa (se outro)', 'Por quê da etapa', 'Status correto', 'Motivo do perdido', 'Por quê do motivo', 'Motivo correto', 'Motivo certo (se incorreto)', 'Observação', 'ID'];
 var WH_FIL = { busca: '', atend: '', planilha: '', status: '', ok: '' };
 
 function whRotulo(lista, v) { var x = lista.find(function (i) { return i.v === v; }); return x ? x.r : ''; }
 function whEscolha(lista, v) { return lista.some(function (i) { return i.v === v; }) ? v : ''; }
+function whSemAtTexto(a) { return a.atend !== 'nao' ? '' : a.atendMotivo === 'outro' ? (a.atendOutro || 'Outro') : whRotulo(WH_SEMAT, a.atendMotivo); }
 function whMotivoTexto(a) { return a.status !== 'perdido' ? '' : a.motivo === 'app' ? 'Motorista de App' : a.motivo === 'outro' ? (a.motivoOutro || 'Outro') : ''; }
 function whTemErro(a) { return a.statusOk === 'nao' || a.motivoOk === 'nao'; }
 
@@ -5965,12 +5979,16 @@ function sanitizarWhats(x) {
     criadoEm: Number.isFinite(Number(x.criadoEm)) && Number(x.criadoEm) > 0 ? Number(x.criadoEm) : Date.now(),
     numero: numero,
     planilha: whEscolha(WH_PLANILHAS, x.planilha),
-    atend: whEscolha(WH_ATEND, whAtendLegado(x.atend)),
+    atend: whEscolha(WH_ATEND, whAtendLegado(x.atend)), atendMotivo: '', atendOutro: '',
     status: whEscolha(WH_STATUS, x.status),
     statusOk: whEscolha(WH_SN, x.statusOk),
     etapa: '', etapaPq: '', motivo: '', motivoOutro: '', motivoPq: '', motivoOk: '', motivoCerto: '',
     obs: limparTexto(x.obs).slice(0, 600)
   };
+  if (a.atend === 'nao') {
+    a.atendMotivo = whEscolha(WH_SEMAT, x.atendMotivo);
+    if (a.atendMotivo === 'outro') a.atendOutro = limparTexto(x.atendOutro).slice(0, 120);
+  }
   if (a.status === 'nao_perdido') { a.etapa = whEscolha(WH_ETAPAS, x.etapa); a.etapaPq = limparTexto(x.etapaPq).slice(0, 300); }
   if (a.status === 'perdido' && (a.atend === 'sim' || a.atend === '')) {
     a.motivo = whEscolha(WH_MOTIVOS, x.motivo);
@@ -6003,10 +6021,12 @@ function whCriarRadios(cont, nome, lista, aoMudar) {
 }
 function whLer(nome) { var r = document.querySelector('input[name="wh-' + nome + '"]:checked'); return r ? r.value : ''; }
 function whMarcar(nome, v) { $$('input[name="wh-' + nome + '"]').forEach(function (r) { r.checked = r.value === v; }); }
-var WH_TITULOS = { numero: 'Número', planilha: 'Planilha', atend: 'Atendimento', status: 'Status', etapa: 'Etapa', etapapq: 'Por quê (etapa)', statusok: 'Status correto', motivo: 'Motivo', qual: 'Qual', motivopq: 'Por quê (motivo)', motivook: 'Motivo correto', motivocerto: 'Motivo certo', obs: 'Observação' };
-var WH_TEXTOS = { numero: '#wh-numero', etapapq: '#wh-epq', qual: '#wh-qual', motivopq: '#wh-mpq', motivocerto: '#wh-cert' };
+var WH_TITULOS = { numero: 'Número', planilha: 'Planilha', atend: 'Atendimento', semat: 'Sem atend.', semato: 'Qual', status: 'Status', etapa: 'Etapa', etapapq: 'Por quê (etapa)', statusok: 'Status correto', motivo: 'Motivo', qual: 'Qual', motivopq: 'Por quê (motivo)', motivook: 'Motivo correto', motivocerto: 'Motivo certo', obs: 'Observação' };
+var WH_TEXTOS = { numero: '#wh-numero', semato: '#wh-semato', etapapq: '#wh-epq', qual: '#wh-qual', motivopq: '#wh-mpq', motivocerto: '#wh-cert' };
 function whPassos() {
-  var p = ['numero', 'planilha', 'atend', 'status'], st = whLer('status');
+  var p = ['numero', 'planilha', 'atend'], st = whLer('status');
+  if (whLer('atend') === 'nao') { p.push('semat'); if (whLer('semat') === 'outro') p.push('semato'); }
+  p.push('status');
   if (st === 'nao_perdido') p.push('etapa', 'etapapq');
   p.push('statusok');
   if (st === 'perdido' && whLer('atend') === 'sim') { p.push('motivo'); if (whLer('motivo') === 'outro') p.push('qual', 'motivopq'); p.push('motivook'); if (whLer('motivook') === 'nao') p.push('motivocerto'); }
@@ -6026,7 +6046,7 @@ function whProximoPasso() {
 function whValorPasso(p) {
   if (WH_TEXTOS[p]) return limparTexto($(WH_TEXTOS[p]).value);
   var v = whLer(p);
-  return p === 'planilha' ? whRotulo(WH_PLANILHAS, v) : p === 'atend' ? whRotulo(WH_ATEND, v) : p === 'status' ? whRotulo(WH_STATUS, v) : p === 'motivo' ? whRotulo(WH_MOTIVOS, v) : p === 'etapa' ? whRotulo(WH_ETAPAS, v)
+  return p === 'planilha' ? whRotulo(WH_PLANILHAS, v) : p === 'atend' ? whRotulo(WH_ATEND, v) : p === 'semat' ? whRotulo(WH_SEMAT, v) : p === 'status' ? whRotulo(WH_STATUS, v) : p === 'motivo' ? whRotulo(WH_MOTIVOS, v) : p === 'etapa' ? whRotulo(WH_ETAPAS, v)
     : v === 'sim' ? '✔ Correto' : v === 'nao' ? '✖ Incorreto' : '';
 }
 function whRenderLista(busca, listaSel, hidden, opcoes) {
@@ -6060,7 +6080,7 @@ function whRender(foco) {
   if (estado.whPasso === 'qual') whRenderQual();
   if (estado.whPasso === 'motivocerto') whRenderCerto();
   if (foco) {
-    var campo = { numero: '#wh-numero', etapapq: '#wh-epq', qual: '#wh-qual-busca', motivopq: '#wh-mpq', motivocerto: '#wh-cert-busca', obs: '#wh-obs' }[estado.whPasso];
+    var campo = { numero: '#wh-numero', semato: '#wh-semato', etapapq: '#wh-epq', qual: '#wh-qual-busca', motivopq: '#wh-mpq', motivocerto: '#wh-cert-busca', obs: '#wh-obs' }[estado.whPasso];
     if (campo) $(campo).focus();
   }
 }
@@ -6072,8 +6092,8 @@ function whContinuar() {
 function whAtualizarForm() { whRender(); }
 function whLimparForm() {
   estado.whEdit = ''; estado.whPasso = 'numero';
-  $('#wh-numero').value = ''; $('#wh-qual').value = ''; $('#wh-qual-busca').value = ''; $('#wh-cert').value = ''; $('#wh-cert-busca').value = ''; $('#wh-epq').value = ''; $('#wh-mpq').value = ''; $('#wh-obs').value = '';
-  ['atend', 'etapa', 'planilha', 'status', 'statusok', 'motivo', 'motivook'].forEach(function (n) { whMarcar(n, ''); });
+  $('#wh-numero').value = ''; $('#wh-semato').value = ''; $('#wh-qual').value = ''; $('#wh-qual-busca').value = ''; $('#wh-cert').value = ''; $('#wh-cert-busca').value = ''; $('#wh-epq').value = ''; $('#wh-mpq').value = ''; $('#wh-obs').value = '';
+  ['semat', 'atend', 'etapa', 'planilha', 'status', 'statusok', 'motivo', 'motivook'].forEach(function (n) { whMarcar(n, ''); });
   $('#wh-form-tit').textContent = 'Nova análise';
   $('#wh-cancelar').hidden = true;
   whRender(false);
@@ -6083,8 +6103,8 @@ function whEditar(id) {
   if (!a) return;
   whLimparForm();
   estado.whEdit = a.id;
-  $('#wh-numero').value = a.numero; $('#wh-qual').value = a.motivoOutro; $('#wh-cert').value = a.motivoCerto; $('#wh-epq').value = a.etapaPq; $('#wh-mpq').value = a.motivoPq; $('#wh-obs').value = a.obs;
-  whMarcar('atend', a.atend); whMarcar('etapa', a.etapa); whMarcar('planilha', a.planilha); whMarcar('status', a.status); whMarcar('statusok', a.statusOk);
+  $('#wh-numero').value = a.numero; $('#wh-semato').value = a.atendOutro; $('#wh-qual').value = a.motivoOutro; $('#wh-cert').value = a.motivoCerto; $('#wh-epq').value = a.etapaPq; $('#wh-mpq').value = a.motivoPq; $('#wh-obs').value = a.obs;
+  whMarcar('atend', a.atend); whMarcar('semat', a.atendMotivo); whMarcar('etapa', a.etapa); whMarcar('planilha', a.planilha); whMarcar('status', a.status); whMarcar('statusok', a.statusOk);
   whMarcar('motivo', a.motivo); whMarcar('motivook', a.motivoOk);
   $('#wh-form-tit').textContent = 'Editando';
   $('#wh-cancelar').hidden = false;
@@ -6093,13 +6113,17 @@ function whEditar(id) {
 }
 function whSalvar() {
   var dados = {
-    numero: $('#wh-numero').value, planilha: whLer('planilha'), atend: whLer('atend'), status: whLer('status'), statusOk: whLer('statusok'),
+    numero: $('#wh-numero').value, planilha: whLer('planilha'), atend: whLer('atend'), atendMotivo: whLer('semat'), atendOutro: $('#wh-semato').value, status: whLer('status'), statusOk: whLer('statusok'),
     etapa: whLer('etapa'), etapaPq: $('#wh-epq').value, motivo: whLer('motivo'), motivoOutro: $('#wh-qual').value, motivoPq: $('#wh-mpq').value, motivoOk: whLer('motivook'), motivoCerto: $('#wh-cert').value, obs: $('#wh-obs').value
   };
   function falta(msg, alvo) { toast(msg, { tipo: 'aviso' }); if (alvo) { var e = $(alvo); if (e) e.focus(); } return false; }
   if (!limparTexto(dados.numero)) { estado.whPasso = 'numero'; whRender(true); return falta('Informe o número.'); }
   if (!dados.planilha) { estado.whPasso = 'planilha'; whRender(); return falta('Escolha a planilha.'); }
   if (!dados.atend) { estado.whPasso = 'atend'; whRender(); return falta('Diga se houve atendimento.'); }
+  if (dados.atend === 'nao') {
+    if (!dados.atendMotivo) { estado.whPasso = 'semat'; whRender(); return falta('Diga por que não houve atendimento.'); }
+    if (dados.atendMotivo === 'outro' && !limparTexto(dados.atendOutro)) { estado.whPasso = 'semato'; whRender(true); return falta('Escreva o motivo.'); }
+  }
   if (!dados.status) { estado.whPasso = 'status'; whRender(); return falta('Escolha o status no Dryve Pro.'); }
   if (dados.status === 'nao_perdido') {
     if (!dados.etapa) { estado.whPasso = 'etapa'; whRender(); return falta('Escolha a etapa.'); }
@@ -6196,7 +6220,7 @@ function renderWhats() {
       el('td', { class: 'num' }, dataHoraBR(a.criadoEm)),
       el('td', { class: 'lead' }, a.numero),
       el('td', null, whRotulo(WH_PLANILHAS, a.planilha) || '—'),
-      el('td', null, whRotulo(WH_ATEND, a.atend) || '—'),
+      el('td', null, whRotulo(WH_ATEND, a.atend) || '—', whSemAtTexto(a) ? el('span', { class: 'wh-pq' }, whSemAtTexto(a)) : null),
       el('td', null, a.status === 'perdido' ? tag('Perdido', 'vermelho') : a.status ? [tag('Outro', 'cinza'), el('span', { class: 'wh-pq' }, (whRotulo(WH_ETAPAS, a.etapa) || '') + (a.etapaPq ? ' — ' + a.etapaPq : ''))] : '—'),
       el('td', null, whTagSN(a.statusOk)),
       el('td', null, motivo || '—', a.motivoPq ? el('span', { class: 'wh-pq' }, a.motivoPq) : null),
@@ -6212,7 +6236,7 @@ function renderWhats() {
 function whLinhasExport() {
   return estado.whats.slice().sort(function (x, y) { return x.criadoEm - y.criadoEm; }).map(function (a) {
     var d = new Date(a.criadoEm);
-    return [dataBR(dataISO(d)), horaISO(d), a.numero, whRotulo(WH_PLANILHAS, a.planilha), whRotulo(WH_ATEND, a.atend), whRotulo(WH_STATUS, a.status),
+    return [dataBR(dataISO(d)), horaISO(d), a.numero, whRotulo(WH_PLANILHAS, a.planilha), whRotulo(WH_ATEND, a.atend), whSemAtTexto(a), whRotulo(WH_STATUS, a.status),
       whRotulo(WH_ETAPAS, a.etapa), a.etapaPq,
       a.statusOk === 'sim' ? 'Sim' : a.statusOk === 'nao' ? 'Não' : '', whMotivoTexto(a), a.motivoPq,
       a.status === 'perdido' ? (a.motivoOk === 'sim' ? 'Sim' : a.motivoOk === 'nao' ? 'Não' : '') : '', a.motivoCerto, a.obs, a.id];
@@ -6266,7 +6290,7 @@ function xmlEscapar(s) {
 function colLetra(i) { return String.fromCharCode(65 + i); }
 function gerarXlsxWhats() {
   var linhas = [WH_CAB].concat(whLinhasExport());
-  var larg = [12, 10, 18, 24, 22, 16, 24, 36, 15, 30, 36, 15, 30, 50, 22];
+  var larg = [12, 10, 18, 24, 22, 34, 16, 24, 36, 15, 30, 36, 15, 30, 50, 22];
   var sheet = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
     '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' +
     '<cols>' + larg.map(function (w, i) { return '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>'; }).join('') + '</cols><sheetData>' +
@@ -6328,13 +6352,14 @@ function whParseAtend(v) {
   if (n.indexOf('nao') === 0 || n.indexOf('sem ') === 0 || n.indexOf('template') !== -1 || n.indexOf('botao') !== -1) return 'nao';
   return n.indexOf('sim') === 0 || n.indexOf('humano') !== -1 || n.indexOf('ia atendeu') === 0 ? 'sim' : '';
 }
+function whParseSemAt(v) { var n = normBusca(v); if (!n) return ''; var x = WH_SEMAT.find(function (e) { return normBusca(e.r) === n; }); return x ? x.v : 'outro'; }
 function whParseEtapa(v) { var n = normBusca(v); var x = WH_ETAPAS.find(function (e) { return normBusca(e.r) === n; }); return x ? x.v : ''; }
 function analisarLinhasWhats(linhas) {
   if (!linhas || linhas.length < 2) return { erro: 'O arquivo não possui linhas de dados.' };
   var cab = linhas[0].map(function (c) { return normBusca(c); });
   function col() { for (var i = 0; i < arguments.length; i++) { var k = cab.indexOf(arguments[i]); if (k >= 0) return k; } return -1; }
   var c = {
-    atend: col('atendimento'), data: col('data'), hora: col('hora'), numero: col('numero', 'telefone', 'whatsapp'), planilha: col('planilha'), status: col('status dryve pro', 'status dryve', 'status'),
+    atend: col('atendimento'), semAt: col('motivo sem atendimento'), data: col('data'), hora: col('hora'), numero: col('numero', 'telefone', 'whatsapp'), planilha: col('planilha'), status: col('status dryve pro', 'status dryve', 'status'),
     etapa: col('etapa (se outro)', 'etapa'), etapaPq: col('por que da etapa'), motivoPq: col('por que do motivo'),
     motivoCerto: col('motivo certo (se incorreto)', 'motivo certo'),
     statusOk: col('status correto'), motivo: col('motivo do perdido', 'motivo'), motivoOk: col('motivo correto'), obs: col('observacao', 'observacoes'), id: col('id')
@@ -6349,7 +6374,7 @@ function analisarLinhasWhats(linhas) {
     var status = whParseStatus(cel(l, c.status));
     var bruto = {
       id: cel(l, c.id), criadoEm: whParseQuando(cel(l, c.data), cel(l, c.hora)), numero: cel(l, c.numero), planilha: whParsePlanilha(cel(l, c.planilha)), status: status,
-      atend: whParseAtend(cel(l, c.atend)), etapa: whParseEtapa(cel(l, c.etapa)), etapaPq: cel(l, c.etapaPq), motivoPq: cel(l, c.motivoPq), motivoCerto: cel(l, c.motivoCerto),
+      atend: whParseAtend(cel(l, c.atend)), atendMotivo: whParseSemAt(cel(l, c.semAt)), atendOutro: cel(l, c.semAt), etapa: whParseEtapa(cel(l, c.etapa)), etapaPq: cel(l, c.etapaPq), motivoPq: cel(l, c.motivoPq), motivoCerto: cel(l, c.motivoCerto),
       statusOk: whParseSN(cel(l, c.statusOk)), motivo: !motivoTxt ? '' : /motorista|\bapp\b/.test(mn) ? 'app' : 'outro', motivoOutro: motivoTxt, motivoOk: whParseSN(cel(l, c.motivoOk)), obs: cel(l, c.obs)
     };
     var a = sanitizarWhats(bruto);
@@ -6447,6 +6472,7 @@ function ligarEventosWhats() {
     estado.whFila = { arquivo: '', importadoEm: 0, itens: [] }; salvarWhatsFila(); renderWhats();
   });
   whCriarRadios($('#wh-atend'), 'atend', WH_ATEND, whAvancar);
+  whCriarRadios($('#wh-semat'), 'semat', WH_SEMAT, whAvancar);
   whCriarRadios($('#wh-etapa'), 'etapa', WH_ETAPAS, whAvancar);
   whCriarRadios($('#wh-planilha'), 'planilha', WH_PLANILHAS, whAvancar);
   whCriarRadios($('#wh-status'), 'status', WH_STATUS, function () { whMarcar('statusok', ''); whAvancar(); });
@@ -6455,7 +6481,7 @@ function ligarEventosWhats() {
   whCriarRadios($('#wh-motivook'), 'motivook', WH_SN, whAvancar);
   $$('[data-wh=continuar]').forEach(function (b) { b.addEventListener('click', whContinuar); });
   $('#wh-voltar').addEventListener('click', function () { var ps = whPassos(), i = ps.indexOf(estado.whPasso); if (i > 0) { estado.whPasso = ps[i - 1]; whRender(true); } });
-  $('#wh-numero').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.ctrlKey) { e.preventDefault(); whContinuar(); } });
+  ['#wh-numero', '#wh-semato'].forEach(function (id) { $(id).addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.ctrlKey) { e.preventDefault(); whContinuar(); } }); });
   ['#wh-epq', '#wh-mpq'].forEach(function (id) { $(id).addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.ctrlKey && !e.shiftKey) { e.preventDefault(); whContinuar(); } }); });
   $('#wh-cert-busca').addEventListener('input', whRenderCerto);
   $('#wh-cert-busca').addEventListener('keydown', function (e) { if (e.key !== 'Enter') return; e.preventDefault(); var b = $('#wh-cert-lista button'); if (b) b.click(); });
