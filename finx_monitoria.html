@@ -6040,7 +6040,7 @@ function whPassos() {
   p.push('status');
   if (st === 'nao_perdido') p.push('etapa', 'etapapq');
   p.push('statusok');
-  if (st === 'perdido') { p.push('motivo'); if (whLer('motivo') === 'outro') p.push('qual', 'motivopq'); p.push('motivook'); if (whLer('motivook') === 'nao') p.push('motivocerto'); }
+  if (st === 'perdido') { p.push('motivo'); if (whLer('motivo') === 'outro') p.push('qual', 'motivopq'); else { p.push('motivook'); if (whLer('motivook') === 'nao') p.push('motivocerto'); } }
   p.push('obs');
   return p;
 }
@@ -6157,6 +6157,8 @@ async function whSalvar() {
   if (!dados.statusOk) { estado.whPasso = 'statusok'; whRender(); return falta('Diga se o status está correto.'); }
   if (dados.status === 'perdido') {
     if (!dados.motivo) { estado.whPasso = 'motivo'; whRender(); return falta('Escolha o motivo do perdido.'); }
+    /* Motivo “Outro”: o que foi escolhido em “Qual” é o motivo real; não pergunta de novo se está correto */
+    if (dados.motivo === 'outro') { dados.motivoOk = 'nao'; dados.motivoCerto = dados.motivoOutro; }
     if (!dados.motivoOk) { estado.whPasso = 'motivook'; whRender(); return falta('Diga se o motivo está correto.'); }
   }
   var existente = estado.whEdit ? estado.whats.find(function (x) { return x.id === estado.whEdit; }) : null;
