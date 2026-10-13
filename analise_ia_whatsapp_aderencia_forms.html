@@ -177,13 +177,15 @@ var Q = [
     rotulo: 'Resposta em 5 s', se: function (r) { return r.respondeu !== 'nao'; }, ops: [
     { v: 'sim', t: 'Sim, sempre', cor: 'verde' },
     { v: 'as_vezes', t: 'Algumas vezes demorou', cor: 'amar' },
-    { v: 'nao', t: 'Não, demorou', cor: 'verm' } ] },
+    { v: 'nao', t: 'Não, demorou', cor: 'verm' },
+    { v: 'na', t: 'N/A (não se aplica)' } ] },
   { id: 'processo', tipo: 'um', titulo: 'A IA seguiu o processo?',
     dica: 'Se apresentou, entendeu o que o cliente quer, tirou dúvidas, coletou os dados e encaminhou.', rotulo: 'Processo',
     se: function (r) { return r.respondeu !== 'nao'; }, ops: [
     { v: 'sim', t: 'Seguiu todo o fluxo', cor: 'verde' },
     { v: 'desvio', t: 'Seguiu com desvios', cor: 'amar' },
-    { v: 'nao', t: 'Não seguiu', cor: 'verm' } ] },
+    { v: 'nao', t: 'Não seguiu', cor: 'verm' },
+    { v: 'na', t: 'N/A (não se aplica)' } ] },
   { id: 'processo_onde', tipo: 'multi', titulo: 'Onde saiu do processo?', dica: 'Marque tudo que se aplica.', rotulo: 'Desvios',
     se: function (r) { return r.respondeu !== 'nao' && (r.processo === 'desvio' || r.processo === 'nao'); }, ops: [
     { v: 'nome', t: 'Não pediu / não usou o nome do cliente' },
@@ -200,7 +202,8 @@ var Q = [
     se: function (r) { return r.respondeu !== 'nao'; }, ops: [
     { v: 'nao', t: 'Não', cor: 'verde' },
     { v: 'leve', t: 'Sim, leve (impreciso, sem impacto)', cor: 'amar' },
-    { v: 'grave', t: 'Sim, grave (inventou ou prometeu)', cor: 'verm' } ] },
+    { v: 'grave', t: 'Sim, grave (inventou ou prometeu)', cor: 'verm' },
+    { v: 'na', t: 'N/A (não se aplica)' } ] },
   { id: 'aluc_tipo', tipo: 'multi', titulo: 'O que ela inventou?', dica: 'Marque tudo que se aplica.', rotulo: 'Tipo de alucinação',
     se: function (r) { return r.respondeu !== 'nao' && (r.aluc === 'leve' || r.aluc === 'grave'); }, ops: [
     { v: 'preco', t: 'Preço / valor / parcela' },
@@ -213,7 +216,8 @@ var Q = [
     { v: 'outro', t: 'Outro (descrever na observação)' } ] },
   { id: 'pedido', tipo: 'um', titulo: 'O cliente conseguiu gerar o pedido?', dica: 'Pedido gerado = o cliente concluiu o cadastro ou a simulação e o pedido foi criado.', rotulo: 'Pedido gerado', ops: [
     { v: 'sim', t: 'Sim, gerou o pedido', cor: 'verde' },
-    { v: 'nao', t: 'Não gerou', cor: 'verm' } ] },
+    { v: 'nao', t: 'Não gerou', cor: 'verm' },
+    { v: 'na', t: 'N/A (não se aplica)' } ] },
   { id: 'pedido_pq', tipo: 'multi', titulo: 'Por que não gerou o pedido?', dica: 'Marque tudo que se aplica.', rotulo: 'Motivo do pedido não gerado',
     se: function (r) { return r.pedido === 'nao'; }, ops: [
     { v: 'sem_resposta', t: 'Cliente não respondeu / parou de responder' },
@@ -236,8 +240,8 @@ var Q = [
 
 var ROT = {
   inicio: 'Como começou', veredito: { aderente: 'Aderente', parcial: 'Parcial', nao: 'Não aderente' },
-  aluc: { nao: 'Não', leve: 'Leve', grave: 'Grave' },
-  processo: { sim: 'Seguiu', desvio: 'Com desvios', nao: 'Não seguiu' }
+  aluc: { nao: 'Não', leve: 'Leve', grave: 'Grave', na: 'N/A' },
+  processo: { sim: 'Seguiu', desvio: 'Com desvios', nao: 'Não seguiu', na: 'N/A' }
 };
 
 function sugestao(r) {
@@ -475,8 +479,8 @@ function listar() {
   var kp = $('#s-kpis'); kp.textContent = '';
   [['Analisadas', tot, ''], ['Aderentes', pc(ader, conv.length), 'verde'], ['Parciais', pc(par, conv.length), 'amar'],
    ['Não aderentes', pc(nao, conv.length), 'verm'], ['Alucinaram', pc(alu, conv.length), 'verm'],
-   ['Pedido gerado', pc(salvas.filter(function (x) { return x.pedido === 'sim'; }).length, salvas.filter(function (x) { return x.pedido; }).length), 'verde'],
-   ['Resposta em 5 s', pc(conv.filter(function (x) { return x.resp5s === 'sim'; }).length, conv.filter(function (x) { return x.resp5s; }).length), '']].forEach(function (k) {
+   ['Pedido gerado', pc(salvas.filter(function (x) { return x.pedido === 'sim'; }).length, salvas.filter(function (x) { return x.pedido === 'sim' || x.pedido === 'nao'; }).length), 'verde'],
+   ['Resposta em 5 s', pc(conv.filter(function (x) { return x.resp5s === 'sim'; }).length, conv.filter(function (x) { return x.resp5s && x.resp5s !== 'na'; }).length), '']].forEach(function (k) {
     kp.appendChild(el('div', { class: 'kpi ' + k[2] }, el('b', null, String(k[1])), el('span', null, k[0])));
   });
 
@@ -498,9 +502,9 @@ function listar() {
       el('td', null, dataHoraBR(x.criado)),
       el('td', null, x.numero),
       el('td', null, x.veredito ? pill(ROT.veredito[x.veredito], corVeredito(x.veredito)) : '–'),
-      el('td', null, x.processo ? pill(ROT.processo[x.processo], x.processo === 'sim' ? 'verde' : x.processo === 'desvio' ? 'amar' : 'verm') : '–'),
-      el('td', null, x.aluc ? pill(ROT.aluc[x.aluc], x.aluc === 'nao' ? 'verde' : x.aluc === 'leve' ? 'amar' : 'verm') : '–'),
-      el('td', null, x.pedido ? pill(x.pedido === 'sim' ? 'Gerou' : 'Não gerou', x.pedido === 'sim' ? 'verde' : 'verm') : '–'),
+      el('td', null, x.processo ? pill(ROT.processo[x.processo], x.processo === 'sim' ? 'verde' : x.processo === 'desvio' ? 'amar' : x.processo === 'na' ? 'cinza' : 'verm') : '–'),
+      el('td', null, x.aluc ? pill(ROT.aluc[x.aluc], x.aluc === 'nao' ? 'verde' : x.aluc === 'leve' ? 'amar' : x.aluc === 'na' ? 'cinza' : 'verm') : '–'),
+      el('td', null, x.pedido ? pill(x.pedido === 'sim' ? 'Gerou' : x.pedido === 'na' ? 'N/A' : 'Não gerou', x.pedido === 'sim' ? 'verde' : x.pedido === 'na' ? 'cinza' : 'verm') : '–'),
       el('td', null, obs),
       el('td', { style: 'white-space:nowrap' },
         el('button', { type: 'button', class: 'btn linha peq', onclick: function () { editar(x.id); } }, 'Editar'), ' ',
