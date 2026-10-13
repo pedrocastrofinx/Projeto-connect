@@ -5983,6 +5983,8 @@ function whEscolha(lista, v) { return lista.some(function (i) { return i.v === v
 function whSemAtTexto(a) { return a.atend !== 'nao' ? '' : a.atendMotivo === 'outro' ? (a.atendOutro || 'Outro') : whRotulo(WH_SEMAT, a.atendMotivo); }
 function whMotivoTexto(a) { return a.status !== 'perdido' ? '' : a.motivo === 'app' ? 'Motorista de App' : a.motivo === 'outro' ? (a.motivoOutro || 'Outro') : ''; }
 function whTemErro(a) { return a.statusOk === 'nao' || a.motivoOk === 'nao'; }
+/* Perdido com motivo incorreto = status incorreto (o status “Perdido por motivo X” está errado), mesmo que a etapa esteja certa */
+function whStatusOkEf(a) { return a.status === 'perdido' && a.motivoOk === 'nao' ? 'nao' : a.statusOk; }
 
 function sanitizarWhats(x) {
   if (!x || typeof x !== 'object') return null;
@@ -6061,6 +6063,7 @@ function whProximoPasso() {
   return 'obs';
 }
 function whValorPasso(p) {
+  if (p === 'statusok' && whLer('status') === 'perdido' && (whLer('motivook') === 'nao' || whLer('motivo') === 'outro')) return '✖ Incorreto (motivo errado)';
   if (WH_TEXTOS[p]) return limparTexto($(WH_TEXTOS[p]).value);
   var v = whLer(p);
   return p === 'planilha' ? whRotulo(WH_PLANILHAS, v) : p === 'atend' ? whRotulo(WH_ATEND, v) : p === 'semat' ? whRotulo(WH_SEMAT, v) : p === 'status' ? whRotulo(WH_STATUS, v) : p === 'motivo' ? whRotulo(WH_MOTIVOS, v) : p === 'etapa' ? whRotulo(WH_ETAPAS, v)
@@ -6229,7 +6232,7 @@ function renderWhats() {
     WH_PLANILHAS.forEach(function (p) { sel.appendChild(opcao(p.v, p.r)); });
   }
   var perd = todas.filter(function (a) { return a.status === 'perdido'; });
-  var stOk = todas.filter(function (a) { return a.statusOk === 'sim'; }).length;
+  var stOk = todas.filter(function (a) { return whStatusOkEf(a) === 'sim'; }).length;
   var avaliados = perd.filter(function (a) { return a.motivoOk; }), moOk = avaliados.filter(function (a) { return a.motivoOk === 'sim'; }).length;
   var realApp = perd.filter(function (a) { return a.motivo === 'app' && a.motivoOk === 'sim'; }).length;
   var reais = {}, semReal = 0;
@@ -6258,7 +6261,7 @@ function renderWhats() {
       el('td', null, whRotulo(WH_PLANILHAS, a.planilha) || '—'),
       el('td', null, whRotulo(WH_ATEND, a.atend) || '—', whSemAtTexto(a) ? el('span', { class: 'wh-pq' }, whSemAtTexto(a)) : null),
       el('td', null, a.status === 'perdido' ? tag('Perdido', 'vermelho') : a.status ? [tag('Outro', 'cinza'), el('span', { class: 'wh-pq' }, (whRotulo(WH_ETAPAS, a.etapa) || '') + (a.etapaPq ? ' — ' + a.etapaPq : ''))] : '—'),
-      el('td', null, whTagSN(a.statusOk)),
+      el('td', null, whTagSN(whStatusOkEf(a)), whStatusOkEf(a) !== a.statusOk ? el('span', { class: 'wh-pq' }, 'motivo incorreto') : null),
       el('td', null, motivo || '—', a.motivoPq ? el('span', { class: 'wh-pq' }, a.motivoPq) : null),
       el('td', null, a.status === 'perdido' ? [whTagSN(a.motivoOk), a.motivoCerto ? el('span', { class: 'wh-pq' }, 'Certo: ' + a.motivoCerto) : null] : el('span', { class: 'dica' }, '—')),
       el('td', { class: 'obs' }, a.obs),
@@ -6274,7 +6277,7 @@ function whLinhasExport() {
     var d = new Date(a.criadoEm);
     return [dataBR(dataISO(d)), horaISO(d), a.numero, whRotulo(WH_PLANILHAS, a.planilha), whRotulo(WH_ATEND, a.atend), whSemAtTexto(a), whRotulo(WH_STATUS, a.status),
       whRotulo(WH_ETAPAS, a.etapa), a.etapaPq,
-      a.statusOk === 'sim' ? 'Sim' : a.statusOk === 'nao' ? 'Não' : '', whMotivoTexto(a), a.motivoPq,
+      whStatusOkEf(a) === 'sim' ? 'Sim' : whStatusOkEf(a) === 'nao' ? 'Não' : '', whMotivoTexto(a), a.motivoPq,
       a.status === 'perdido' ? (a.motivoOk === 'sim' ? 'Sim' : a.motivoOk === 'nao' ? 'Não' : '') : '', a.motivoCerto, a.obs, a.id];
   });
 }
