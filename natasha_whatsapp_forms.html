@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Natasha WhatsApp · Formulário de análise</title>
+<title>Análise IA · WhatsApp</title>
 <script>(function(){var t='';try{t=localStorage.getItem('finx_tema')||''}catch(e){}if(t!=='claro'&&t!=='escuro')t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'escuro':'claro';document.documentElement.setAttribute('data-tema',t)})();</script>
 <style>
 /* =========================================================
@@ -544,10 +544,9 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
 <header class="topo">
   <div class="topo-in">
     <div class="marca">
-      <span class="logo" aria-hidden="true">X</span>
       <div>
-        <div class="marca-nome">FINX</div>
-        <div class="marca-sub">Natasha WhatsApp · Formulário de análise</div>
+        <div class="marca-nome">Análise IA</div>
+        <div class="marca-sub">WhatsApp · Formulário de análise</div>
       </div>
     </div>
     <div class="relogio-bloco">
@@ -802,8 +801,8 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
     </section>
 
     <!-- ===================== NATASHA WHATSAPP ===================== -->
-    <section class="aba" id="aba-whats" data-aba="whats" aria-label="Análise Natasha WhatsApp" hidden>
-      <div class="secao-titulo"><h2>Análise Natasha · WhatsApp</h2><span id="wh-sub"></span></div>
+    <section class="aba" id="aba-whats" data-aba="whats" aria-label="Análise IA WhatsApp" hidden>
+      <div class="secao-titulo"><h2>Análise IA · WhatsApp</h2><span id="wh-sub"></span></div>
       <div class="acoes" style="margin-bottom:14px">
         <button type="button" class="btn btn-primario btn-peq" id="wh-xlsx">⭳ Exportar Excel</button>
         <button type="button" class="btn btn-sec btn-peq" id="wh-csv">⭳ CSV</button>
@@ -1047,7 +1046,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
 </div>
 
 <footer class="rodape">
-  <span>FINX · Painel de Auditorias e Metas — funciona offline; dados salvos no navegador desta máquina.</span>
+  <span>Análise IA — funciona offline; dados salvos no navegador desta máquina.</span>
   <span id="rod-salvo"></span>
 </footer>
 
@@ -6287,7 +6286,7 @@ function whLinhasExport() {
       a.status === 'perdido' ? (a.motivoOk === 'sim' ? 'Sim' : a.motivoOk === 'nao' ? 'Não' : '') : '', a.motivoCerto, a.obs, a.id];
   });
 }
-function whNomeArquivo(ext) { var d = new Date(); return 'natasha_whatsapp_' + dataISO(d) + '_' + pad(d.getHours()) + pad(d.getMinutes()) + '.' + ext; }
+function whNomeArquivo(ext) { var d = new Date(); return 'analise_ia_whatsapp_' + dataISO(d) + '_' + pad(d.getHours()) + pad(d.getMinutes()) + '.' + ext; }
 function exportarWhatsCSV() {
   if (!estado.whats.length) { toast('Não há análises para exportar.', { tipo: 'aviso' }); return; }
   var linhas = [WH_CAB.join(';')].concat(whLinhasExport().map(function (l) { return l.map(campoCSV).join(';'); }));
@@ -6349,7 +6348,7 @@ function gerarXlsxWhats() {
   return montarZip([
     { nome: '[Content_Types].xml', conteudo: cab + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>' },
     { nome: '_rels/.rels', conteudo: cab + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="' + rel + '/officeDocument" Target="xl/workbook.xml"/></Relationships>' },
-    { nome: 'xl/workbook.xml', conteudo: cab + '<workbook ' + ns + ' xmlns:r="' + rel + '"><sheets><sheet name="Natasha WhatsApp" sheetId="1" r:id="rId1"/></sheets></workbook>' },
+    { nome: 'xl/workbook.xml', conteudo: cab + '<workbook ' + ns + ' xmlns:r="' + rel + '"><sheets><sheet name="Análise IA WhatsApp" sheetId="1" r:id="rId1"/></sheets></workbook>' },
     { nome: 'xl/_rels/workbook.xml.rels', conteudo: cab + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="' + rel + '/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="' + rel + '/styles" Target="styles.xml"/></Relationships>' },
     { nome: 'xl/styles.xml', conteudo: cab + '<styleSheet ' + ns + '><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="49" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="49" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>' },
     { nome: 'xl/worksheets/sheet1.xml', conteudo: sheet }
