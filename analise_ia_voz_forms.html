@@ -582,6 +582,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--azul);outline:0;box-s
 th{background:var(--sup2);color:var(--muted);font-size:.68rem;letter-spacing:.07em;border-bottom:1px solid var(--borda)}
 .pl-ajustes summary{font-weight:600;color:var(--texto)}
 .wh-resumo .card,#wh-resumo .card{background:var(--sup2)}
+
+/* só o formulário: sem cartões de resumo, gráficos e relatório */
+#ia-resumo,#ia-pend,#ia-dash,#ia-rel-tit,#ia-rel{display:none!important}
 </style>
 </head>
 <body>
@@ -798,12 +801,12 @@ th{background:var(--sup2);color:var(--muted);font-size:.68rem;letter-spacing:.07
       <details class="card pl-ajustes" id="ia-audio">
         <summary>🎧 Áudios do 3C: ouvir, baixar e baixar em lote</summary>
         <div style="display:grid;gap:10px;margin-top:10px">
-          <p class="dica" style="margin:0">O botão 🎧 de cada ligação toca o áudio aqui mesmo; ⬇ baixa o arquivo com o mesmo nome que o 3C usa. Para o lote, o painel usa o <b>seu</b> acesso e vai um por vez, devagar. Se o 3C recusar (401/403/429) ou não permitir a leitura por este arquivo, o lote <b>para</b> e avisa: nada é contornado. Nesse caso use o botão de download do 3C ou o <code>transcrever.py</code> com o seu token.</p>
+          <p class="dica" style="margin:0">O botão 🎧 de cada ligação toca o áudio aqui mesmo; ⬇ baixa o arquivo. Para baixar em lote, escolha quantas ligações e a duração mínima: o painel baixa uma por vez, devagar.</p>
           <div class="linha-form">
-            <div class="campo"><label for="au-base">Endereço do 3C</label><input type="text" id="au-base" autocomplete="off" placeholder="https://app.3c.plus"></div>
-            <div class="campo"><label for="au-token">Seu token de API (opcional; não é salvo)</label><input type="password" id="au-token" autocomplete="off" placeholder="cole aqui se tiver"></div>
+            <div class="campo" hidden><label for="au-base">Endereço do 3C</label><input type="text" id="au-base" autocomplete="off" placeholder="https://app.3c.plus"></div>
+            <div class="campo" hidden><label for="au-token">Seu token de API (opcional; não é salvo)</label><input type="password" id="au-token" autocomplete="off" placeholder="cole aqui se tiver"></div>
             <div class="campo"><label for="au-n">Quantas baixar agora</label><input type="number" id="au-n" min="1" max="500" value="30"></div>
-            <div class="campo"><label for="au-min">Fala mínima (s)</label><input type="number" id="au-min" min="0" max="3600" value="15"></div>
+            <div class="campo"><label for="au-min">Duração da ligação</label><select id="au-min"><option value="0">Todas</option><option value="15" selected>Mais de 0:15</option><option value="30">Mais de 0:30</option><option value="60">Mais de 1:00</option><option value="90">Mais de 1:30</option><option value="120">Mais de 2:00</option></select></div>
           </div>
           <div class="acoes">
             <button type="button" class="btn btn-primario" id="au-lote">⬇ Baixar lote</button>
