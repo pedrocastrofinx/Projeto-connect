@@ -897,7 +897,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
       <details class="card pl-ajustes wh-det" id="wh-fila-det">
         <summary id="wh-fila-sum">Fila de números a analisar</summary>
         <div style="display:grid;gap:10px;margin-top:12px">
-          <p class="dica" id="wh-fila-info" style="margin:0">Importe a planilha “telefones únicos”: entram só os números <b>sem esteira</b> e com nome <b>“Cliente”</b>. Clique num número para começar a análise dele.</p>
+          <p class="dica" id="wh-fila-info" style="margin:0">Importe a planilha “telefones únicos”. Primeiro vêm os números <b>sem esteira</b> e com nome <b>“Cliente”</b> ou <b>sem nome</b>; os que têm nome ficam em “Para validar depois”. Clique num número para copiá-lo e começar a análise.</p>
           <div class="acoes">
             <button type="button" class="btn btn-sec btn-peq" id="wh-fila-imp">⭱ Importar telefones únicos (.xlsx)</button>
             <button type="button" class="btn btn-linha btn-peq" id="wh-fila-limpar" hidden>Limpar fila</button>
@@ -1970,7 +1970,7 @@ function carregarTudo() {
 
   var rf = carregarJSON(CH.whFila, function (v) { return v && typeof v === 'object' && Array.isArray(v.itens); });
   if (rf.valor) estado.whFila = { arquivo: limparTexto(rf.valor.arquivo).slice(0, 120), importadoEm: Number(rf.valor.importadoEm) || 0,
-    itens: rf.valor.itens.map(function (i) { return { tel: limparTexto(i && i.tel).slice(0, 40), plan: whEscolha(WH_PLANILHAS, i && i.plan) }; }).filter(function (i) { return i.tel; }) };
+    itens: rf.valor.itens.map(function (i) { return { tel: limparTexto(i && i.tel).slice(0, 40), plan: whEscolha(WH_PLANILHAS, i && i.plan), depois: !!(i && i.depois) }; }).filter(function (i) { return i.tel; }) };
 
   var re = carregarJSON(CH.estado, function (v) { return v && typeof v === 'object'; });
   if (re.valor) {
@@ -6469,24 +6469,34 @@ function whFilaPendentes() {
   return estado.whFila.itens.filter(function (i) { return !feitos.has(whChave(i.tel)); });
 }
 var WH_FEITOS_ABERTO = false;
+function whChipFila(i) {
+  return el('button', { type: 'button', class: 'btn btn-linha btn-peq', title: i.plan ? 'Planilha: ' + whRotulo(WH_PLANILHAS, i.plan) : '', onclick: function () {
+    var txt = whFormatarTel(i.tel);
+    copiarTexto(txt).then(function (ok) { toast(ok ? 'Número copiado: ' + txt : 'Não consegui copiar automaticamente: ' + txt, { tipo: ok ? 'ok' : 'erro' }); });
+    whLimparForm(); $('#wh-numero').value = i.tel; whMarcar('planilha', i.plan);
+    estado.whPasso = whProximoPasso(); whRender(true); $('#wh-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } }, whFormatarTel(i.tel));
+}
+var WH_DEPOIS_ABERTO = false;
 function renderWhatsFila() {
-  var f = estado.whFila, pend = whFilaPendentes(), cont = $('#wh-fila');
+  var f = estado.whFila, todasPend = whFilaPendentes(), cont = $('#wh-fila');
+  var pend = todasPend.filter(function (i) { return !i.depois; }), depois = todasPend.filter(function (i) { return i.depois; });
   cont.textContent = '';
   $('#wh-fila-limpar').hidden = !f.itens.length;
-  $('#wh-fila-sum').textContent = 'Fila de números a analisar' + (f.itens.length ? ' · ' + pend.length + ' ' + plural(pend.length, 'pendente', 'pendentes') : '');
+  $('#wh-fila-sum').textContent = 'Fila de números a analisar' + (f.itens.length ? ' · ' + pend.length + ' ' + plural(pend.length, 'pendente', 'pendentes') + (depois.length ? ' (+' + depois.length + ' para validar depois)' : '') : '');
   if (f.itens.length) {
-    $('#wh-fila-info').textContent = f.arquivo + ' · ' + f.itens.length + ' números na fila · ' + pend.length + ' ' + plural(pend.length, 'pendente', 'pendentes') + ' · ' + (f.itens.length - pend.length) + ' já analisados.';
+    $('#wh-fila-info').textContent = f.arquivo + ' · ' + f.itens.length + ' números · ' + pend.length + ' ' + plural(pend.length, 'pendente', 'pendentes') + ' para analisar agora (sem esteira, “Cliente” ou sem nome) · ' + depois.length + ' para validar depois (com nome) · ' + (f.itens.length - todasPend.length) + ' já analisados.';
   }
-  pend.forEach(function (i) {
-    cont.appendChild(el('button', { type: 'button', class: 'btn btn-linha btn-peq', title: i.plan ? 'Planilha: ' + whRotulo(WH_PLANILHAS, i.plan) : '', onclick: function () {
-      var txt = whFormatarTel(i.tel);
-      copiarTexto(txt).then(function (ok) { toast(ok ? 'Número copiado: ' + txt : 'Não consegui copiar automaticamente: ' + txt, { tipo: ok ? 'ok' : 'erro' }); });
-      whLimparForm(); $('#wh-numero').value = i.tel; whMarcar('planilha', i.plan);
-      estado.whPasso = whProximoPasso(); whRender(true); $('#wh-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } }, whFormatarTel(i.tel)));
-  });
-  if (f.itens.length && !pend.length) cont.appendChild(el('span', { class: 'dica' }, 'Todos os números da fila já foram analisados. ✔'));
-  var pendSet = new Set(pend.map(function (i) { return whChave(i.tel); }));
+  pend.forEach(function (i) { cont.appendChild(whChipFila(i)); });
+  if (depois.length) {
+    var dd = el('details', { style: 'width:100%;margin-top:6px' }, el('summary', { class: 'dica' }, 'Para validar depois (' + depois.length + ') — números com nome; deixe para o fim'),
+      el('div', { class: 'wh-feitos', style: 'margin-top:8px' }, depois.map(whChipFila)));
+    dd.open = WH_DEPOIS_ABERTO;
+    dd.addEventListener('toggle', function () { WH_DEPOIS_ABERTO = dd.open; });
+    cont.appendChild(dd);
+  }
+  if (f.itens.length && !pend.length) cont.insertBefore(el('span', { class: 'dica' }, depois.length ? 'Todos os números para analisar agora foram feitos. ✔ Faltam os ' + depois.length + ' para validar depois.' : 'Todos os números da fila já foram analisados. ✔'), cont.firstChild);
+  var pendSet = new Set(todasPend.map(function (i) { return whChave(i.tel); }));
   var feitos = f.itens.filter(function (i) { return !pendSet.has(whChave(i.tel)); });
   if (feitos.length) {
     var det = el('details', { style: 'width:100%;margin-top:6px' }, el('summary', { class: 'dica' }, 'Já analisados (' + feitos.length + ') — use o ✕ para remover a análise e devolver o número à fila'),
@@ -6514,19 +6524,20 @@ async function importarWhatsFila(arquivo) {
   linhas.slice(1).forEach(function (l) {
     var tel = limparTexto(l[cTel]), d = whDigitos(tel);
     if (!d || vistos.has(d)) return;
-    if (limparTexto(l[cEst]) !== '' || normBusca(l[cNome] || '') !== 'cliente') return;
+    var nomeN = normBusca(l[cNome] || ''), semEst = limparTexto(l[cEst]) === '';
     vistos.add(d);
     var sit = normBusca(cSit >= 0 ? l[cSit] : '');
-    itens.push({ tel: tel, plan: sit.indexOf('duas') !== -1 ? 'ambas' : sit.indexOf('disparo') !== -1 ? 'pedidos_disparos' : sit.indexOf('funil') !== -1 ? 'funil_vendas_pedidos' : '' });
+    itens.push({ tel: tel, depois: !(semEst && (nomeN === '' || nomeN === 'cliente')), plan: sit.indexOf('duas') !== -1 ? 'ambas' : sit.indexOf('disparo') !== -1 ? 'pedidos_disparos' : sit.indexOf('funil') !== -1 ? 'funil_vendas_pedidos' : '' });
   });
-  if (!itens.length) { await avisoModal('Nenhum número na fila', 'Nenhum número sem esteira e com nome “Cliente” foi encontrado. Nada foi alterado.'); return; }
+  if (!itens.length) { await avisoModal('Nenhum número na fila', 'Nenhum telefone foi encontrado na planilha. Nada foi alterado.'); return; }
   if (estado.whFila.itens.length) {
     var ok = await confirmar({ titulo: 'Substituir a fila?', rotuloOk: 'Substituir', corpo: ['A fila atual (' + estado.whFila.itens.length + ' números) será trocada por ' + itens.length + ' números. As análises já salvas são mantidas.'] });
     if (!ok) return;
   }
   estado.whFila = { arquivo: arquivo.name.slice(0, 120), importadoEm: Date.now(), itens: itens };
   salvarWhatsFila(); renderWhats(); $('#wh-fila-det').open = true;
-  toast(itens.length + ' de ' + total + ' números entraram na fila.');
+  var nd = itens.filter(function (i) { return i.depois; }).length;
+  toast(itens.length + ' números entraram na fila: ' + (itens.length - nd) + ' para analisar agora e ' + nd + ' para validar depois (com nome).');
 }
 
 function ligarEventosWhats() {
