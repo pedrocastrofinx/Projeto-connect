@@ -106,7 +106,7 @@ td{padding:8px 10px;border-top:1px solid var(--borda);vertical-align:top}
 <main>
   <div class="card titulo">
     <h1>Conversa da IA aderiu ao processo?</h1>
-    <p>Abra a conversa no WhatsApp, leia e responda uma pergunta por vez. Dá para usar as teclas <b>1–9</b> para escolher e <b>Enter</b> para continuar.</p>
+    <p>Abra a conversa no WhatsApp, leia e responda uma pergunta por vez. São poucas perguntas (em média 8). Dá para usar as teclas <b>1–9</b> para escolher e <b>Enter</b> para continuar.</p>
     <div class="campo" style="max-width:320px"><label for="analista">Analista (fica salvo)</label><input type="text" id="analista" maxlength="80" placeholder="Seu nome" autocomplete="off"></div>
   </div>
 
@@ -148,7 +148,7 @@ td{padding:8px 10px;border-top:1px solid var(--borda);vertical-align:top}
     </div>
     <div class="top" id="s-top"></div>
     <div class="tabela">
-      <table><thead><tr><th>Data</th><th>Número</th><th>Veredito</th><th>Nota</th><th>Processo</th><th>Alucinou</th><th>Desfecho</th><th>Obs.</th><th>Ações</th></tr></thead><tbody id="s-corpo"></tbody></table>
+      <table><thead><tr><th>Data</th><th>Número</th><th>Veredito</th><th>Processo</th><th>Alucinou</th><th>Pedido</th><th>Obs.</th><th>Ações</th></tr></thead><tbody id="s-corpo"></tbody></table>
     </div>
   </details>
 </main>
@@ -164,51 +164,22 @@ var CH_ANALISTA = 'aderencia_ia_whats_analista';
    tipo: 'um' (uma opção), 'multi' (várias), 'texto' (curto), 'longo' (parágrafo)
    cor: verde = ótimo, amar = atenção, verm = problema
    se(r): só aparece quando retorna true */
-function pts(n) { return String(n).replace('.', ','); }
-function rub(id, grupo, n, de, nome, pt, rotulo, dica) {
-  return { id: id, tipo: 'um', rubrica: grupo, pts: pt, titulo: grupo + ' · ' + n + ' de ' + de + ': ' + nome + ' (' + pt + ' pts)', dica: dica, rotulo: rotulo,
-    se: function (r) { return r.respondeu !== 'nao'; }, ops: [
-    { v: 'sim', t: 'Fez tudo (+' + pts(pt) + ')', cor: 'verde' },
-    { v: 'parcial', t: 'Fez em parte (+' + pts(pt / 2) + ')', cor: 'amar' },
-    { v: 'nao', t: 'Não fez (0)', cor: 'verm' } ] };
-}
-function nota(x) {
-  var a = 0, e = 0, resp = false;
-  Q.forEach(function (q) {
-    if (!q.rubrica) return;
-    var v = x[q.id]; if (!v) return; resp = true;
-    var p = v === 'sim' ? q.pts : v === 'parcial' ? q.pts / 2 : 0;
-    if (q.rubrica === 'Abordagem') a += p; else e += p;
-  });
-  return resp ? { a: a, e: e, t: a + e } : null;
-}
 var Q = [
   { id: 'numero', tipo: 'texto', titulo: 'Qual é o telefone do lead?', ph: 'Ex.: 22 99964-0695', obrig: true,
     rotulo: 'Telefone' },
-  { id: 'inicio', tipo: 'um', titulo: 'Como a conversa começou?', rotulo: 'Início', ops: [
-    { v: 'tpl_ok', t: 'Template: financiamento aprovado' },
-    { v: 'tpl_nao', t: 'Template: financiamento não aprovado' },
-    { v: 'lead', t: 'O lead chamou sozinho' },
-    { v: 'outro', t: 'Outro disparo / template' } ] },
   { id: 'respondeu', tipo: 'um', titulo: 'O cliente conversou com a IA?',
     dica: 'Só clicar nos botões do template (Confirmar / Encerrar) não conta como conversa.', rotulo: 'Cliente respondeu', ops: [
     { v: 'sim', t: 'Sim, conversou' },
     { v: 'botao', t: 'Só clicou nos botões do template' },
     { v: 'nao', t: 'Não respondeu nada' } ] },
   { id: 'resp5s', tipo: 'um', titulo: 'O bot respondeu o cliente em até 5 segundos?',
-    dica: 'Compare o horário da mensagem do cliente com o da resposta do bot. O WhatsApp mostra só hora:minuto: se a resposta veio em outro minuto, passou de 5 segundos.',
+    dica: 'Compare o horário da mensagem do cliente com o da resposta. O WhatsApp mostra só hora:minuto: se a resposta veio em outro minuto, passou de 5 segundos.',
     rotulo: 'Resposta em 5 s', se: function (r) { return r.respondeu !== 'nao'; }, ops: [
-    { v: 'sim', t: 'Sim, sempre em até 5 segundos', cor: 'verde' },
-    { v: 'as_vezes', t: 'Na maioria das vezes, mas algumas demoraram', cor: 'amar' },
-    { v: 'nao', t: 'Não, demorou mais de 5 segundos', cor: 'verm' },
-    { v: 'nv', t: 'Não deu para ver o horário' } ] },
-  { id: 'apresentacao', tipo: 'um', titulo: 'A IA se apresentou direito?',
-    dica: 'Nome (Natasha), empresa (Dryve Assinatura) e objetivo; pediu o nome do cliente.', rotulo: 'Apresentação',
-    se: function (r) { return r.respondeu !== 'nao'; }, ops: [
-    { v: 'ok', t: 'Sim, completa', cor: 'verde' },
-    { v: 'parcial', t: 'Parcial (faltou algo)', cor: 'amar' },
-    { v: 'nao', t: 'Não se apresentou', cor: 'verm' } ] },
-  { id: 'processo', tipo: 'um', titulo: 'A IA seguiu o processo?', rotulo: 'Processo',
+    { v: 'sim', t: 'Sim, sempre', cor: 'verde' },
+    { v: 'as_vezes', t: 'Algumas vezes demorou', cor: 'amar' },
+    { v: 'nao', t: 'Não, demorou', cor: 'verm' } ] },
+  { id: 'processo', tipo: 'um', titulo: 'A IA seguiu o processo?',
+    dica: 'Se apresentou, entendeu o que o cliente quer, tirou dúvidas, coletou os dados e encaminhou.', rotulo: 'Processo',
     se: function (r) { return r.respondeu !== 'nao'; }, ops: [
     { v: 'sim', t: 'Seguiu todo o fluxo', cor: 'verde' },
     { v: 'desvio', t: 'Seguiu com desvios', cor: 'amar' },
@@ -240,47 +211,10 @@ var Q = [
     { v: 'chute', t: 'Respondeu sem base (chutou)' },
     { v: 'contradisse', t: 'Contradisse o que ela mesma disse' },
     { v: 'outro', t: 'Outro (descrever na observação)' } ] },
-  { id: 'resposta', tipo: 'um', titulo: 'Ela respondeu o que o cliente perguntou?', rotulo: 'Resposta à dúvida',
-    se: function (r) { return r.respondeu === 'sim'; }, ops: [
-    { v: 'sim', t: 'Sim', cor: 'verde' },
-    { v: 'parcial', t: 'Parcialmente', cor: 'amar' },
-    { v: 'nao', t: 'Ignorou ou desviou', cor: 'verm' },
-    { v: 'semperg', t: 'Cliente não perguntou nada' } ] },
-  { id: 'tom', tipo: 'um', titulo: 'Como foi o tom?', rotulo: 'Tom',
-    se: function (r) { return r.respondeu !== 'nao'; }, ops: [
-    { v: 'bom', t: 'Natural e cordial', cor: 'verde' },
-    { v: 'robo', t: 'Robótico ou repetitivo', cor: 'amar' },
-    { v: 'ruim', t: 'Inadequado (insistente, seco, informal demais)', cor: 'verm' } ] },
-  { id: 'optout', tipo: 'um', titulo: 'O cliente mostrou desinteresse, pediu para parar ou disse que não era a pessoa?',
-    rotulo: 'Desinteresse', se: function (r) { return r.respondeu === 'sim'; }, ops: [
-    { v: 'nao', t: 'Não' },
-    { v: 'respeitou', t: 'Sim, e a IA respeitou e encerrou bem', cor: 'verde' },
-    { v: 'insistiu', t: 'Sim, mas a IA insistiu ou ignorou', cor: 'verm' } ] },
-  { id: 'humano', tipo: 'um', titulo: 'Precisava passar para um humano?', rotulo: 'Humano',
-    se: function (r) { return r.respondeu === 'sim'; }, ops: [
-    { v: 'nao', t: 'Não precisava' },
-    { v: 'escalou', t: 'Precisava e escalou', cor: 'verde' },
-    { v: 'nao_escalou', t: 'Precisava e não escalou', cor: 'verm' },
-    { v: 'desnec', t: 'Escalou sem necessidade', cor: 'amar' } ] },
-  /* ---- Rubrica de pontos: Abordagem (35) + Encaminhamento (25) ---- */
-  rub('ab1', 'Abordagem', 1, 4, 'Abertura do contato e geração de interesse', 5, 'Abertura 1 (5)',
-    'O que olhar: a IA cumprimentou, se apresentou (nome e empresa) e pediu o nome do cliente? A conversa começou de um jeito que gera interesse?'),
-  rub('ab2', 'Abordagem', 2, 4, 'Apresentação clara do serviço e seus benefícios', 10, 'Abordagem 2 – serviço (10)',
-    'O que olhar: explicou o que é a assinatura e o que está incluso? Usou benefícios como previsibilidade, praticidade e conveniência para dar valor?'),
-  rub('ab3', 'Abordagem', 3, 4, 'Validação de requisitos e esclarecimento de dúvidas', 10, 'Abordagem 3 – requisitos (10)',
-    'O que olhar: fez as perguntas obrigatórias (ex.: renda mínima) explicando por que pergunta? Confirmou o entendimento, respondeu as dúvidas e garantiu que há interesse?'),
-  rub('ab4', 'Abordagem', 4, 4, 'Apresentação de valores e condução para a continuidade comercial', 10, 'Abordagem 4 – valores (10)',
-    'O que olhar: informou os valores iniciais com clareza? Explicou que o executivo de vendas continua o atendimento e que a empresa trabalha com várias locadoras (modelos e condições podem variar)?'),
-  rub('en1', 'Encaminhamento', 1, 3, 'Levantamento de interesse e perfil da demanda', 10, 'Encaminhamento 1 – demanda (10)',
-    'O que olhar: descobriu o carro de interesse, o prazo, a franquia (km) e o orçamento antes de encaminhar?'),
-  rub('en2', 'Encaminhamento', 2, 3, 'Direcionamento para a continuidade comercial', 10, 'Encaminhamento 2 – direcionamento (10)',
-    'O que olhar: levou o cliente ao próximo passo, pediu os dados (CPF, CNPJ, e-mail) e explicou que o executivo de vendas continua o processo?'),
-  rub('en3', 'Encaminhamento', 3, 3, 'Encerramento, canal de retorno e registro no CRM', 5, 'Encaminhamento 3 – encerramento (5)',
-    'O que olhar: agradeceu, avisou sobre o retorno, confirmou o canal de contato preferido e registrou as informações no CRM?'),
   { id: 'pedido', tipo: 'um', titulo: 'O cliente conseguiu gerar o pedido?', dica: 'Pedido gerado = o cliente concluiu o cadastro ou a simulação e o pedido foi criado.', rotulo: 'Pedido gerado', ops: [
-    { v: 'sim', t: 'Sim, o pedido foi gerado', cor: 'verde' },
-    { v: 'nao', t: 'Não gerou o pedido', cor: 'verm' } ] },
-  { id: 'pedido_pq', tipo: 'multi', titulo: 'Por que o pedido não foi gerado?', dica: 'Marque tudo que se aplica.', rotulo: 'Motivo do pedido não gerado',
+    { v: 'sim', t: 'Sim, gerou o pedido', cor: 'verde' },
+    { v: 'nao', t: 'Não gerou', cor: 'verm' } ] },
+  { id: 'pedido_pq', tipo: 'multi', titulo: 'Por que não gerou o pedido?', dica: 'Marque tudo que se aplica.', rotulo: 'Motivo do pedido não gerado',
     se: function (r) { return r.pedido === 'nao'; }, ops: [
     { v: 'sem_resposta', t: 'Cliente não respondeu / parou de responder' },
     { v: 'sem_interesse', t: 'Cliente sem interesse' },
@@ -291,15 +225,8 @@ var Q = [
     { v: 'veiculo', t: 'Carro ou modelo não disponível' },
     { v: 'aberto', t: 'Conversa ainda em andamento' },
     { v: 'outro', t: 'Outro (descrever na observação)' } ] },
-  { id: 'desfecho', tipo: 'um', titulo: 'Qual foi o desfecho da conversa?', rotulo: 'Desfecho', ops: [
-    { v: 'qualificado', t: 'Lead qualificado / avançou' },
-    { v: 'consultor', t: 'Encaminhado ao consultor' },
-    { v: 'encerrou_ok', t: 'Encerrado corretamente (sem interesse)' },
-    { v: 'encerrou_mal', t: 'Encerrado indevidamente', cor: 'verm' },
-    { v: 'parada', t: 'Conversa parada / em aberto' },
-    { v: 'sem', t: 'Sem conversa' } ] },
   { id: 'veredito', tipo: 'um', titulo: 'No geral, a IA foi aderente?', rotulo: 'Veredito',
-    dica: function (r) { var s = sugestao(r), n = nota(r); return 'Sugestão pelas respostas: ' + s.t + (n ? ' · Nota da rubrica: ' + pts(n.t) + ' de 60 (Abordagem ' + pts(n.a) + '/35 · Encaminhamento ' + pts(n.e) + '/25)' : ''); }, ops: [
+    dica: function (r) { var s = sugestao(r); return 'Sugestão pelas respostas: ' + s.t; }, ops: [
     { v: 'aderente', t: 'Aderente', cor: 'verde' },
     { v: 'parcial', t: 'Parcialmente aderente', cor: 'amar' },
     { v: 'nao', t: 'Não aderente', cor: 'verm' } ] },
@@ -315,8 +242,8 @@ var ROT = {
 
 function sugestao(r) {
   if (r.respondeu === 'nao') return { v: 'aderente', t: 'sem conversa para avaliar', cor: 'cinza' };
-  if (r.aluc === 'grave' || r.processo === 'nao' || r.optout === 'insistiu' || r.humano === 'nao_escalou' || r.tom === 'ruim') return { v: 'nao', t: 'Não aderente', cor: 'verm' };
-  if (r.aluc === 'leve' || r.processo === 'desvio' || r.apresentacao !== 'ok' || r.resposta === 'parcial' || r.resposta === 'nao' || r.tom === 'robo' || r.resp5s === 'nao' || r.humano === 'desnec' || r.desfecho === 'encerrou_mal') return { v: 'parcial', t: 'Parcialmente aderente', cor: 'amar' };
+  if (r.aluc === 'grave' || r.processo === 'nao' || r.resp5s === 'nao') return { v: 'nao', t: 'Não aderente', cor: 'verm' };
+  if (r.aluc === 'leve' || r.processo === 'desvio' || r.resp5s === 'as_vezes') return { v: 'parcial', t: 'Parcialmente aderente', cor: 'amar' };
   return { v: 'aderente', t: 'Aderente', cor: 'verde' };
 }
 
@@ -548,7 +475,6 @@ function listar() {
   var kp = $('#s-kpis'); kp.textContent = '';
   [['Analisadas', tot, ''], ['Aderentes', pc(ader, conv.length), 'verde'], ['Parciais', pc(par, conv.length), 'amar'],
    ['Não aderentes', pc(nao, conv.length), 'verm'], ['Alucinaram', pc(alu, conv.length), 'verm'],
-   ['Nota média', (function () { var ns = salvas.map(nota).filter(Boolean); return ns.length ? pts(Math.round(ns.reduce(function (t, n) { return t + n.t; }, 0) / ns.length * 10) / 10) + '/60' : '–'; })(), ''],
    ['Pedido gerado', pc(salvas.filter(function (x) { return x.pedido === 'sim'; }).length, salvas.filter(function (x) { return x.pedido; }).length), 'verde'],
    ['Resposta em 5 s', pc(conv.filter(function (x) { return x.resp5s === 'sim'; }).length, conv.filter(function (x) { return x.resp5s; }).length), '']].forEach(function (k) {
     kp.appendChild(el('div', { class: 'kpi ' + k[2] }, el('b', null, String(k[1])), el('span', null, k[0])));
@@ -564,18 +490,17 @@ function listar() {
 
   $('#s-cont').textContent = fil.length === tot ? tot + ' análises' : fil.length + ' de ' + tot + ' análises';
   var cb = $('#s-corpo'); cb.textContent = '';
-  if (!fil.length) cb.appendChild(el('tr', null, el('td', { colspan: '9', class: 'dica' }, 'Nenhuma análise ainda.')));
+  if (!fil.length) cb.appendChild(el('tr', null, el('td', { colspan: '8', class: 'dica' }, 'Nenhuma análise ainda.')));
   fil.forEach(function (x) {
-    var vq = qPorId('veredito'), dq = qPorId('desfecho');
+    
     var obs = x.obs ? (x.obs.length > 60 ? x.obs.slice(0, 58) + '…' : x.obs) : '';
     cb.appendChild(el('tr', null,
       el('td', null, dataHoraBR(x.criado)),
       el('td', null, x.numero),
       el('td', null, x.veredito ? pill(ROT.veredito[x.veredito], corVeredito(x.veredito)) : '–'),
-      el('td', null, (function () { var n = nota(x); return n ? pts(n.t) + '/60' : '–'; })()),
       el('td', null, x.processo ? pill(ROT.processo[x.processo], x.processo === 'sim' ? 'verde' : x.processo === 'desvio' ? 'amar' : 'verm') : '–'),
       el('td', null, x.aluc ? pill(ROT.aluc[x.aluc], x.aluc === 'nao' ? 'verde' : x.aluc === 'leve' ? 'amar' : 'verm') : '–'),
-      el('td', null, x.desfecho ? optTxt(dq, x.desfecho) : '–'),
+      el('td', null, x.pedido ? pill(x.pedido === 'sim' ? 'Gerou' : 'Não gerou', x.pedido === 'sim' ? 'verde' : 'verm') : '–'),
       el('td', null, obs),
       el('td', { style: 'white-space:nowrap' },
         el('button', { type: 'button', class: 'btn linha peq', onclick: function () { editar(x.id); } }, 'Editar'), ' ',
@@ -693,11 +618,11 @@ function gerarXlsx(lista) {
   ]);
 }
 function linhasExport(lista) {
-  var cab = ['Data', 'Hora', 'Analista'].concat(Q.map(function (q) { return q.rotulo; }), ['Nota Abordagem (35)', 'Nota Encaminhamento (25)', 'Nota total (60)']);
+  var cab = ['Data', 'Hora', 'Analista'].concat(Q.map(function (q) { return q.rotulo; }));
   return [cab].concat(lista.map(function (x) {
     var d = new Date(x.criado);
     return [pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear(), pad(d.getHours()) + ':' + pad(d.getMinutes()), x.analista || '']
-      .concat(Q.map(function (q) { return texto(q, x[q.id]); }), (function () { var n = nota(x); return n ? [pts(n.a), pts(n.e), pts(n.t)] : ['', '', '']; })());
+      .concat(Q.map(function (q) { return texto(q, x[q.id]); }));
   }));
 }
 function nomeArq(ext) { var d = new Date(); return 'aderencia_ia_whatsapp_' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '.' + ext; }
