@@ -608,6 +608,29 @@ th{background:var(--sup2);color:var(--muted);font-size:.68rem;letter-spacing:.07
 #ia-det .ia-det>article.card:nth-child(2)>div:not(.ia-ck):not(.acoes){background:var(--sup);border:1px solid var(--borda);border-radius:10px;padding:16px 20px}
 #ia-det .ia-det>article.card:nth-child(2)>.rotulo{display:none}
 .ia-ck-lin{grid-template-columns:minmax(0,1fr)!important}
+
+/* ---- passo a passo ---- */
+.wz{max-width:760px;margin:0 auto;display:grid;gap:14px}
+.wz-lead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:16px 20px;background:var(--sup);border:1px solid var(--borda);border-radius:12px}
+.wz-card{display:grid;gap:16px;padding:24px;background:var(--sup);border:1px solid var(--borda);border-radius:12px}
+.wz-topo{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.wz-tag{border:1px solid var(--borda);color:var(--azul);border-radius:99px;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 10px}
+.wz-prog{height:3px;background:var(--cinza-cl);border-radius:99px;overflow:hidden}
+.wz-prog i{display:block;height:100%;background:var(--azul);transition:width .25s}
+.wz-resp{display:flex;flex-wrap:wrap;gap:6px}
+.wz-resp button{border:1px solid var(--borda);background:var(--sup2);color:var(--texto);border-radius:8px;padding:4px 10px;font-size:.76rem;font-weight:600;cursor:pointer}
+.wz-resp button:hover{border-color:var(--azul)}
+.wz-resp small{color:var(--muted);margin-right:4px;font-weight:600}
+.wz-q{font-size:1.3rem;font-weight:700;margin:0}
+.wz-hint{margin:6px 0 0;color:var(--muted);font-size:.88rem}
+.wz-ops{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.wz-op{display:flex;align-items:center;gap:12px;text-align:left;min-height:58px;padding:14px 16px;background:var(--sup2);border:1px solid var(--borda);border-radius:10px;color:var(--texto);font-size:.95rem;font-weight:600;cursor:pointer;transition:border-color .12s,background .12s}
+.wz-op:hover{border-color:var(--azul)}
+.wz-op.on{background:var(--azul);border-color:var(--azul);color:#fff}
+.wz-op .ck{flex:none;width:20px;height:20px;border:1.5px solid var(--muted);border-radius:6px;display:grid;place-items:center;font-size:.75rem;font-weight:800}
+.wz-op.on .ck{background:#fff;color:var(--azul);border-color:#fff}
+.wz-rodape{display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--borda);padding-top:14px}
+.wz textarea,.wz input[type=text]{font-size:1rem}
 </style>
 </head>
 <body>
@@ -5770,6 +5793,122 @@ function iaRenderDetalhe() {
           if (!a.qualOk) a.qualOk = 'sim'; a.qualIA = iaQualPrincipal(l); iaGravar(l, a); toast('Análise salva.'); proximo();
         } }, '✓ Salvar e ir para o próximo'),
         el('button', { type: 'button', class: 'btn btn-perigo-linha', onclick: function () { delete estado.ia.analises[l.codigoNorm]; salvarIA(); iaRenderDetalhe(); iaRenderLateral(); toast('Análise limpa.'); } }, 'Limpar análise')))));
+}
+
+/* ===== Passo a passo (uma pergunta por tela) — substitui o checklist em lista ===== */
+var iaWz = { cod: '', i: 0 };
+var IA_WZ_ARG = [['sim', 'Sim'], ['parcial', 'Parcialmente'], ['nao', 'Não'], ['na', 'Não deu tempo (cliente desligou)']];
+var IA_WZ_TIT = { arg: 'Processo SDR', qualok: 'Qualificação', qualcerta: 'Qualificação certa', correto: 'Motivo correto', porque: 'Por quê', motivoreal: 'Motivo real', situ: 'Ligação', comp: 'Comportamento da IA', evid: 'Conferiu', ia: 'Parecer da IA', obs: 'Observação' };
+function iaWzPassos(a) {
+  var p = ['arg', 'qualok']; if (a.qualOk === 'nao') p.push('qualcerta');
+  p.push('correto'); if (a.correto === 'nao') p.push('porque', 'motivoreal');
+  p.push('situ', 'comp', 'evid', 'ia', 'obs'); return p;
+}
+function iaRenderDetalhe() {
+  var u = estado.ui.ia, l = estado.ia.leads.find(function (x) { return x.codigoNorm === u.sel; }), cont = $('#ia-det');
+  if (!l) { cont.replaceChildren(el('div', { class: 'vazio' }, estado.ia.leads.length ? 'Nenhum lead selecionado.' : '')); return; }
+  if (iaWz.cod !== l.codigoNorm) { iaWz.cod = l.codigoNorm; iaWz.i = 0; }
+  var a = iaAnalise(l), sinal = iaSinal(l), sug = iaNotaGeral(l), ps = iaWzPassos(a);
+  if (iaWz.i >= ps.length) iaWz.i = ps.length - 1;
+  var passo = ps[iaWz.i];
+  function ir(n) { iaWz.i = Math.max(0, Math.min(iaWzPassos(a).length - 1, n)); iaRenderDetalhe(); window.scrollTo(0, 0); }
+  function avancar() { ir(iaWz.i + 1); }
+  function gravar() { iaGravar(l, a); }
+  function proximo() {
+    var prox = iaProximoPendente(l.codigoNorm);
+    u.sel = prox ? prox.codigoNorm : l.codigoNorm; iaWz.cod = ''; iaRenderDetalhe(); iaRenderLateral(); window.scrollTo(0, 0);
+    if (prox && estado.ia.autoCopiar && prox.tel) copiarTexto(formatTel(prox.tel)).then(function () { toast('Próximo telefone copiado: ' + formatTel(prox.tel)); });
+    if (!prox) { toast('Todos os leads foram analisados. 🎉'); u.foco = false; renderIA(); }
+  }
+  function unicas(lista, campo) {
+    return el('div', { class: 'wz-ops' }, lista.map(function (o) {
+      var rot = o[2] ? [o[2], ' ', o[1]] : [o[1]];
+      return el('button', { type: 'button', class: 'wz-op' + (a[campo] === o[0] ? ' on' : ''), onclick: function () { a[campo] = o[0]; gravar(); avancar(); } }, rot);
+    }));
+  }
+  function multi(itens, lista) {
+    return el('div', { class: 'wz-ops' }, itens.map(function (t) {
+      var ck = el('span', { class: 'ck' }, lista.indexOf(t) >= 0 ? '✓' : '');
+      var b = el('button', { type: 'button', class: 'wz-op' + (lista.indexOf(t) >= 0 ? ' on' : ''), onclick: function () {
+        var i = lista.indexOf(t); if (i >= 0) lista.splice(i, 1); else lista.push(t);
+        b.classList.toggle('on', i < 0); ck.textContent = i < 0 ? '✓' : ''; gravar();
+      } }, ck, t);
+      return b;
+    }));
+  }
+  function texto(campo, ph, lista) {
+    var inp = el('input', { type: 'text', maxlength: '80', placeholder: ph, autocomplete: 'off' }); if (lista) inp.setAttribute('list', lista); inp.value = a[campo] || '';
+    inp.addEventListener('input', function () { a[campo] = inp.value; if (campo === 'qualCerta') a.qualIA = iaQualPrincipal(l); gravar(); });
+    inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); avancar(); } });
+    setTimeout(function () { inp.focus(); }, 30); return inp;
+  }
+  function continuar(rot, ok) { return el('div', { class: 'acoes' }, el('button', { type: 'button', class: 'btn btn-primario', onclick: function () { if (ok && !ok()) return; avancar(); } }, rot || 'Continuar →')); }
+  var ligs = l.ligacoes.length, q = null, corpo = [];
+  if (passo === 'arg') { q = ['A IA apresentou o serviço e seguiu o processo de SDR (qualificar o lead)?', ligs ? 'Ouça a gravação: ela se apresentou, explicou o serviço e fez as perguntas de qualificação?' : 'Sem ligação da IA registrada']; corpo = [unicas(IA_WZ_ARG, 'arg')]; }
+  else if (passo === 'qualok') { q = ['A qualificação da IA está certa?', 'Qualificação registrada: ' + (iaQualPrincipal(l) || 'nenhuma') + ' · normalmente está certa']; corpo = [unicas([['sim', 'Sim, está certa'], ['nao', 'Não, está errada']], 'qualOk')]; }
+  else if (passo === 'qualcerta') { q = ['Qual seria a qualificação certa?', 'Escreva ou escolha na lista (opcional)']; corpo = [texto('qualCerta', 'Digite para buscar ou escrever', 'ia-quals'), continuar('Continuar →')]; }
+  else if (passo === 'correto') { q = ['O motivo está correto?', 'O cliente realmente é ' + (l.motivo || 'o motivo registrado') + '?']; corpo = [unicas([['sim', 'Sim, está correto'], ['nao', 'Não, está incorreto'], ['duvida', 'Sem como avaliar']], 'correto')]; }
+  else if (passo === 'porque') {
+    var tx = el('textarea', { rows: '2', maxlength: '400', placeholder: 'Ou explique em uma frase por que está errado' }); tx.value = a.porqueTxt; tx.addEventListener('input', function () { a.porqueTxt = tx.value; gravar(); });
+    q = ['Por que não está correto?', 'Marque o que se aplica']; corpo = [multi(IA_PORQUES, a.porque), tx, continuar('Continuar →', function () { if (!a.porque.length && !a.porqueTxt.trim()) { toast('Marque uma opção ou escreva o porquê.', { tipo: 'aviso' }); return false; } return true; })];
+  }
+  else if (passo === 'motivoreal') { q = ['Qual seria o motivo correto?', 'Escreva ou escolha na lista (opcional)']; corpo = [texto('motivoReal', 'Digite para buscar ou escrever', 'ia-motivos'), continuar('Continuar →')]; }
+  else if (passo === 'situ') { q = ['O que aconteceu na ligação?', 'Marque o que se aplica (opcional)']; corpo = [multi(IA_SITUACOES, a.situ), continuar()]; }
+  else if (passo === 'comp') { q = ['Como foi o comportamento da IA na ligação?', sug ? 'Sinal do painel: ' + IA_COMP[sug].rot + ' — ' + IA_COMP[sug].txt : 'Sem ligações da IA para avaliar']; corpo = [unicas([['boa', 'Boa', semaforo('boa')], ['media', 'Média', semaforo('media')], ['ruim', 'Ruim', semaforo('ruim')]], 'comp'), continuar('Pular →')]; }
+  else if (passo === 'evid') { q = ['O que você conferiu?', 'Marque o que fez (opcional)']; corpo = [multi(IA_EVIDENCIAS, a.evid), continuar()]; }
+  else if (passo === 'ia') {
+    var parecer = el('textarea', { rows: '5', maxlength: '4000', placeholder: 'Cole aqui a resposta da IA (CORRETO: …, POR QUÊ: …, MOTIVO SUGERIDO: …, EVIDÊNCIA: …)' }); parecer.value = a.parecer;
+    parecer.addEventListener('input', function () { a.parecer = parecer.value; gravar(); });
+    q = ['Quer usar uma análise por IA?', 'Opcional: copie o prompt, cole a resposta e preencha o checklist por ela']; corpo = [
+      el('div', { class: 'acoes' },
+        el('button', { type: 'button', class: 'btn btn-sec', onclick: function () { copiarTexto(iaPrompt(l)).then(function (ok) { toast(ok ? 'Prompt copiado: cole na sua IA e, se tiver, acrescente a transcrição.' : 'Não consegui copiar.', { tipo: ok ? 'ok' : 'erro' }); }); } }, '⧉ Copiar prompt para a IA'),
+        el('button', { type: 'button', class: 'btn btn-linha', onclick: function () {
+          var r = iaLerParecer(parecer.value);
+          if (!Object.keys(r).length) { toast('Não achei “CORRETO: …” no parecer. Peça à IA o formato do prompt.', { tipo: 'aviso' }); return; }
+          Object.keys(r).forEach(function (k) { a[k] = r[k]; }); gravar(); iaWz.i = 0; iaRenderDetalhe(); toast('Checklist preenchido a partir do parecer. Confira antes de salvar.');
+        } }, '✓ Preencher checklist pelo parecer')), parecer, continuar('Continuar →')];
+  }
+  else {
+    var obs = el('textarea', { rows: '3', maxlength: '600', placeholder: 'Opcional' }); obs.value = a.obs; obs.addEventListener('input', function () { a.obs = obs.value; gravar(); });
+    q = ['Alguma observação?', 'Opcional']; corpo = [obs, el('div', { class: 'acoes' },
+      el('button', { type: 'button', class: 'btn btn-primario btn-grande', onclick: function () {
+        if (!a.correto) { toast('Marque se o motivo está correto, incorreto ou sem como avaliar.', { tipo: 'aviso' }); iaWz.i = ps.indexOf('correto'); iaRenderDetalhe(); return; }
+        if (a.correto === 'nao' && !a.porque.length && !a.porqueTxt.trim()) { toast('Diga por que o motivo está incorreto.', { tipo: 'aviso' }); iaWz.i = ps.indexOf('porque'); iaRenderDetalhe(); return; }
+        if (!a.qualOk) a.qualOk = 'sim'; a.qualIA = iaQualPrincipal(l); iaGravar(l, a); toast('Análise salva.'); proximo();
+      } }, '✓ Salvar e ir para o próximo'),
+      el('span', { class: 'dica' }, 'Atalho: Ctrl + Enter'))];
+    obs.addEventListener('keydown', function (e) { if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); corpo[1].querySelector('button').click(); } });
+    setTimeout(function () { obs.focus(); }, 30);
+  }
+  function valor(p) {
+    if (p === 'arg') return (IA_WZ_ARG.find(function (o) { return o[0] === a.arg; }) || [])[1] || '';
+    if (p === 'qualok') return a.qualOk === 'sim' ? '✔ Certa' : a.qualOk === 'nao' ? '✖ Errada' : '';
+    if (p === 'qualcerta') return a.qualCerta;
+    if (p === 'correto') return a.correto === 'sim' ? '✔ Correto' : a.correto === 'nao' ? '✖ Incorreto' : a.correto === 'duvida' ? 'Sem como avaliar' : '';
+    if (p === 'porque') return a.porque.length ? a.porque.length + (a.porque.length > 1 ? ' motivos' : ' motivo') : (a.porqueTxt ? 'escrito' : '');
+    if (p === 'motivoreal') return a.motivoReal;
+    if (p === 'situ') return a.situ.length ? a.situ.length + ' marcada' + (a.situ.length > 1 ? 's' : '') : '';
+    if (p === 'comp') return a.comp ? IA_COMP[a.comp].rot : '';
+    if (p === 'evid') return a.evid.length ? a.evid.length + ' item' + (a.evid.length > 1 ? 's' : '') : '';
+    return '';
+  }
+  var resp = ps.filter(function (p) { return p !== passo && valor(p); }).map(function (p) {
+    return el('button', { type: 'button', title: 'Mudar esta resposta', onclick: function () { ir(ps.indexOf(p)); } }, el('small', null, IA_WZ_TIT[p] + ':'), valor(p));
+  });
+  var fatos = ['Motivo registrado: ' + (l.motivo || '—'), l.origem ? 'Origem: ' + l.origem : '', ligs ? ligs + ' ' + plural(ligs, 'ligação', 'ligações') + ' da IA · maior fala ' + fmtSeg(l.ligacoes.reduce(function (m, g) { return Math.max(m, g.fala); }, 0)) : 'Sem ligação da IA'].filter(Boolean);
+  cont.replaceChildren(el('div', { class: 'wz' },
+    el('div', { class: 'wz-lead' },
+      el('div', null, el('div', { class: 'rotulo' }, 'TELEFONE'), el('div', { class: 'ia-cod' }, formatTel(l.tel) || 'sem telefone'), el('div', { class: 'dica' }, 'Lead ' + l.codigo + ' · ' + fatos.join(' · '))),
+      el('div', { class: 'acoes' }, el('button', { type: 'button', class: 'btn btn-primario', disabled: !l.tel, onclick: function () { copiarTexto(formatTel(l.tel)).then(function () { toast('Telefone copiado: ' + formatTel(l.tel)); }); } }, '⧉ Copiar telefone'))),
+    el('div', { class: 'wz-card' },
+      el('div', { class: 'wz-topo' }, el('span', { class: 'wz-tag' }, 'Análise'), el('span', { class: 'dica' }, 'Passo ' + (iaWz.i + 1) + ' de ' + ps.length)),
+      el('div', { class: 'wz-prog' }, el('i', { style: 'width:' + Math.round((iaWz.i + 1) / ps.length * 100) + '%' })),
+      resp.length ? el('div', { class: 'wz-resp' }, resp) : null,
+      el('div', null, el('h3', { class: 'wz-q' }, q[0]), q[1] ? el('p', { class: 'wz-hint' }, q[1]) : null),
+      corpo,
+      el('div', { class: 'wz-rodape' },
+        el('button', { type: 'button', class: 'btn btn-linha btn-peq', hidden: iaWz.i === 0, onclick: function () { ir(iaWz.i - 1); } }, '← Voltar'),
+        el('button', { type: 'button', class: 'btn btn-linha btn-peq', title: 'Apaga as respostas deste lead e recomeça', onclick: function () { delete estado.ia.analises[l.codigoNorm]; salvarIA(); iaWz.i = 0; iaRenderDetalhe(); iaRenderLateral(); toast('Análise limpa.'); } }, '↺ Recomeçar')))));
 }
 function renderIA() {
   var u = estado.ui.ia;
