@@ -811,7 +811,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
           <div class="wh-opcoes" role="radiogroup" aria-label="Planilha" id="wh-planilha"></div>
         </div>
         <div class="wh-passo" data-passo="atend" hidden>
-          <h3 class="wh-q">Houve atendimento?</h3>
+          <h3 class="wh-q">Houve atendimento? <small>(Não = só template, ou o cliente só clicou em botão como “Encerrar” e a IA respondeu)</small></h3>
           <div class="wh-opcoes" role="radiogroup" aria-label="Atendimento" id="wh-atend"></div>
         </div>
         <div class="wh-passo" data-passo="status" hidden>
@@ -890,7 +890,7 @@ td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
           <div class="wh-fil">
             <div class="campo"><label for="wh-f-busca">Buscar número ou observação</label><input type="search" id="wh-f-busca" placeholder="Buscar"></div>
             <div class="campo"><label for="wh-f-planilha">Planilha</label><select id="wh-f-planilha"></select></div>
-            <div class="campo"><label for="wh-f-atend">Atendimento</label><select id="wh-f-atend"><option value="">Todos</option><option value="sem">Sem atendimento humano</option><option value="template">Só template</option><option value="botao">Só botão + IA</option><option value="ia">IA atendeu</option><option value="humano">Atendimento humano</option></select></div>
+            <div class="campo"><label for="wh-f-atend">Atendimento</label><select id="wh-f-atend"><option value="">Todos</option><option value="sim">Com atendimento</option><option value="nao">Sem atendimento</option></select></div>
             <div class="campo"><label for="wh-f-status">Status Dryve Pro</label><select id="wh-f-status"><option value="">Todos</option><option value="perdido">Perdido</option><option value="nao_perdido">Não perdido</option></select></div>
             <div class="campo"><label for="wh-f-ok">Correção</label><select id="wh-f-ok"><option value="">Todas</option><option value="erro">Com algo incorreto</option><option value="ok">Tudo correto</option></select></div>
           </div>
@@ -5935,12 +5935,8 @@ var WH_PLANILHAS = [
   { v: 'pedidos_disparos', r: 'pedidos_disparos' },
   { v: 'ambas', r: 'Ambas' }
 ];
-var WH_ATEND = [
-  { v: 'template', r: 'Só template (cliente não respondeu)' },
-  { v: 'botao', r: 'Cliente só clicou em botão (ex.: Encerrar) e a IA respondeu' },
-  { v: 'ia', r: 'IA atendeu (houve conversa)' },
-  { v: 'humano', r: 'Atendimento humano' }
-];
+var WH_ATEND = [{ v: 'sim', r: 'Sim, houve atendimento' }, { v: 'nao', r: 'Não, sem atendimento' }];
+function whAtendLegado(v) { return v === 'humano' ? 'sim' : (v === 'template' || v === 'botao' || v === 'ia') ? 'nao' : v; }
 var WH_STATUS = [{ v: 'perdido', r: 'Perdido' }, { v: 'nao_perdido', r: 'Outro' }];
 var WH_ETAPAS = [
   { v: 'pendente', r: 'Pendente de atendimento' }, { v: 'tentativa', r: 'Tentativa de contato' }, { v: 'efetivo', r: 'Contato efetivo' },
@@ -5969,14 +5965,14 @@ function sanitizarWhats(x) {
     criadoEm: Number.isFinite(Number(x.criadoEm)) && Number(x.criadoEm) > 0 ? Number(x.criadoEm) : Date.now(),
     numero: numero,
     planilha: whEscolha(WH_PLANILHAS, x.planilha),
-    atend: whEscolha(WH_ATEND, x.atend),
+    atend: whEscolha(WH_ATEND, whAtendLegado(x.atend)),
     status: whEscolha(WH_STATUS, x.status),
     statusOk: whEscolha(WH_SN, x.statusOk),
     etapa: '', etapaPq: '', motivo: '', motivoOutro: '', motivoPq: '', motivoOk: '', motivoCerto: '',
     obs: limparTexto(x.obs).slice(0, 600)
   };
   if (a.status === 'nao_perdido') { a.etapa = whEscolha(WH_ETAPAS, x.etapa); a.etapaPq = limparTexto(x.etapaPq).slice(0, 300); }
-  if (a.status === 'perdido' && (a.atend === 'humano' || a.atend === '')) {
+  if (a.status === 'perdido' && (a.atend === 'sim' || a.atend === '')) {
     a.motivo = whEscolha(WH_MOTIVOS, x.motivo);
     if (a.motivo === 'outro') { a.motivoOutro = limparTexto(x.motivoOutro).slice(0, 120); a.motivoPq = limparTexto(x.motivoPq).slice(0, 300); }
     a.motivoOk = whEscolha(WH_SN, x.motivoOk);
@@ -6013,7 +6009,7 @@ function whPassos() {
   var p = ['numero', 'planilha', 'atend', 'status'], st = whLer('status');
   if (st === 'nao_perdido') p.push('etapa', 'etapapq');
   p.push('statusok');
-  if (st === 'perdido' && whLer('atend') === 'humano') { p.push('motivo'); if (whLer('motivo') === 'outro') p.push('qual', 'motivopq'); p.push('motivook'); if (whLer('motivook') === 'nao') p.push('motivocerto'); }
+  if (st === 'perdido' && whLer('atend') === 'sim') { p.push('motivo'); if (whLer('motivo') === 'outro') p.push('qual', 'motivopq'); p.push('motivook'); if (whLer('motivook') === 'nao') p.push('motivocerto'); }
   p.push('obs');
   return p;
 }
@@ -6110,7 +6106,7 @@ function whSalvar() {
     if (!limparTexto(dados.etapaPq)) { estado.whPasso = 'etapapq'; whRender(true); return falta('Escreva o porquê da etapa.'); }
   }
   if (!dados.statusOk) { estado.whPasso = 'statusok'; whRender(); return falta('Diga se o status está correto.'); }
-  if (dados.status === 'perdido' && dados.atend === 'humano') {
+  if (dados.status === 'perdido' && dados.atend === 'sim') {
     if (!dados.motivo) { estado.whPasso = 'motivo'; whRender(); return falta('Escolha o motivo do perdido.'); }
     if (dados.motivo === 'outro' && !limparTexto(dados.motivoOutro)) { estado.whPasso = 'qual'; whRender(true); return falta('Escolha qual é o motivo.'); }
     if (dados.motivo === 'outro' && !limparTexto(dados.motivoPq)) { estado.whPasso = 'motivopq'; whRender(true); return falta('Escreva o porquê do motivo.'); }
@@ -6159,7 +6155,7 @@ function whFiltradas() {
   return estado.whats.filter(function (a) {
     if (WH_FIL.planilha && a.planilha !== WH_FIL.planilha) return false;
     if (WH_FIL.status && a.status !== WH_FIL.status) return false;
-    if (WH_FIL.atend === 'sem' ? (!a.atend || a.atend === 'humano') : WH_FIL.atend && a.atend !== WH_FIL.atend) return false;
+    if (WH_FIL.atend && a.atend !== WH_FIL.atend) return false;
     if (WH_FIL.ok === 'erro' && !whTemErro(a)) return false;
     if (WH_FIL.ok === 'ok' && whTemErro(a)) return false;
     if (q && normBusca(a.numero + ' ' + a.obs + ' ' + whMotivoTexto(a)).indexOf(q) === -1 && a.numero.replace(/\D/g, '').indexOf(q.replace(/\D/g, '') || '\u0000') === -1) return false;
@@ -6186,7 +6182,7 @@ function renderWhats() {
    ['Perdidos', String(perd.length), todas.length ? fmtPct(perd.length / todas.length * 100) + ' do total' : ''],
    ['Status correto', todas.length ? fmtPct(stOk / todas.length * 100) : '—', stOk + ' de ' + todas.length],
    ['Motivo correto', avaliados.length ? fmtPct(moOk / avaliados.length * 100) : '—', moOk + ' de ' + avaliados.length + ' avaliados'],
-   ['Sem atendimento humano', String(todas.filter(function (a) { return a.atend && a.atend !== 'humano'; }).length), ''],
+   ['Sem atendimento', String(todas.filter(function (a) { return a.atend === 'nao'; }).length), ''],
    ['Com algo incorreto', String(todas.filter(whTemErro).length), '']
   ].forEach(function (c) { resumo.appendChild(el('div', { class: 'card' }, el('b', null, c[1]), el('span', null, c[0] + (c[2] ? ' · ' + c[2] : '')))); });
   var corpo = $('#wh-corpo'); corpo.textContent = '';
@@ -6270,7 +6266,7 @@ function xmlEscapar(s) {
 function colLetra(i) { return String.fromCharCode(65 + i); }
 function gerarXlsxWhats() {
   var linhas = [WH_CAB].concat(whLinhasExport());
-  var larg = [12, 10, 18, 24, 40, 16, 24, 36, 15, 30, 36, 15, 30, 50, 22];
+  var larg = [12, 10, 18, 24, 22, 16, 24, 36, 15, 30, 36, 15, 30, 50, 22];
   var sheet = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
     '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' +
     '<cols>' + larg.map(function (w, i) { return '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>'; }).join('') + '</cols><sheetData>' +
@@ -6329,10 +6325,8 @@ function whParseQuando(d, h) {
 function whParseAtend(v) {
   var n = normBusca(v);
   if (!n) return '';
-  if (n.indexOf('humano') !== -1) return 'humano';
-  if (n.indexOf('botao') !== -1 || n.indexOf('encerrar') !== -1) return 'botao';
-  if (n.indexOf('template') !== -1) return 'template';
-  return n.indexOf('ia') === 0 ? 'ia' : '';
+  if (n.indexOf('nao') === 0 || n.indexOf('sem ') === 0 || n.indexOf('template') !== -1 || n.indexOf('botao') !== -1) return 'nao';
+  return n.indexOf('sim') === 0 || n.indexOf('humano') !== -1 || n.indexOf('ia atendeu') === 0 ? 'sim' : '';
 }
 function whParseEtapa(v) { var n = normBusca(v); var x = WH_ETAPAS.find(function (e) { return normBusca(e.r) === n; }); return x ? x.v : ''; }
 function analisarLinhasWhats(linhas) {
