@@ -5990,7 +5990,7 @@ function sanitizarWhats(x) {
     if (a.atendMotivo === 'outro') a.atendOutro = limparTexto(x.atendOutro).slice(0, 120);
   }
   if (a.status === 'nao_perdido') { a.etapa = whEscolha(WH_ETAPAS, x.etapa); a.etapaPq = limparTexto(x.etapaPq).slice(0, 300); }
-  if (a.status === 'perdido' && (a.atend === 'sim' || a.atend === '')) {
+  if (a.status === 'perdido') {
     a.motivo = whEscolha(WH_MOTIVOS, x.motivo);
     if (a.motivo === 'outro') { a.motivoOutro = limparTexto(x.motivoOutro).slice(0, 120); a.motivoPq = limparTexto(x.motivoPq).slice(0, 300); }
     a.motivoOk = whEscolha(WH_SN, x.motivoOk);
@@ -6029,7 +6029,7 @@ function whPassos() {
   p.push('status');
   if (st === 'nao_perdido') p.push('etapa', 'etapapq');
   p.push('statusok');
-  if (st === 'perdido' && whLer('atend') === 'sim') { p.push('motivo'); if (whLer('motivo') === 'outro') p.push('qual', 'motivopq'); p.push('motivook'); if (whLer('motivook') === 'nao') p.push('motivocerto'); }
+  if (st === 'perdido') { p.push('motivo'); if (whLer('motivo') === 'outro') p.push('qual', 'motivopq'); p.push('motivook'); if (whLer('motivook') === 'nao') p.push('motivocerto'); }
   p.push('obs');
   return p;
 }
@@ -6130,7 +6130,7 @@ function whSalvar() {
     if (!limparTexto(dados.etapaPq)) { estado.whPasso = 'etapapq'; whRender(true); return falta('Escreva o porquê da etapa.'); }
   }
   if (!dados.statusOk) { estado.whPasso = 'statusok'; whRender(); return falta('Diga se o status está correto.'); }
-  if (dados.status === 'perdido' && dados.atend === 'sim') {
+  if (dados.status === 'perdido') {
     if (!dados.motivo) { estado.whPasso = 'motivo'; whRender(); return falta('Escolha o motivo do perdido.'); }
     if (dados.motivo === 'outro' && !limparTexto(dados.motivoOutro)) { estado.whPasso = 'qual'; whRender(true); return falta('Escolha qual é o motivo.'); }
     if (dados.motivo === 'outro' && !limparTexto(dados.motivoPq)) { estado.whPasso = 'motivopq'; whRender(true); return falta('Escreva o porquê do motivo.'); }
