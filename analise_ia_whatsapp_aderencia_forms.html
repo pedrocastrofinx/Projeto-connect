@@ -169,6 +169,8 @@ var CH_ANALISTA = 'aderencia_ia_whats_analista';
    Confirmar → o bot manda a abertura (Natasha) e segue o fluxo + a cadência de follow-up por 24 h. */
 function iniciou(r) { return (r.template === 'confirmar' || r.template === 'texto') && r.abertura !== 'nao'; }
 function seguiu(r) { return r.template === 'confirmar' || r.template === 'texto'; }
+function appSim(r) { return iniciou(r) && r.app === 'sim'; }
+function semApp(r) { return seguiu(r) && r.app !== 'sim'; }
 var Q = [
   { id: 'numero', tipo: 'texto', titulo: 'Qual é o telefone do lead?', ph: 'Ex.: 22 99964-0695', obrig: true,
     rotulo: 'Telefone' },
@@ -195,6 +197,18 @@ var Q = [
     se: seguiu, ops: [
     { v: 'sim', t: 'Sim, mandou a abertura', cor: 'verde' },
     { v: 'nao', t: 'Não mandou: o fluxo não começou', cor: 'verm' } ] },
+  { id: 'app', tipo: 'um', titulo: 'O cliente disse que vai rodar por aplicativo (Uber, 99…)?',
+    dica: 'Motorista de app não segue o fluxo normal: o bot deve transferir para o departamento correto.', rotulo: 'Motorista de app',
+    se: iniciou, ops: [
+    { v: 'nao', t: 'Não' },
+    { v: 'sim', t: 'Sim, é motorista de app', cor: 'amar' } ] },
+  { id: 'app_acao', tipo: 'um', titulo: 'O que o bot fez com o motorista de app?',
+    dica: 'Correto: avisar que há planos para o perfil e transferir para o departamento correto.', rotulo: 'Ação (motorista de app)',
+    se: appSim, ops: [
+    { v: 'transf', t: 'Transferiu para o departamento correto', cor: 'verde' },
+    { v: 'enc', t: 'Encerrou a conversa', cor: 'verm' },
+    { v: 'seguiu', t: 'Continuou o fluxo normal, sem transferir', cor: 'verm' },
+    { v: 'nada', t: 'Não fez nada / parou', cor: 'verm' } ] },
   { id: 'resp5s', tipo: 'um', titulo: 'O bot respondeu o cliente em até 5 segundos?',
     dica: 'Compare o horário da mensagem do cliente com o da resposta. No WhatsApp Web o horário mostra os segundos; se só aparece hora:minuto, outro minuto = mais de 5 s.',
     rotulo: 'Resposta em 5 s', se: iniciou, ops: [
@@ -239,13 +253,13 @@ var Q = [
     { v: 'outro', t: 'Outro (descrever na observação)' } ] },
   { id: 'cadencia', tipo: 'um', titulo: 'A IA fez os follow-ups da cadência?',
     dica: 'Se o cliente parou de responder, o bot faz follow-up a cada 5 min e 10 min e segue a cadência por 24 horas, sem encerrar antes.', rotulo: 'Cadência',
-    se: seguiu, ops: [
+    se: semApp, ops: [
     { v: 'sim', t: 'Sim: follow-ups nos 5 e 10 min e seguiu a cadência', cor: 'verde' },
     { v: 'parcial', t: 'Em parte: fez só alguns ou atrasou', cor: 'amar' },
     { v: 'nao', t: 'Não fez follow-up: a cadência não aconteceu', cor: 'verm' },
     { v: 'na', t: 'N/A (cliente seguiu respondendo / ainda não deu tempo)' } ] },
   { id: 'desfecho', tipo: 'um', titulo: 'Como a conversa está agora?', dica: 'Escolha a situação que descreve o fim (ou o momento atual) da conversa.', rotulo: 'Desfecho',
-    se: seguiu, ops: [
+    se: semApp, ops: [
     { v: 'pedido', t: 'Gerou o pedido', cor: 'verde' },
     { v: 'cad_ok', t: 'Cumpriu as 24 h de cadência, mas não fechou o pedido', cor: 'amar' },
     { v: 'em_cad', t: 'Ainda dentro das 24 h (cadência em andamento)', cor: 'amar' },
@@ -254,7 +268,7 @@ var Q = [
     { v: 'nao_ini', t: 'O fluxo nem começou', cor: 'verm' },
     { v: 'na', t: 'N/A' } ] },
   { id: 'desfecho_pq', tipo: 'multi', titulo: 'Por que não fechou o pedido?', dica: 'Marque tudo que se aplica.', rotulo: 'Motivo sem pedido',
-    se: function (r) { return seguiu(r) && r.desfecho && r.desfecho !== 'pedido' && r.desfecho !== 'na'; }, ops: [
+    se: function (r) { return semApp(r) && r.desfecho && r.desfecho !== 'pedido' && r.desfecho !== 'na'; }, ops: [
     { v: 'sem_resposta', t: 'Cliente não respondeu / parou de responder' },
     { v: 'sem_interesse', t: 'Cliente sem interesse' },
     { v: 'renda', t: 'Cliente não tem a renda mínima' },
@@ -287,6 +301,7 @@ function sugestao(r) {
   }
   if (r.template === 'nada') return r.nada_ok === 'abertura' ? { v: 'parcial', t: 'Parcialmente aderente', cor: 'amar' } : { v: 'aderente', t: 'sem resposta do cliente', cor: 'cinza' };
   if (r.abertura === 'nao' || r.desfecho === 'nao_ini') return { v: 'nao', t: 'Não aderente: o fluxo não começou', cor: 'verm' };
+  if (appSim(r) && r.app_acao && r.app_acao !== 'transf') return { v: 'nao', t: 'Não aderente: motorista de app devia ser transferido', cor: 'verm' };
   if (r.aluc === 'grave' || r.processo === 'nao' || r.resp5s === 'nao' || r.cadencia === 'nao' || r.desfecho === 'enc_cedo' || r.desfecho === 'sem_cad') return { v: 'nao', t: 'Não aderente', cor: 'verm' };
   if (r.aluc === 'leve' || r.processo === 'desvio' || r.resp5s === 'as_vezes' || r.cadencia === 'parcial') return { v: 'parcial', t: 'Parcialmente aderente', cor: 'amar' };
   return { v: 'aderente', t: 'Aderente', cor: 'verde' };
@@ -550,6 +565,7 @@ function listar() {
       el('td', null, (function () {
         if (x.template === 'encerrar') return pill(x.enc_ok === 'ok' ? 'Encerrar · ok' : 'Encerrar · erro', x.enc_ok === 'ok' ? 'verde' : 'verm');
         if (x.template === 'nada') return pill('Sem resposta', 'cinza');
+        if (x.app === 'sim') return x.app_acao === 'transf' ? pill('App · transferiu', 'verde') : pill('App · ' + ({ enc: 'encerrou', seguiu: 'não transferiu', nada: 'parou' }[x.app_acao] || 'sem ação'), 'verm');
         var d = { pedido: ['Confirmou · pedido', 'verde'], cad_ok: ['Confirmou · 24 h sem pedido', 'amar'], em_cad: ['Confirmou · em cadência', 'amar'], enc_cedo: ['Confirmou · encerrado cedo', 'verm'], sem_cad: ['Confirmou · sem cadência', 'verm'], nao_ini: ['Confirmou · fluxo não começou', 'verm'], na: ['N/A', 'cinza'] }[x.desfecho];
         if (d) return pill(d[0], d[1]);
         var l = { completo: ['Completo · pedido', 'verde'], sim: ['Completo · pedido', 'verde'], completo_cad: ['Completo · sem pedido', 'amar'], inc_cad: ['Incompleto · em cadência', 'amar'], inc_enc: ['Incompleto · encerrado', 'verm'], nao: ['Sem pedido', 'verm'] }[x.pedido];
