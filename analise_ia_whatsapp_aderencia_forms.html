@@ -169,7 +169,8 @@ var CH_ANALISTA = 'aderencia_ia_whats_analista';
    Confirmar → o bot manda a abertura (Natasha) e segue o fluxo + a cadência de follow-up por 24 h. */
 function iniciou(r) { return (r.template === 'confirmar' || r.template === 'texto') && r.abertura !== 'nao'; }
 function seguiu(r) { return r.template === 'confirmar' || r.template === 'texto'; }
-function appSim(r) { return iniciou(r) && r.app === 'sim'; }
+function conversou(r) { return iniciou(r) && r.respondeu !== 'nao'; }
+function appSim(r) { return conversou(r) && r.app === 'sim'; }
 function semApp(r) { return seguiu(r) && r.app !== 'sim'; }
 var Q = [
   { id: 'numero', tipo: 'texto', titulo: 'Qual é o telefone do lead?', ph: 'Ex.: 22 99964-0695', obrig: true,
@@ -197,9 +198,14 @@ var Q = [
     se: seguiu, ops: [
     { v: 'sim', t: 'Sim, mandou a abertura', cor: 'verde' },
     { v: 'nao', t: 'Não mandou: o fluxo não começou', cor: 'verm' } ] },
+  { id: 'respondeu', tipo: 'um', titulo: 'O cliente respondeu depois da abertura?',
+    dica: 'Se o cliente não respondeu, as perguntas de conversa (5 s, processo, alucinação) não se aplicam: o bot só pode ser avaliado na cadência.', rotulo: 'Cliente respondeu',
+    se: iniciou, ops: [
+    { v: 'sim', t: 'Sim, respondeu e a conversa andou', cor: 'verde' },
+    { v: 'nao', t: 'Não respondeu: ficou só a abertura e os follow-ups', cor: 'amar' } ] },
   { id: 'app', tipo: 'um', titulo: 'O cliente disse que vai rodar por aplicativo (Uber, 99…)?',
     dica: 'Motorista de app não segue o fluxo normal: o bot deve transferir para o departamento correto.', rotulo: 'Motorista de app',
-    se: iniciou, ops: [
+    se: conversou, ops: [
     { v: 'nao', t: 'Não' },
     { v: 'sim', t: 'Sim, é motorista de app', cor: 'amar' } ] },
   { id: 'app_acao', tipo: 'um', titulo: 'O que o bot fez com o motorista de app?',
@@ -211,20 +217,20 @@ var Q = [
     { v: 'nada', t: 'Não fez nada / parou', cor: 'verm' } ] },
   { id: 'resp5s', tipo: 'um', titulo: 'O bot respondeu o cliente em até 5 segundos?',
     dica: 'Compare o horário da mensagem do cliente com o da resposta. No WhatsApp Web o horário mostra os segundos; se só aparece hora:minuto, outro minuto = mais de 5 s.',
-    rotulo: 'Resposta em 5 s', se: iniciou, ops: [
+    rotulo: 'Resposta em 5 s', se: conversou, ops: [
     { v: 'sim', t: 'Sim, sempre', cor: 'verde' },
     { v: 'as_vezes', t: 'Algumas vezes demorou', cor: 'amar' },
     { v: 'nao', t: 'Não, demorou', cor: 'verm' },
     { v: 'na', t: 'N/A (não deu para ver)' } ] },
   { id: 'processo', tipo: 'um', titulo: 'A IA seguiu o processo?',
     dica: 'Se apresentou, entendeu o que o cliente quer, tirou dúvidas, coletou os dados e encaminhou.', rotulo: 'Processo',
-    se: iniciou, ops: [
+    se: conversou, ops: [
     { v: 'sim', t: 'Seguiu o processo', cor: 'verde' },
     { v: 'desvio', t: 'Seguiu com desvios', cor: 'amar' },
     { v: 'nao', t: 'Não seguiu o processo', cor: 'verm' },
     { v: 'na', t: 'N/A (não se aplica)' } ] },
   { id: 'processo_onde', tipo: 'multi', titulo: 'Onde saiu do processo?', dica: 'Marque tudo que se aplica.', rotulo: 'Desvios',
-    se: function (r) { return iniciou(r) && (r.processo === 'desvio' || r.processo === 'nao'); }, ops: [
+    se: function (r) { return conversou(r) && (r.processo === 'desvio' || r.processo === 'nao'); }, ops: [
     { v: 'nome', t: 'Não pediu / não usou o nome do cliente' },
     { v: 'perfil', t: 'Não entendeu o perfil ou uso do carro' },
     { v: 'opcoes', t: 'Não apresentou opções de carro' },
@@ -236,13 +242,13 @@ var Q = [
     { v: 'outro', t: 'Outro (descrever na observação)' } ] },
   { id: 'aluc', tipo: 'um', titulo: 'A IA alucinou?', rotulo: 'Alucinação',
     dica: 'Alucinar = afirmar algo sem base (preço, carro, prazo, regra) ou entender errado o que o cliente disse (ex.: ignorar um “não tenho interesse”).',
-    se: iniciou, ops: [
+    se: conversou, ops: [
     { v: 'nao', t: 'Não', cor: 'verde' },
     { v: 'leve', t: 'Sim, leve (impreciso ou fora de contexto, sem impacto)', cor: 'amar' },
     { v: 'grave', t: 'Sim, grave (inventou, prometeu ou ignorou o cliente)', cor: 'verm' },
     { v: 'na', t: 'N/A (não se aplica)' } ] },
   { id: 'aluc_tipo', tipo: 'multi', titulo: 'Como ela alucinou?', dica: 'Marque tudo que se aplica. Alucinar também é entender errado o que o cliente disse.', rotulo: 'Tipo de alucinação',
-    se: function (r) { return iniciou(r) && (r.aluc === 'leve' || r.aluc === 'grave'); }, ops: [
+    se: function (r) { return conversou(r) && (r.aluc === 'leve' || r.aluc === 'grave'); }, ops: [
     { v: 'negativa', t: 'Não entendeu a negativa (sem interesse, “não quero”, “não me envie mais”)' },
     { v: 'nao_lembra', t: 'Ignorou que o cliente não reconhece / não pediu o serviço' },
     { v: 'ignorou', t: 'Ignorou o que o cliente disse e seguiu o script' },
@@ -564,8 +570,8 @@ function listar() {
       el('td', null, dataHoraBR(x.criado)),
       el('td', null, x.numero),
       el('td', null, x.veredito ? pill(ROT.veredito[x.veredito], corVeredito(x.veredito)) : '–'),
-      el('td', null, x.processo ? pill(ROT.processo[x.processo], x.processo === 'sim' ? 'verde' : x.processo === 'desvio' ? 'amar' : x.processo === 'na' ? 'cinza' : 'verm') : '–'),
-      el('td', null, x.aluc ? pill(ROT.aluc[x.aluc], x.aluc === 'nao' ? 'verde' : x.aluc === 'leve' ? 'amar' : x.aluc === 'na' ? 'cinza' : 'verm') : '–'),
+      el('td', null, x.respondeu === 'nao' ? pill('N/A · cliente não respondeu', 'cinza') : x.processo ? pill(ROT.processo[x.processo], x.processo === 'sim' ? 'verde' : x.processo === 'desvio' ? 'amar' : x.processo === 'na' ? 'cinza' : 'verm') : '–'),
+      el('td', null, x.respondeu === 'nao' ? pill('N/A', 'cinza') : x.aluc ? pill(ROT.aluc[x.aluc], x.aluc === 'nao' ? 'verde' : x.aluc === 'leve' ? 'amar' : x.aluc === 'na' ? 'cinza' : 'verm') : '–'),
       el('td', null, (function () {
         if (x.template === 'encerrar') return pill(x.enc_ok === 'ok' ? 'Encerrar · ok' : 'Encerrar · erro', x.enc_ok === 'ok' ? 'verde' : 'verm');
         if (x.template === 'nada') return pill('Sem resposta', 'cinza');
