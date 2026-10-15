@@ -115,6 +115,14 @@ svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.6;stro
 .cm-tp div{height:6px;border-radius:3px;background:#16224A;overflow:hidden}
 .cm-tp i{display:block;height:100%;background:#1D6BFF}
 .cm-tp b{text-align:right}
+.back{position:absolute;right:64px;top:24px;z-index:3}
+.welcome h1{font-size:clamp(48px,6vw,76px)}
+.welcome .orb{width:min(36vw,440px)}
+.welcome .orbline{width:min(32vw,400px)}
+.welcome .orbline.b{width:min(24vw,300px)}
+.wteam{display:flex;gap:24px;margin-top:30px;flex-wrap:wrap}
+.wp{display:flex;flex-direction:column;align-items:center;gap:10px;font-size:15px;color:var(--muted);font-weight:700}
+.wp .avatar{width:92px;height:92px;border-radius:50%;border:2px solid rgba(90,162,255,.55);box-shadow:0 12px 34px -12px var(--glow)}
 /* Prints do Connect (slide 14) */
 .shots{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .shot{margin:0;cursor:zoom-in;border:1px solid var(--line2);border-radius:14px;overflow:hidden;background:#070C18;transition:border-color .2s,transform .2s}
@@ -131,7 +139,7 @@ svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.6;stro
 .slide{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transform:translateX(48px) scale(.99);transition:opacity .55s ease,transform .7s cubic-bezier(.2,.7,.2,1),visibility .55s;pointer-events:none}
 .slide.active{opacity:1;visibility:visible;transform:none;pointer-events:auto}
 .slide.past{transform:translateX(-48px) scale(.99)}
-.inner{width:min(1200px,100%);height:100%;padding:24px 64px 36px;display:flex;flex-direction:column;justify-content:center;justify-content:safe center;overflow-y:auto}
+.inner{position:relative;width:min(1200px,100%);height:100%;padding:24px 64px 36px;display:flex;flex-direction:column;justify-content:center;justify-content:safe center;overflow-y:auto}
 .slide.active .reveal{animation:rise .7s cubic-bezier(.2,.7,.2,1) both}
 .slide.active .reveal:nth-child(2){animation-delay:.08s}
 .slide.active .reveal:nth-child(3){animation-delay:.16s}
@@ -271,7 +279,8 @@ ul.plain{list-style:none}
 .tools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
 .tool{display:flex;flex-direction:column;gap:12px}
 .tool .ico{margin-bottom:0}
-.tool .btn{margin-top:auto;justify-content:center}
+.tool .btn{margin-top:0;justify-content:center}
+.tool .btn.ghost{margin-top:auto}
 .tool .sub{font-size:13px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;font-weight:700}
 .tool .btn[disabled]{background:rgba(255,255,255,.05);color:var(--muted);box-shadow:none;border:1px dashed var(--line2)}
 
@@ -287,8 +296,13 @@ ul.plain{list-style:none}
 .sample-note{padding:10px 18px;font-size:12px;color:var(--dim);background:rgba(255,255,255,.02)}
 
 /* ---------- Mock: funnel ---------- */
-.funnel{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;align-items:end}
+.funnel{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;align-items:stretch}
 .funnel .col{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:14px 10px;text-align:center;font-size:13px;color:#D7E1F5;font-weight:600;min-height:110px;display:flex;flex-direction:column;justify-content:space-between;gap:10px}
+.funnel-wrap{display:flex;flex-direction:column;gap:12px}
+.funnel-tag{align-self:center;font-size:13px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--blue2);border:1px solid var(--line2);background:rgba(47,107,255,.08);padding:6px 16px;border-radius:999px}
+.funnel-bar{height:8px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden}
+.funnel-bar i{display:block;height:100%;width:100%;border-radius:999px;background:linear-gradient(90deg,var(--blue),var(--blue2) 60%,var(--ok))}
+.funnel .col{justify-content:center;min-height:96px}
 .funnel .col b{font-size:12px;color:var(--blue2);letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:6px}
 .funnel .col.won{border-color:rgba(61,214,140,.4)}
 .funnel .col.won b{color:var(--ok)}
@@ -515,7 +529,7 @@ body.fs .brand{opacity:.6}
 <main id="deck" aria-label="Apresentação Quality Experience">
 
 <!-- ================= 01 · CAPA ================= -->
-<section class="slide" data-section="Introdução" data-title="Capa" aria-label="Slide 1 de 24">
+<section class="slide" data-section="Introdução" data-title="Capa" aria-label="Slide 1 de 25">
   <div class="inner">
     <div class="cover">
       <div class="orb" aria-hidden="true"></div>
@@ -534,10 +548,10 @@ body.fs .brand{opacity:.6}
 </section>
 
 <!-- ================= 02 · PERGUNTA ================= -->
-<section class="slide" data-section="Introdução" data-title="Uma pergunta para começar" aria-label="Slide 2 de 24">
+<section class="slide" data-section="Introdução" data-title="Uma pergunta para começar" aria-label="Slide 2 de 25">
   <div class="inner">
     <div class="kicker reveal">Participação do grupo</div>
-    <h2 class="reveal q-big">Quando você ouve falar em monitoria de qualidade, o que vem à sua cabeça?</h2>
+    <h2 class="reveal q-big">Quando você ouve falar em monitoria da Qualidade, o que vem à sua cabeça?</h2>
     <div class="poll reveal" role="group" aria-label="Alternativas">
       <button class="chip" aria-pressed="false">Fiscalização</button>
       <button class="chip" aria-pressed="false">Nota e avaliação</button>
@@ -551,7 +565,7 @@ body.fs .brand{opacity:.6}
 </section>
 
 <!-- ================= 03 · O QUE É A QUALIDADE ================= -->
-<section class="slide" data-section="Introdução" data-title="O que é a Qualidade?" aria-label="Slide 3 de 24">
+<section class="slide" data-section="Introdução" data-title="O que é a Qualidade?" aria-label="Slide 3 de 25">
   <div class="inner">
     <div class="kicker reveal">Função da área</div>
     <h2 class="reveal">O que é a Qualidade?</h2>
@@ -567,7 +581,7 @@ body.fs .brand{opacity:.6}
 </section>
 
 <!-- ================= 04 · FLUXO DO MONITOR ================= -->
-<section class="slide" data-section="Nosso papel" data-title="O que um monitor faz na prática?" aria-label="Slide 4 de 24">
+<section class="slide" data-section="Nosso papel" data-title="O que um monitor faz na prática?" aria-label="Slide 4 de 25">
   <div class="inner">
     <div class="kicker reveal">Rotina do monitor</div>
     <h2 class="reveal">O que um monitor faz na prática?</h2>
@@ -586,7 +600,7 @@ body.fs .brand{opacity:.6}
 </section>
 
 <!-- ================= 05 · NOSSO PAPEL ================= -->
-<section class="slide" data-section="Nosso papel" data-title="A Qualidade não é sua adversária" aria-label="Slide 5 de 24">
+<section class="slide" data-section="Nosso papel" data-title="A Qualidade não é sua adversária" aria-label="Slide 5 de 25">
   <div class="inner">
     <div class="kicker reveal">Nosso papel</div>
     <h2 class="reveal">A Qualidade não é sua adversária.</h2>
@@ -619,7 +633,7 @@ body.fs .brand{opacity:.6}
 </section>
 
 <!-- ================= 06 · POR QUE É IMPORTANTE ================= -->
-<section class="slide" data-section="Nosso papel" data-title="Por que a Qualidade é importante?" aria-label="Slide 6 de 24">
+<section class="slide" data-section="Nosso papel" data-title="Por que a Qualidade é importante?" aria-label="Slide 6 de 25">
   <div class="inner">
     <div class="kicker reveal">Quatro dimensões conectadas</div>
     <h2 class="reveal">Por que a Qualidade é importante?</h2>
@@ -634,7 +648,7 @@ body.fs .brand{opacity:.6}
 </section>
 
 <!-- ================= 07 · TIME ================= -->
-<section class="slide" data-section="Nosso time" data-title="Quem faz parte do time de Qualidade" aria-label="Slide 7 de 24">
+<section class="slide" data-section="Nosso time" data-title="Quem faz parte do time de Qualidade" aria-label="Slide 7 de 25">
   <div class="inner">
     <div class="kicker reveal">Distribuição atual</div>
     <h2 class="reveal">Quem faz parte do time de Qualidade</h2>
@@ -671,7 +685,7 @@ body.fs .brand{opacity:.6}
 </section>
 
 <!-- ================= 08 · CONEXÃO COM A OPERAÇÃO ================= -->
-<section class="slide" data-section="Nosso time" data-title="Como o trabalho se conecta à operação" aria-label="Slide 8 de 24">
+<section class="slide" data-section="Nosso time" data-title="Como o trabalho se conecta à operação" aria-label="Slide 8 de 25">
   <div class="inner">
     <div class="kicker reveal">Fluxo da operação</div>
     <h2 class="reveal">Como nosso trabalho se conecta à operação</h2>
@@ -688,7 +702,7 @@ body.fs .brand{opacity:.6}
 </section>
 
 <!-- ================= 09 · ECOSSISTEMA ================= -->
-<section class="slide" data-section="Ferramentas" data-title="As ferramentas que utilizamos" aria-label="Slide 9 de 24">
+<section class="slide" data-section="Ferramentas" data-title="As ferramentas que utilizamos" aria-label="Slide 9 de 25">
   <div class="inner">
     <div class="kicker reveal">Ecossistema</div>
     <h2 class="reveal">As ferramentas que utilizamos</h2>
@@ -715,14 +729,16 @@ body.fs .brand{opacity:.6}
         <h3>Connect</h3>
         <p>Acompanhamento das conversas de WhatsApp, apoio aos Closers e análise de indicadores de comunicação.</p>
         <button class="btn ghost sm" data-go="13">Ver detalhes</button>
+        <button class="btn" data-open-shot="0">Ver telas <span class="ext">↗ exemplo</span></button>
       </div>
     </div>
   </div>
 </section>
 
 <!-- ================= 10 · LOCUS ================= -->
-<section class="slide" data-section="Ferramentas" data-title="Locus Spy: escuta de ligações" aria-label="Slide 10 de 24">
+<section class="slide" data-section="Ferramentas" data-title="Locus Spy: escuta de ligações" aria-label="Slide 10 de 25">
   <div class="inner">
+    <button class="btn ghost sm back reveal" data-back>← Ferramentas</button>
     <div class="split">
       <div>
         <div class="kicker reveal">Ferramenta 01</div>
@@ -770,7 +786,7 @@ body.fs .brand{opacity:.6}
 </section>
 
 <!-- ================= 11 · MONITORIA HUMANA ================= -->
-<section class="slide" data-section="Monitorias" data-title="Como a monitoria humana acontece" aria-label="Slide 11 de 24">
+<section class="slide" data-section="Monitorias" data-title="Como a monitoria humana acontece" aria-label="Slide 11 de 25">
   <div class="inner">
     <div class="kicker reveal">Monitoria humana</div>
     <h2 class="reveal">Como a monitoria humana acontece</h2>
@@ -799,19 +815,24 @@ body.fs .brand{opacity:.6}
 </section>
 
 <!-- ================= 12 · DRYVEPRO FUNIL ================= -->
-<section class="slide" data-section="Ferramentas" data-title="DryvePro: o funil de oportunidades" aria-label="Slide 12 de 24">
+<section class="slide" data-section="Ferramentas" data-title="DryvePro: o funil de oportunidades" aria-label="Slide 12 de 25">
   <div class="inner">
+    <button class="btn ghost sm back reveal" data-back>← Ferramentas</button>
     <div class="kicker reveal">Ferramenta 02 · DryvePro</div>
     <h2 class="reveal">O funil de oportunidades</h2>
     <p class="lead reveal" style="max-width:960px">O DryvePro acompanha as oportunidades comerciais no funil e permite consultar as negociações.</p>
-    <div class="funnel mt reveal" aria-label="Exemplos de etapas do funil">
-      <div class="col"><div><b>Exemplo</b>Tentativa de contato</div></div>
-      <div class="col"><div><b>Exemplo</b>Em negociação</div></div>
-      <div class="col"><div><b>Exemplo</b>Aguardando prova de vida</div></div>
-      <div class="col"><div><b>Exemplo</b>Aguardando assinatura</div></div>
-      <div class="col"><div><b>Exemplo</b>Aguardando documentação</div></div>
-      <div class="col"><div><b>Exemplo</b>Aguardando pagamento</div></div>
-      <div class="col won"><div><b>Exemplo</b>Assinado</div></div>
+    <div class="funnel-wrap mt reveal" aria-label="Exemplo de etapas do funil">
+      <div class="funnel-tag">Exemplo</div>
+      <div class="funnel">
+        <div class="col"><div>Tentativa de contato</div></div>
+        <div class="col"><div>Em negociação</div></div>
+        <div class="col"><div>Aguardando prova de vida</div></div>
+        <div class="col"><div>Aguardando assinatura</div></div>
+        <div class="col"><div>Aguardando documentação</div></div>
+        <div class="col"><div>Aguardando pagamento</div></div>
+        <div class="col won"><div>Assinado</div></div>
+      </div>
+      <div class="funnel-bar"><i></i></div>
     </div>
     <div class="grid g2 mt reveal">
       <div class="card static">
@@ -832,7 +853,7 @@ body.fs .brand{opacity:.6}
 </section>
 
 <!-- ================= 13 · MONITORIA POR IA ================= -->
-<section class="slide" data-section="Monitorias" data-title="Monitoria por inteligência artificial" aria-label="Slide 13 de 24">
+<section class="slide" data-section="Monitorias" data-title="Monitoria por inteligência artificial" aria-label="Slide 13 de 25">
   <div class="inner">
     <div class="kicker reveal">DryvePro · Monitoria de ligações</div>
     <h2 class="reveal">Monitoria por inteligência artificial</h2>
@@ -866,8 +887,9 @@ body.fs .brand{opacity:.6}
 </section>
 
 <!-- ================= 14 · CONNECT ================= -->
-<section class="slide" data-section="Ferramentas" data-title="Connect: acompanhamento dos WhatsApps" aria-label="Slide 14 de 24">
+<section class="slide" data-section="Ferramentas" data-title="Connect: acompanhamento dos WhatsApps" aria-label="Slide 14 de 25">
   <div class="inner">
+    <button class="btn ghost sm back reveal" data-back>← Ferramentas</button>
     <div class="kicker reveal">Ferramenta 03</div>
     <h2 class="reveal">Connect: acompanhamento dos WhatsApps</h2>
     <div class="split mt reveal" style="grid-template-columns:.8fr 1.2fr;gap:36px;align-items:start">
@@ -901,7 +923,7 @@ body.fs .brand{opacity:.6}
 </section>
 
 <!-- ================= 15 · COMO REALIZAMOS UMA MONITORIA ================= -->
-<section class="slide" data-section="Monitorias" data-title="Como realizamos uma monitoria" aria-label="Slide 15 de 24">
+<section class="slide" data-section="Monitorias" data-title="Como realizamos uma monitoria" aria-label="Slide 15 de 25">
   <div class="inner">
     <div class="kicker reveal">Checklist de avaliação</div>
     <h2 class="reveal">Como realizamos uma monitoria</h2>
@@ -922,7 +944,7 @@ body.fs .brand{opacity:.6}
 </section>
 
 <!-- ================= 16 · ATENDIMENTO ================= -->
-<section class="slide" data-section="Checklist" data-title="Checklist: Atendimento · 17 pontos" aria-label="Slide 16 de 24">
+<section class="slide" data-section="Checklist" data-title="Checklist: Atendimento · 17 pontos" aria-label="Slide 16 de 25">
   <div class="inner">
     <div class="kicker reveal">Bloco 1 · 17 pontos</div>
     <h2 class="reveal">Atendimento <span class="grad">· 17 pontos</span></h2>
@@ -931,7 +953,7 @@ body.fs .brand{opacity:.6}
 </section>
 
 <!-- ================= 17 · ABORDAGEM ================= -->
-<section class="slide" data-section="Checklist" data-title="Checklist: Abordagem · 26 pontos" aria-label="Slide 17 de 24">
+<section class="slide" data-section="Checklist" data-title="Checklist: Abordagem · 26 pontos" aria-label="Slide 17 de 25">
   <div class="inner">
     <div class="kicker reveal">Bloco 2 · 26 pontos</div>
     <h2 class="reveal">Abordagem <span class="grad">· 26 pontos</span></h2>
@@ -941,7 +963,7 @@ body.fs .brand{opacity:.6}
 </section>
 
 <!-- ================= 18 · NEGOCIAÇÃO ================= -->
-<section class="slide" data-section="Checklist" data-title="Checklist: Negociação · 35 pontos" aria-label="Slide 18 de 24">
+<section class="slide" data-section="Checklist" data-title="Checklist: Negociação · 35 pontos" aria-label="Slide 18 de 25">
   <div class="inner">
     <div class="kicker reveal">Bloco 3 · 35 pontos</div>
     <h2 class="reveal">Negociação <span class="grad">· 35 pontos</span></h2>
@@ -952,7 +974,7 @@ body.fs .brand{opacity:.6}
 </section>
 
 <!-- ================= 19 · FECHAMENTO ================= -->
-<section class="slide" data-section="Checklist" data-title="Checklist: Fechamento · 22 pontos" aria-label="Slide 19 de 24">
+<section class="slide" data-section="Checklist" data-title="Checklist: Fechamento · 22 pontos" aria-label="Slide 19 de 25">
   <div class="inner">
     <div class="kicker reveal">Bloco 4 · 22 pontos</div>
     <h2 class="reveal">Fechamento <span class="grad">· 22 pontos</span></h2>
@@ -969,7 +991,7 @@ body.fs .brand{opacity:.6}
 </section>
 
 <!-- ================= 20 · NCG ================= -->
-<section class="slide" data-section="Checklist" data-title="Bloco crítico: NCG" aria-label="Slide 20 de 24">
+<section class="slide" data-section="Checklist" data-title="Bloco crítico: NCG" aria-label="Slide 20 de 25">
   <div class="inner">
     <div class="kicker reveal" style="color:var(--err)">Erros críticos · NCG</div>
     <h2 class="reveal">Além da pontuação, existem situações que exigem atenção especial.</h2>
@@ -980,7 +1002,7 @@ body.fs .brand{opacity:.6}
 </section>
 
 <!-- ================= 21 · PONTOS FORTES E SUGESTÕES ================= -->
-<section class="slide" data-section="Desenvolvimento" data-title="Pontos fortes e sugestões de melhoria" aria-label="Slide 21 de 24">
+<section class="slide" data-section="Desenvolvimento" data-title="Pontos fortes e sugestões de melhoria" aria-label="Slide 21 de 25">
   <div class="inner">
     <div class="kicker reveal">Feedback útil</div>
     <h2 class="reveal">Pontos fortes e sugestões de melhoria</h2>
@@ -997,7 +1019,7 @@ body.fs .brand{opacity:.6}
 </section>
 
 <!-- ================= 22 · MELHORIA CONTÍNUA ================= -->
-<section class="slide" data-section="Desenvolvimento" data-title="Como transformamos a monitoria em evolução" aria-label="Slide 22 de 24">
+<section class="slide" data-section="Desenvolvimento" data-title="Como transformamos a monitoria em evolução" aria-label="Slide 22 de 25">
   <div class="inner">
     <div class="kicker reveal">Melhoria contínua</div>
     <h2 class="reveal">Como transformamos a monitoria em evolução</h2>
@@ -1015,7 +1037,7 @@ body.fs .brand{opacity:.6}
 </section>
 
 <!-- ================= 23 · COMO CONTAR COM A QUALIDADE ================= -->
-<section class="slide" data-section="Desenvolvimento" data-title="Como você pode contar com a Qualidade" aria-label="Slide 23 de 24">
+<section class="slide" data-section="Desenvolvimento" data-title="Como você pode contar com a Qualidade" aria-label="Slide 23 de 25">
   <div class="inner">
     <div class="kicker reveal">Apoio</div>
     <h2 class="reveal">Como você pode contar com a Qualidade</h2>
@@ -1033,7 +1055,7 @@ body.fs .brand{opacity:.6}
 </section>
 
 <!-- ================= 24 · ENCERRAMENTO ================= -->
-<section class="slide" data-section="Encerramento" data-title="Qualidade é construção conjunta" aria-label="Slide 24 de 24">
+<section class="slide" data-section="Encerramento" data-title="Qualidade é construção conjunta" aria-label="Slide 24 de 25">
   <div class="inner">
     <div class="cover">
       <div class="orb" aria-hidden="true" style="opacity:.7"></div>
@@ -1055,6 +1077,21 @@ body.fs .brand{opacity:.6}
   </div>
 </section>
 
+
+<!-- ================= 25 · BEM-VINDO ================= -->
+<section class="slide" data-section="Encerramento" data-title="Bem-vindo" aria-label="Slide 25 de 25">
+  <div class="inner">
+    <div class="cover welcome">
+      <div class="orb" aria-hidden="true"></div>
+      <div class="orbline" aria-hidden="true"></div>
+      <div class="orbline b" aria-hidden="true"></div>
+      <div class="kicker reveal">Qualidade · Operação de Assinatura de Veículos</div>
+      <h1 class="reveal">Seja<br><span class="grad">bem-vindo(a)!</span></h1>
+      <p class="lead reveal mt" style="max-width:640px">Estamos juntos para ajudar você a atender melhor e crescer a cada contato.</p>
+      <div class="wteam reveal"><div class="wp"><div class="avatar" data-photo="anderson">AN</div>Anderson</div><div class="wp"><div class="avatar" data-photo="guilherme">GU</div>Guilherme</div><div class="wp"><div class="avatar" data-photo="lilian">LI</div>Lilian</div><div class="wp"><div class="avatar" data-photo="alexandre">AL</div>Alexandre</div><div class="wp"><div class="avatar" data-photo="fernanda">FE</div>Fernanda</div><div class="wp"><div class="avatar" data-photo="pedro">PE</div>Pedro</div></div>
+    </div>
+  </div>
+</section>
 </main>
 
 <!-- ================= Controles ================= -->
@@ -1064,7 +1101,7 @@ body.fs .brand{opacity:.6}
     <button class="ctl" id="next" aria-label="Próximo slide (seta direita ou espaço)" title="Próximo (→ ou espaço)"><svg class="i"><use href="#i-right"/></svg></button>
   </div>
   <div class="prog" aria-hidden="false">
-    <div class="meta"><span id="counter" aria-live="polite">01 / 24</span><span id="sectionName"></span></div>
+    <div class="meta"><span id="counter" aria-live="polite">01 / 25</span><span id="sectionName"></span></div>
     <div class="track" role="progressbar" aria-label="Progresso da apresentação" aria-valuemin="1" aria-valuemax="24"><i id="progress"></i></div>
   </div>
   <div class="ctl-group">
@@ -1250,9 +1287,18 @@ body.fs .brand{opacity:.6}
     if (!opts.silent) closeMenuIfOpen();
   }
 
+  let jump = null;   // guarda de onde o usuário saiu ao clicar em "Ver detalhes" / blocos
   function go(n){ show(n); }
+  function goJump(n){ jump = { from: current, to: n }; show(n); }
+  function voltar(){
+    if (jump && jump.to === current) { const f = jump.from; jump = null; show(f); }
+    else show(8);
+  }
   function next(){ if (current < N-1) show(current+1); }
-  function prev(){ if (current > 0) show(current-1); }
+  function prev(){
+    if (jump && jump.to === current) { const f = jump.from; jump = null; show(f); return; }
+    if (current > 0) show(current-1);
+  }
 
   function animateBars(slide){
     $$(".bar i", slide).forEach(i => {
@@ -1364,15 +1410,17 @@ body.fs .brand{opacity:.6}
     window.addEventListener("resize", escalar);
     escalar();
     function fechar(){ lb.classList.remove("on"); body.textContent = ""; }
-    $$(".shot").forEach(f => f.addEventListener("click", () => {
-      const src = $(".cm", f); if (!src) return;
+    function abrir(src){
+      if (!src) return;
       const k = Math.min((innerWidth - 56) / 960, (innerHeight - 56) / 540);
       const wrap = document.createElement("div");
       wrap.style.cssText = `position:relative;width:${960 * k}px;height:${540 * k}px;border-radius:12px;overflow:hidden;border:1px solid var(--line2);box-shadow:0 30px 80px rgba(0,0,0,.6)`;
       const c = src.cloneNode(true); c.style.transform = `scale(${k})`;
       c.style.position = "absolute"; c.style.left = "0"; c.style.top = "0"; c.style.transformOrigin = "top left";
       wrap.appendChild(c); body.appendChild(wrap); lb.classList.add("on");
-    }));
+    }
+    window.abrirMockup = i => abrir($$(".shot .cm")[i]);
+    $$(".shot").forEach(f => f.addEventListener("click", () => abrir($(".cm", f))));
     lb.addEventListener("click", fechar);
     window.addEventListener("keydown", e => {
       if (lb.classList.contains("on")) { e.stopPropagation(); e.preventDefault(); if (e.key === "Escape" || e.key === " " || e.key === "Enter") fechar(); }
@@ -1391,7 +1439,10 @@ body.fs .brand{opacity:.6}
   /* ---------- Eventos gerais ---------- */
   document.addEventListener("click", e => {
     const go_ = e.target.closest("[data-go]");
-    if (go_) { go(Number(go_.dataset.go)); return; }
+    if (go_) { goJump(Number(go_.dataset.go)); return; }
+    if (e.target.closest("[data-back]")) { voltar(); return; }
+    const shot_ = e.target.closest("[data-open-shot]");
+    if (shot_ && window.abrirMockup) { window.abrirMockup(Number(shot_.dataset.openShot)); return; }
     if (e.target.closest("[data-open-menu]")) { openMenu(); return; }
     if (e.target.closest("[data-open-checklist]")) { openChecklist(); return; }
     if (e.target.closest("[data-close]")) {
