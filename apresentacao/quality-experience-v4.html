@@ -163,17 +163,29 @@ svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.6;stro
 .percep-strip .pw{font-size:15px;padding:7px 14px}
 .two-tools{grid-template-columns:repeat(2,minmax(0,1fr))}
 .tool .tag.must{margin-top:auto;align-self:flex-start}
-.wp small{display:block;font-size:12px;color:var(--dim);font-weight:600;margin-top:-4px}
 .tools.tools-4{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
 .tools-4 .tool{padding:20px 18px}
 .tools-4 .tool h3{font-size:22px}
 .tools-4 .tool p{font-size:14px}
+.btn.static{cursor:default;pointer-events:none;color:var(--muted)}
 .tool-actions{margin-top:auto;display:flex;flex-direction:column;gap:8px}
 .tool-actions .btn,.tool-actions .tag{margin-top:0;align-self:stretch;justify-content:center;text-align:center}
 .flow.proc .step{padding:22px 20px;font-size:17px;line-height:1.4}
 .flow.proc .step b{display:block;font-size:24px;margin-bottom:6px;color:#fff}
 .flow.proc .step span{color:var(--muted);font-size:16px;font-weight:500}
 .flow.proc{margin-bottom:26px}
+.proc3{display:flex;align-items:stretch;gap:10px}
+.proc3 .arr{align-self:center;color:var(--blue2);opacity:.8}
+.proc3 .pc{flex:1;padding:22px 22px 20px}
+.proc3 .pc .n{font-size:13px;font-weight:800;color:var(--blue2);letter-spacing:.12em;display:block;margin-bottom:10px}
+.proc3 .pc h3{font-size:26px;margin-bottom:6px}
+.proc3 .sub2{font-size:16px;color:var(--text);line-height:1.4;margin:0 0 14px}
+.pcl{list-style:none;display:flex;flex-direction:column;gap:8px;padding:0;margin:0}
+.pcl li{font-size:15px;color:var(--muted);line-height:1.4;padding-left:18px;position:relative}
+.pcl li::before{content:"";position:absolute;left:0;top:.55em;width:7px;height:7px;border-radius:50%;background:var(--blue2)}
+.loop{display:flex;align-items:center;justify-content:center;gap:12px;margin:18px 0 6px;padding:12px 18px;border-radius:14px;border:1px dashed var(--line2);color:var(--muted);font-size:17px}
+.loop b{color:#fff}
+.loop .i{color:var(--blue2)}
 /* Prints do Connect (slide 14) */
 .shots{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .shot{margin:0;cursor:zoom-in;border:1px solid var(--line2);border-radius:14px;overflow:hidden;background:#070C18;transition:border-color .2s,transform .2s}
@@ -649,17 +661,39 @@ body.fs .brand{opacity:.6}
   </div>
 </section>
 
-<section class="slide" data-section="O que é a Qualidade" data-title="Como funciona o processo" aria-label="Slide 4 de 13" data-notes="O processo tem três etapas que se repetem: acompanhamento das interações, monitoria com base no checklist e feedback para o Closer. O feedback se transforma em uma ação prática para os próximos atendimentos.">
+<section class="slide" data-section="O que é a Qualidade" data-title="Como funciona o processo" aria-label="Slide 4 de 13" data-notes="Percorra as três etapas. O Closer atende e a interação é acompanhada; a monitoria (humana ou por IA) avalia critérios e evidências e registra pontos fortes e oportunidades; o feedback é uma conversa objetiva com exemplos que vira um ajuste prático, e depois acompanhamos se a prática se repete. O ciclo recomeça e o aprendizado vira padrão.">
   <div class="inner">
     <div class="kicker reveal">Processo de Qualidade</div>
     <h2 class="reveal">Como funciona o processo</h2>
-    <div class="flow proc mt2 reveal">
-      <div class="step"><em>01</em><b>Acompanhamento</b><span>Acompanhamos as interações dos Closers.</span></div>
+    <div class="proc3 mt reveal">
+      <div class="card static pc">
+        <span class="n">01</span><h3>Acompanhamento</h3>
+        <p class="sub2">O Closer atende e a interação é acompanhada.</p>
+        <ul class="plain pcl">
+          <li>Ligações gravadas e monitoradas pela IA</li>
+          <li>WhatsApp em tempo real</li>
+        </ul>
+      </div>
       <div class="arr"><svg class="i"><use href="#i-right"/></svg></div>
-      <div class="step"><em>02</em><b>Monitoria</b><span>Analisamos o atendimento com base no checklist.</span></div>
+      <div class="card static pc">
+        <span class="n">02</span><h3>Monitoria</h3>
+        <p class="sub2">Avaliamos o atendimento com base no checklist.</p>
+        <ul class="plain pcl">
+          <li>Critérios e evidências avaliados</li>
+          <li>Pontos fortes e oportunidades registrados</li>
+        </ul>
+      </div>
       <div class="arr"><svg class="i"><use href="#i-right"/></svg></div>
-      <div class="step"><em>03</em><b>Feedback</b><span>Devolvemos pontos fortes, oportunidades e orientações.</span></div>
+      <div class="card static pc">
+        <span class="n">03</span><h3>Feedback</h3>
+        <p class="sub2">Uma conversa objetiva, com exemplos do atendimento.</p>
+        <ul class="plain pcl">
+          <li>Um ajuste prático para as próximas ligações</li>
+          <li>Acompanhamos se a prática se repete</li>
+        </ul>
+      </div>
     </div>
+    <div class="loop reveal"><svg class="i"><use href="#i-reset"/></svg><span>E o ciclo recomeça: <b>o aprendizado vira padrão.</b></span></div>
     <div class="quote reveal">Um bom feedback não termina quando a conversa acaba. Ele se transforma em uma ação prática.</div>
   </div>
 </section>
@@ -709,15 +743,15 @@ body.fs .brand{opacity:.6}
         <div class="ico"><svg class="i"><use href="#i-phone"/></svg></div>
         <div class="sub">Ligações gravadas</div>
         <h3>SARA</h3>
-        <p>Escutamos as ligações que vocês gravam pela SARA.</p>
-        <div class="tool-actions"><span class="tag warn must">Toda ligação precisa ser gravada</span></div>
+        <p>Escutamos as ligações que vocês gravam pela SARA. Toda ligação e tentativa de contato precisa ser gravada.</p>
+        <div class="tool-actions"><span class="btn sm ghost static">Gravação obrigatória</span></div>
       </div>
       <div class="card tool reveal">
         <div class="ico"><svg class="i"><use href="#i-flow"/></svg></div>
         <div class="sub">Monitoria por IA</div>
         <h3>DryvePro</h3>
         <p>Escutamos as ligações monitoradas pela IA, que ficam no DryvePro.</p>
-        <div class="tool-actions"><a class="btn sm" href="https://app.dryve.pro/dashboard/call-monitoring" target="_blank" rel="noopener noreferrer">Abrir DryvePro <span class="ext">↗</span></a></div>
+        <div class="tool-actions"><a class="btn sm ghost" href="https://app.dryve.pro/dashboard/call-monitoring" target="_blank" rel="noopener noreferrer">Abrir DryvePro ↗</a></div>
       </div>
       <div class="card tool reveal">
         <div class="ico"><svg class="i"><use href="#i-chat"/></svg></div>
@@ -731,7 +765,7 @@ body.fs .brand{opacity:.6}
         <div class="sub">Interações</div>
         <h3>Locus</h3>
         <p>O time de Qualidade acompanha as interações. No Spy, a ligação é acompanhada em tempo real.</p>
-        <div class="tool-actions"><a class="btn sm" href="https://projectlocus.pages.dev/" target="_blank" rel="noopener noreferrer">Abrir Locus <span class="ext">↗</span></a><button class="btn sm ghost" data-open-shot="1">Ver o Spy</button></div>
+        <div class="tool-actions"><button class="btn sm ghost" data-open-shot="1">Ver o Spy</button></div>
       </div>
     </div>
   </div>
@@ -819,7 +853,10 @@ body.fs .brand{opacity:.6}
       <div class="orbline b" aria-hidden="true"></div>
       <div class="kicker reveal">Qualidade · Operação de Assinatura de Veículos</div>
       <h1 class="reveal">Seja<br><span class="grad">bem-vindo(a)!</span></h1>
-      <p class="lead reveal mt" style="max-width:640px">Pode contar com a Qualidade. Chame qualquer monitor no Teams, no WhatsApp ou pessoalmente.</p>
+      <p class="lead reveal mt" style="max-width:640px">Estamos juntos para ajudar você a atender melhor e crescer a cada contato. Pode contar com a Qualidade: chame qualquer monitor no Teams, no WhatsApp ou pessoalmente.</p>
+      <div class="wteam reveal"><div class="wp"><div class="avatar" data-photo="anderson">AN</div>Anderson</div><div class="wp"><div class="avatar" data-photo="guilherme">GU</div>Guilherme</div><div class="wp"><div class="avatar" data-photo="lilian">LI</div>Lilian</div><div class="wp"><div class="avatar" data-photo="alexandre">AL</div>Alexandre</div><div class="wp"><div class="avatar" data-photo="fernanda">FE</div>Fernanda</div><div class="wp"><div class="avatar" data-photo="pedro">PE</div>Pedro</div></div>
+    </div>
+  </div>
 </section>
 </main>
 
