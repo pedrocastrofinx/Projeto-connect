@@ -123,6 +123,20 @@ svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.6;stro
 .wteam{display:flex;gap:24px;margin-top:30px;flex-wrap:wrap}
 .wp{display:flex;flex-direction:column;align-items:center;gap:10px;font-size:15px;color:var(--muted);font-weight:700}
 .wp .avatar{width:92px;height:92px;border-radius:50%;border:2px solid rgba(90,162,255,.55);box-shadow:0 12px 34px -12px var(--glow)}
+.cm-bar{display:flex;justify-content:space-between;align-items:center}
+.cm-x{cursor:pointer;padding:0 8px;font-size:12px;color:#9AA8C8;border-radius:4px}
+.cm-x:hover{background:#B3263A;color:#fff}
+.cm-click{cursor:pointer}
+.cm-op.cm-click:hover,.cm-cv.cm-click:hover{background:#13245A;border-radius:6px}
+.cm-op.sel{background:#17275E;border-radius:6px}
+.cm-seg span.cm-click:hover{border-color:#E7B93E}
+.cm-in-field{font:inherit;font-size:12px;color:#E6EDFB;outline:none;width:100%}
+.cm-input.cm-in-field{width:calc(100% - 28px)}
+.cm-in-field::placeholder{color:#7F8DAE}
+.cm-in-field:focus{border-color:#2F6BFF}
+.cm-vazio{color:#7F8DAE;padding:10px 4px;font-size:11px}
+.cm-oplist,.cm-cvlist{display:flex;flex-direction:column;gap:2px;min-height:0;overflow:hidden}
+.cm-msgs{overflow-y:auto}
 /* Prints do Connect (slide 14) */
 .shots{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .shot{margin:0;cursor:zoom-in;border:1px solid var(--line2);border-radius:14px;overflow:hidden;background:#070C18;transition:border-color .2s,transform .2s}
@@ -130,7 +144,7 @@ svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.6;stro
 .shot-view{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;background:#0A1226}
 .shot-view>.cm{position:absolute;left:0;top:0;transform-origin:top left}
 .shot figcaption{font-size:12px;color:var(--muted);padding:8px 12px;border-top:1px solid var(--line)}
-#lightbox{position:fixed;inset:0;z-index:50;background:rgba(3,6,14,.92);display:none;align-items:center;justify-content:center;padding:28px;cursor:zoom-out}
+#lightbox{position:fixed;inset:0;z-index:50;background:rgba(3,6,14,.92);display:none;align-items:center;justify-content:center;padding:28px;cursor:pointer}
 #lightbox.on{display:flex}
 #lightbox img{max-width:100%;max-height:100%;border-radius:12px;border:1px solid var(--line2);box-shadow:0 30px 80px rgba(0,0,0,.6)}
 
@@ -1402,7 +1416,7 @@ body.fs .brand{opacity:.6}
     clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove("show"), 4200);
   }
 
-  /* ---------- Mockups do Connect: escala e ampliação ---------- */
+  /* ---------- Mockups do Connect: escala, ampliação e versão interativa ---------- */
   (function(){
     const lb = $("#lightbox"), body = $("#lbBody");
     function escalar(){ $$(".shot-view").forEach(w => { const c = w.firstElementChild; if (c) c.style.transform = `scale(${w.clientWidth / 960})`; }); }
@@ -1410,20 +1424,120 @@ body.fs .brand{opacity:.6}
     window.addEventListener("resize", escalar);
     escalar();
     function fechar(){ lb.classList.remove("on"); body.textContent = ""; }
-    function abrir(src){
-      if (!src) return;
+    function mostrar(node){
       const k = Math.min((innerWidth - 56) / 960, (innerHeight - 56) / 540);
       const wrap = document.createElement("div");
-      wrap.style.cssText = `position:relative;width:${960 * k}px;height:${540 * k}px;border-radius:12px;overflow:hidden;border:1px solid var(--line2);box-shadow:0 30px 80px rgba(0,0,0,.6)`;
-      const c = src.cloneNode(true); c.style.transform = `scale(${k})`;
-      c.style.position = "absolute"; c.style.left = "0"; c.style.top = "0"; c.style.transformOrigin = "top left";
-      wrap.appendChild(c); body.appendChild(wrap); lb.classList.add("on");
+      wrap.style.cssText = `position:relative;width:${960 * k}px;height:${540 * k}px;border-radius:12px;overflow:hidden;border:1px solid var(--line2);box-shadow:0 30px 80px rgba(0,0,0,.6);cursor:default`;
+      node.style.transform = `scale(${k})`; node.style.position = "absolute"; node.style.left = "0"; node.style.top = "0"; node.style.transformOrigin = "top left";
+      wrap.appendChild(node); body.textContent = ""; body.appendChild(wrap); lb.classList.add("on");
     }
-    window.abrirMockup = i => abrir($$(".shot .cm")[i]);
-    $$(".shot").forEach(f => f.addEventListener("click", () => abrir($(".cm", f))));
-    lb.addEventListener("click", fechar);
+    function h(tag, cls, txt){ const e = document.createElement(tag); if (cls) e.className = cls; if (txt !== undefined) e.textContent = txt; return e; }
+
+    /* Connect de exemplo, clicável (dados fictícios) */
+    const MODELOS = [
+      ["aguardando retorno", "11:27", [["out","Bom dia! Aqui é o {op}, tudo bem? Seu cadastro foi aprovado, posso te ligar para explicar os próximos passos?","09:10"],["in","Bom dia! Pode sim, obrigado.","09:12"]]],
+      ["dúvida sobre prazo", "11:05", [["in","Qual é o prazo para receber o carro?","10:02"],["out","Oi! Em geral são poucos dias após a aprovação. Vou confirmar certinho e já te aviso.","10:05"]]],
+      ["ok, obrigado", "10:37", [["out","Segue o resumo da sua proposta, qualquer dúvida é só chamar.","16:10"],["in","ok, obrigado","16:16"]]],
+      ["Mídia / sem texto", "17:47", [["in","📎 Documento enviado","17:40"],["out","Recebi, obrigado! Vou conferir e te retorno.","17:47"]]]
+    ];
+    const OPS = ["A","B","C","D","E"].map((l, i) => {
+      const nome = "Operador " + l;
+      const conv = MODELOS.map((m, j) => ({ id: "c" + i + j, nome: "Lead " + (100001 + i * 10 + j), ult: m[0], hora: m[1], msgs: m[2].map(x => [x[0], x[1].replace("{op}", nome), x[2]]) }));
+      const grupos = [1, 2].map(n => ({ id: "g" + i + n, nome: "Grupo Exemplo " + n, ult: n === 1 ? "bom dia, pessoal" : "reunião às 15h", hora: n === 1 ? "08:30" : "12:05", msgs: [["in", n === 1 ? "Bom dia, pessoal!" : "Lembrete: reunião às 15h.", n === 1 ? "08:30" : "12:05"]] }));
+      return { nome, equipe: "Equipe Exemplo", conv, grupos };
+    });
+    function mockInterativo(){
+      const st = { op: 0, aba: "conv", sel: OPS[0].conv[0].id, busca: "", buscaOp: "" };
+      const root = h("div", "cm");
+      const bar = h("div", "cm-bar"); bar.appendChild(h("span", "", "Connect"));
+      const x = h("span", "cm-x", "✕"); x.title = "Fechar"; x.setAttribute("data-fechar", "1"); bar.appendChild(x);
+      const bodyEl = h("div", "cm-body"); root.append(bar, bodyEl);
+      const rail = h("div", "cm-rail"); ["on","","","",""].forEach(c => rail.appendChild(h("i", c))); 
+      const col1 = h("div", "cm-col1"), col2 = h("div", "cm-col2"), chat = h("div", "cm-chat");
+      bodyEl.append(rail, col1, col2, chat);
+      const buscaOp = h("input", "cm-search cm-in-field"); buscaOp.placeholder = "Buscar operador…";
+      const buscaLead = h("input", "cm-search cm-in-field"); buscaLead.placeholder = "Buscar lead por nome ou número…";
+      const msgIn = h("input", "cm-input cm-in-field"); msgIn.placeholder = "Escreva uma mensagem…";
+      [buscaOp, buscaLead, msgIn].forEach(i => i.addEventListener("keydown", ev => ev.stopPropagation()));
+      const lista1 = h("div", "cm-oplist"), cnt = h("div", "cm-count"), tab = h("div", "cm-tab"), seg = h("div", "cm-seg"), lista2 = h("div", "cm-cvlist");
+      const doc = h("div", "cm-doc"); doc.append(h("b", "", "Documentação"), h("small", "", "Documentos deste operador"));
+      col1.append(h("div", "cm-brand", "Connect."), buscaOp, cnt, lista1);
+      col2.append(tab, buscaLead, doc, seg, lista2);
+      const hd = h("div", "cm-hd"), av = h("span", "cm-av"), nomeChat = h("b"), act = h("div", "cm-act");
+      act.append(h("span", "", "Ligar"), h("span", "", "Resumir")); hd.append(av, nomeChat, act);
+      const msgs = h("div", "cm-msgs"); chat.append(hd, msgs, msgIn);
+      const itens = () => { const o = OPS[st.op]; return st.aba === "conv" ? o.conv : st.aba === "grupos" ? o.grupos : o.conv.concat(o.grupos); };
+      function pintar(){
+        const o = OPS[st.op];
+        lista1.textContent = "";
+        const vis = OPS.map((q, i) => [q, i]).filter(([q]) => q.nome.toLowerCase().includes(st.buscaOp.toLowerCase()));
+        cnt.textContent = vis.length + " de 48 operadores";
+        vis.forEach(([q, i]) => {
+          const r = h("div", "cm-op cm-click" + (i === st.op ? " sel" : ""));
+          r.append(h("span", "cm-av", q.nome.slice(-1)));
+          const d = h("div"); d.append(h("b", "", q.nome), h("small", "", q.equipe)); r.appendChild(d); r.appendChild(h("i"));
+          r.addEventListener("click", () => { st.op = i; st.sel = (OPS[i].conv[0] || {}).id; st.busca = ""; buscaLead.value = ""; pintar(); });
+          lista1.appendChild(r);
+        });
+        tab.textContent = o.nome + " ✕";
+        seg.textContent = "";
+        [["conv","Conversas"],["grupos","Grupos"],["todos","Todos"]].forEach(([k, t]) => {
+          const b = h("span", "cm-click" + (st.aba === k ? " on" : ""), t);
+          b.addEventListener("click", () => { st.aba = k; const it = itens(); if (!it.find(z => z.id === st.sel)) st.sel = (it[0] || {}).id; pintar(); });
+          seg.appendChild(b);
+        });
+        lista2.textContent = "";
+        const q = st.busca.toLowerCase();
+        const lst = itens().filter(z => !q || z.nome.toLowerCase().includes(q) || z.ult.toLowerCase().includes(q));
+        if (!lst.length) lista2.appendChild(h("div", "cm-vazio", "Nenhuma conversa encontrada."));
+        lst.forEach(z => {
+          const r = h("div", "cm-cv cm-click" + (z.id === st.sel ? " on" : ""));
+          r.append(h("span", "cm-av", z.nome.slice(-1)));
+          const d = h("div"); d.append(h("b", "", z.nome), h("small", "", "↩ " + z.ult)); r.appendChild(d); r.appendChild(h("em", "", z.hora));
+          r.addEventListener("click", () => { st.sel = z.id; pintar(); });
+          lista2.appendChild(r);
+        });
+        const atual = itens().find(z => z.id === st.sel);
+        msgs.textContent = "";
+        if (atual) {
+          av.textContent = atual.nome.slice(-1); nomeChat.textContent = atual.nome;
+          msgs.appendChild(h("div", "cm-day", "05 DE OUTUBRO DE 2026"));
+          atual.msgs.forEach(m => { const b = h("div", m[0] === "out" ? "cm-out" : "cm-in", m[1]); b.appendChild(h("small", "", m[2])); msgs.appendChild(b); });
+        } else { av.textContent = ""; nomeChat.textContent = "Selecione uma conversa"; }
+      }
+      buscaOp.addEventListener("input", () => { st.buscaOp = buscaOp.value; pintar(); });
+      buscaLead.addEventListener("input", () => { st.busca = buscaLead.value; pintar(); });
+      msgIn.addEventListener("keydown", ev => {
+        if (ev.key !== "Enter" || !msgIn.value.trim()) return;
+        const atual = itens().find(z => z.id === st.sel); if (!atual) return;
+        atual.msgs.push(["out", msgIn.value.trim(), "agora"]); msgIn.value = ""; pintar();
+        msgs.scrollTop = msgs.scrollHeight;
+      });
+      pintar();
+      return root;
+    }
+    function abrirEstatico(src){
+      if (!src) return;
+      const c = src.cloneNode(true); c.classList.add("cm-static");
+      const bar = $(".cm-bar", c); if (bar) { const x = h("span", "cm-x", "✕"); x.setAttribute("data-fechar", "1"); bar.appendChild(x); }
+      mostrar(c);
+    }
+    window.abrirMockup = i => { if (i === 0) mostrar(mockInterativo()); else abrirEstatico($$(".shot .cm")[i]); };
+    $$(".shot").forEach((f, i) => f.addEventListener("click", () => window.abrirMockup(i)));
+    // qualquer clique fora da tela de exemplo (ou no X) fecha e volta ao slide anterior
+    lb.addEventListener("click", e => {
+      // composedPath: o clique pode ter re-renderizado (e removido) o elemento clicado
+      const path = e.composedPath().filter(n => n.classList);
+      const dentro = path.some(n => n.classList.contains("cm"));
+      const fechaX = path.some(n => n.hasAttribute && n.hasAttribute("data-fechar"));
+      const estatico = path.some(n => n.classList.contains("cm-static"));
+      if (!dentro || fechaX || estatico) fechar();
+    });
     window.addEventListener("keydown", e => {
-      if (lb.classList.contains("on")) { e.stopPropagation(); e.preventDefault(); if (e.key === "Escape" || e.key === " " || e.key === "Enter") fechar(); }
+      if (!lb.classList.contains("on")) return;
+      if (e.target && e.target.tagName === "INPUT") { if (e.key === "Escape") fechar(); return; }
+      e.stopPropagation(); e.preventDefault();
+      if (e.key === "Escape" || e.key === " " || e.key === "Enter") fechar();
     }, true);
   })();
 
