@@ -145,7 +145,13 @@ ul.plain{list-style:none}
 .center-note{margin-top:22px;font-size:17px;color:var(--muted);max-width:900px}
 
 /* ---------- Team ---------- */
-.team-col{display:flex;flex-direction:column;gap:16px}
+.team-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px 28px}
+.team-wide{grid-column:1 / -1}
+.team-people{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.team-mesa:not(.team-wide) .team-people{grid-template-columns:1fr}
+.team-grid .lead-card{flex-direction:row;align-items:center;text-align:left;padding:12px 14px}
+.team-grid .avatar{width:76px;height:76px;border-radius:14px;flex:none}
+.team-grid .person{font-size:18px}
 .lead-card{display:flex;align-items:center;gap:16px;padding:16px 18px;border-radius:14px;background:rgba(47,107,255,.07);border:1px solid var(--line2)}
 .avatar{width:72px;height:72px;border-radius:20px;background:linear-gradient(145deg,#1D3A78,#0E1A36);border:1px dashed rgba(90,162,255,.5);display:grid;place-items:center;font-weight:800;font-size:22px;color:var(--blue2);flex:none;position:relative;overflow:hidden}
 .avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
@@ -197,6 +203,11 @@ ul.plain{list-style:none}
 .cf-bar{display:flex;gap:8px;margin-top:auto}
 .cf-bar span{flex:1;height:30px;border-radius:8px;background:rgba(255,255,255,.05)}
 .conf-box{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:18px}
+.connect-card{padding:26px 28px}
+.connect-card p{margin-top:8px}
+.connect-cfg{margin-top:16px;color:var(--muted);font-size:14px}
+.connect-cfg summary{cursor:pointer;color:var(--blue2)}
+.connect-cfg .conf-box{margin-top:10px}
 .conf-box input{flex:1 1 320px;padding:14px 16px;border-radius:12px;background:var(--bg2);border:1px solid var(--line2);color:var(--text);font:inherit;font-size:15px}
 .conf-box input::placeholder{color:var(--dim)}
 .cmd{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:18px;padding:14px 16px;border-radius:14px;background:var(--bg2);border:1px solid var(--line)}
@@ -412,7 +423,7 @@ body.fs .brand{opacity:.6}
       <div class="cover-id reveal"><b>FINX</b> &nbsp;|&nbsp; Qualidade &nbsp;|&nbsp; Operação de Assinatura de Veículos</div>
       <div class="btns reveal">
         <button class="btn" data-go="1">Começar apresentação <svg class="i" aria-hidden="true"><use href="#i-right"/></svg></button>
-        <span class="kbd" style="align-self:center;margin-left:6px">→</span><span class="small" style="align-self:center">ou use a seta do teclado</span>
+        
       </div>
     </div>
   </div>
@@ -524,35 +535,29 @@ body.fs .brand{opacity:.6}
   <div class="inner">
     <div class="kicker reveal">Distribuição atual</div>
     <h2 class="reveal">Quem faz parte do time de Qualidade</h2>
-    <div class="team-col mt reveal">
-      <div>
+    <div class="team-grid mt reveal">
+      <div class="team-mesa">
         <div class="mesa-title">Mesa da supervisora Ana</div>
-        <div class="people">
-          <div class="card lead-card static"><div class="avatar" data-photo="Anderson">AN</div><div><div class="person">Anderson</div><div class="person-sub">Monitor · Mesa da Ana</div></div></div>
+        <div class="team-people">
+          <div class="card lead-card static"><div class="avatar" data-photo="anderson">AN</div><div><div class="person">Anderson</div><div class="person-sub">Monitor</div></div></div>
         </div>
       </div>
-      <div>
+      <div class="team-mesa">
         <div class="mesa-title">Mesa do supervisor Bruno</div>
-        <div class="people">
-          <div class="card lead-card static"><div class="avatar" data-photo="Guilherme">GU</div><div><div class="person">Guilherme</div><div class="person-sub">Monitor · Mesa do Bruno</div></div></div>
+        <div class="team-people">
+          <div class="card lead-card static"><div class="avatar" data-photo="guilherme">GU</div><div><div class="person">Guilherme</div><div class="person-sub">Monitor</div></div></div>
         </div>
       </div>
-      <div>
-        <div class="mesa-title">Mesa do supervisor Tiago — Sales Lab</div>
-        <div class="people">
-          <div class="card lead-card static"><div class="avatar" data-photo="Lilian">LI</div><div><div class="person">Lilian</div><div class="person-sub">Monitora · Sales Lab</div></div></div>
-          <div class="card lead-card static"><div class="avatar" data-photo="Fernanda">FE</div><div><div class="person">Fernanda</div><div class="person-sub">Monitora · Sales Lab</div></div></div>
-          <div class="card lead-card static"><div class="avatar" data-photo="Alexandre">AL</div><div><div class="person">Alexandre</div><div class="person-sub">Monitor · Sales Lab</div></div></div>
-        </div>
-      </div>
-      <div>
-        <div class="mesa-title">Outros assuntos</div>
-        <div class="people" style="grid-template-columns:1fr">
-          <div class="card lead-card static"><div class="avatar">TG</div><div><div class="person">Monitor de temas gerais</div><div class="person-sub">Atua em temas gerais, conforme a distribuição operacional.</div></div></div>
+      <div class="team-mesa team-wide">
+        <div class="mesa-title">Mesa do supervisor Tiago · Sales Lab</div>
+        <div class="team-people">
+          <div class="card lead-card static"><div class="avatar" data-photo="lilian">LI</div><div><div class="person">Lilian</div><div class="person-sub">Monitora</div></div></div>
+          <div class="card lead-card static"><div class="avatar" data-photo="alexandre">AL</div><div><div class="person">Alexandre</div><div class="person-sub">Monitor</div></div></div>
+          <div class="card lead-card static"><div class="avatar" data-photo="fernanda">FE</div><div><div class="person">Fernanda</div><div class="person-sub">Monitora</div></div></div>
         </div>
       </div>
     </div>
-    <p class="note-box reveal">Fotos são placeholders. Para trocar, coloque o arquivo em <span class="kbd">apresentacao/fotos/&lt;nome&gt;.jpg</span> e ajuste o atributo <span class="kbd">data-photo</span> — ou edite o `src` diretamente no HTML.</p>
+    <p class="small reveal mt">Monitor de temas gerais: atua em temas gerais, conforme a distribuição operacional.</p>
   </div>
 </section>
 
@@ -731,60 +736,32 @@ body.fs .brand{opacity:.6}
   <div class="inner">
     <div class="kicker reveal">Ferramenta 03</div>
     <h2 class="reveal">Connect: acompanhamento dos WhatsApps</h2>
-    <div class="split mt" style="grid-template-columns:1.15fr .85fr;gap:36px">
-      <div class="stage-visual reveal" aria-label="Moldura ilustrativa do Connect">
-        <div class="bar-hdr"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="small" style="margin-left:10px">Connect · ilustrativo</span></div>
-        <div class="connect-frame">
-          <div>
-            <div class="cf-title">Operadores</div>
-            <div class="cf-item on">Operador A</div>
-            <div class="cf-item">Operador B</div>
-            <div class="cf-item">Operador C</div>
-          </div>
-          <div>
-            <div class="cf-title">Conversas</div>
-            <div class="cf-item on">Conversa 1 · aguardando retorno</div>
-            <div class="cf-item">Conversa 2</div>
-            <div class="cf-item">Conversa 3 · dúvida</div>
-          </div>
-          <div style="display:flex;flex-direction:column">
-            <span class="cf-msg in">Mensagem do cliente aguardando retorno.</span>
-            <span class="cf-msg r">Resposta do Closer.</span>
-            <span class="cf-msg in">Dúvida que precisa de orientação.</span>
-            <div class="cf-bar"><span></span></div>
-          </div>
-        </div>
-        <div class="sample-note">Ilustração de interface. Sem dados reais, telefones ou nomes de clientes.</div>
-      </div>
-      <div class="reveal">
-        <p class="small" style="margin-bottom:10px">Permite à Qualidade:</p>
+    <div class="split mt reveal" style="grid-template-columns:1.1fr .9fr;gap:48px;align-items:start">
+      <div>
+        <p class="small" style="margin-bottom:12px">Permite à Qualidade:</p>
         <ul class="plain check" style="margin-top:0">
           <li><svg class="i"><use href="#i-check"/></svg>Visualizar conversas dos Closers.</li>
           <li><svg class="i"><use href="#i-check"/></svg>Identificar possíveis necessidades de apoio.</li>
           <li><svg class="i"><use href="#i-check"/></svg>Acompanhar o contexto das comunicações.</li>
           <li><svg class="i"><use href="#i-check"/></svg>Consultar relatórios de mensagens.</li>
-          <li><svg class="i"><use href="#i-check"/></svg>Observar mensagens recebidas e enviadas.</li>
           <li><svg class="i"><use href="#i-check"/></svg>Identificar padrões de comunicação e oportunidades de melhoria.</li>
         </ul>
       </div>
+      <div class="card static connect-card">
+        <div class="sub">Acesso</div>
+        <h3>Connect</h3>
+        <p>Acompanhamento das conversas de WhatsApp dos Closers.</p>
+        <button class="btn" data-open-connect id="connectBtn" style="margin-top:18px">Abrir Connect <span class="ext">↗</span></button>
+        <details class="connect-cfg">
+          <summary>Configurar endereço</summary>
+          <div class="conf-box">
+            <input id="connectUrl" type="url" inputmode="url" placeholder="Endereço do Connect (https://…)" aria-label="Endereço do Connect">
+            <button class="btn sm ghost" id="saveConnect">Salvar</button>
+          </div>
+        </details>
+        <p class="small" id="connectStatus" style="margin-top:12px"></p>
+      </div>
     </div>
-    <div class="grid g4 mt reveal">
-      <div class="card" style="padding:18px 20px"><h3 style="font-size:18px">Cliente aguardando retorno</h3></div>
-      <div class="card" style="padding:18px 20px"><h3 style="font-size:18px">Dúvida que precisa de orientação</h3></div>
-      <div class="card" style="padding:18px 20px"><h3 style="font-size:18px">Conversa que exige continuidade</h3></div>
-      <div class="card" style="padding:18px 20px"><h3 style="font-size:18px">Oportunidade de melhorar a clareza</h3></div>
-    </div>
-    <div class="cmd reveal">
-      <span class="small" style="width:100%">Abrir o Connect no Windows (app de desktop). Copie e cole no Executar (Win + R):</span>
-      <code id="connectCmd">"%LOCALAPPDATA%\Programs\Central de Atendimento\Connect\Connect.exe"</code>
-      <button class="btn sm ghost" id="copyCmd"><svg class="i" style="width:16px;height:16px"><use href="#i-copy"/></svg> Copiar comando</button>
-    </div>
-    <div class="conf-box reveal">
-      <input id="connectUrl" type="url" inputmode="url" placeholder="Cole aqui a URL oficial do Connect (web), quando for informada" aria-label="URL oficial do Connect">
-      <button class="btn sm" id="saveConnect">Salvar URL</button>
-      <button class="btn sm" data-open-connect id="connectBtn">Abrir Connect web <span class="ext">↗</span></button>
-    </div>
-    <p class="note-box reveal" id="connectStatus">URL oficial ainda não informada. Nenhum endereço foi criado neste material.</p>
   </div>
 </section>
 
@@ -1235,8 +1212,7 @@ body.fs .brand{opacity:.6}
     const btns = $$("[data-open-connect]");
     const status = $("#connectStatus");
     btns.forEach(b => { b.disabled = !validUrl(url); });
-    if (validUrl(url)) status.textContent = "URL do Connect configurada neste navegador.";
-    else status.textContent = "URL oficial ainda não informada. Nenhum endereço foi criado neste material.";
+    if (status) status.textContent = validUrl(url) ? "" : "Endereço ainda não configurado neste navegador.";
   }
   $$("[data-open-connect]").forEach(b => b.addEventListener("click", () => {
     const url = getConnectUrl();
@@ -1245,22 +1221,11 @@ body.fs .brand{opacity:.6}
   }));
   $("#saveConnect").addEventListener("click", () => {
     const v = $("#connectUrl").value.trim();
-    if (!v) { toast("Cole a URL antes de salvar."); return; }
-    if (!validUrl(v)) { toast("A URL precisa começar com https://"); return; }
-    if (!setConnectUrl(v)) toast("Não foi possível salvar neste navegador. A URL vale só nesta sessão.");
-    else toast("URL salva neste navegador.");
+    if (!v) { toast("Cole o endereço antes de salvar."); return; }
+    if (!validUrl(v)) { toast("O endereço precisa começar com https://"); return; }
+    if (!setConnectUrl(v)) toast("Não foi possível salvar neste navegador. O endereço vale só nesta sessão.");
+    else toast("Endereço salvo neste navegador.");
     syncConnect();
-  });
-  $("#copyCmd").addEventListener("click", async () => {
-    const txt = $("#connectCmd").textContent;
-    try {
-      await navigator.clipboard.writeText(txt);
-      toast("Comando copiado. Cole no Executar (Win + R).");
-    } catch (e) {
-      const r = document.createRange(); r.selectNodeContents($("#connectCmd"));
-      const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
-      toast("Selecione o comando e copie com Ctrl + C.");
-    }
   });
 
   /* ---------- Enquete (sem armazenamento) ---------- */
