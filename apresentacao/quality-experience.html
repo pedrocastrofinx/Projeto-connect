@@ -22,6 +22,33 @@ a{color:inherit}
 svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
 :focus-visible{outline:2px solid var(--blue2);outline-offset:3px;border-radius:8px}
 
+/* Locus Spy (mockup do slide 10) */
+.spy{padding:18px;background:linear-gradient(180deg,#0D1424,#070B14)}
+.spy-top{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:6px 6px 14px;border-bottom:1px solid var(--line)}
+.spy-kick{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue2);font-weight:700}
+.spy-title{font-size:20px;font-weight:800;color:#fff;margin-top:2px}
+.spy-pill{font-size:12px;color:var(--muted);border:1px solid var(--line2);border-radius:999px;padding:7px 12px;white-space:nowrap}
+.spy-pill b{color:#fff;font-size:15px;margin-right:4px}
+.spy-station{display:flex;justify-content:space-between;align-items:center;margin:14px 0;padding:12px 14px;border:1px dashed rgba(90,162,255,.35);border-radius:12px;font-size:13px;color:var(--muted)}
+.spy-standby{font-size:11px;letter-spacing:.1em;font-weight:700;color:var(--blue2);border:1px solid var(--line2);padding:4px 9px;border-radius:999px}
+.spy-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.spy-card{border:1px solid var(--line);border-radius:14px;padding:12px;background:rgba(255,255,255,.02);display:flex;flex-direction:column;gap:10px;font-size:12px}
+.spy-card-h{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.spy-live{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ok);border:1px solid rgba(61,214,140,.4);border-radius:999px;padding:3px 8px}
+.spy-ouv,.spy-time{font-size:10px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 8px}
+.spy-time{margin-left:auto;color:#fff}
+.spy-who{display:flex;gap:10px;align-items:center}
+.spy-who b{display:block;color:#fff;font-size:13px}
+.spy-who small,.spy-meta small,.spy-ctx small{display:block;color:var(--dim);font-size:10px}
+.spy-av{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#1B2C4D;color:var(--blue2);font-weight:800;font-size:12px;flex:none}
+.spy-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.spy-meta b{color:#D7E1F5;font-size:12px;font-weight:600}
+.spy-ctx{border:1px solid var(--line);border-radius:10px;padding:9px 10px;background:rgba(47,107,255,.05)}
+.spy-ctx b{display:block;color:#fff;font-size:12px;margin:2px 0}
+.spy-btns{display:flex;gap:8px;margin-top:auto}
+.spy-btn{flex:1;text-align:center;font-size:11px;font-weight:700;padding:8px 6px;border-radius:9px;border:1px solid var(--line2);color:var(--muted)}
+.spy-btn.main{background:var(--blue);border-color:transparent;color:#fff}
+
 /* ---------- Deck ---------- */
 #deck{position:fixed;inset:64px 0 84px 0}
 .slide{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transform:translateX(48px) scale(.99);transition:opacity .55s ease,transform .7s cubic-bezier(.2,.7,.2,1),visibility .55s;pointer-events:none}
@@ -635,14 +662,32 @@ body.fs .brand{opacity:.6}
           <a class="btn" href="https://projectlocus.pages.dev/" target="_blank" rel="noopener noreferrer">Abrir Locus <svg class="i" style="width:18px;height:18px"><use href="#i-external"/></svg><span class="ext">externo</span></a>
         </div>
       </div>
-      <div class="stage-visual reveal" aria-label="Representação ilustrativa do Locus Spy">
-        <div class="bar-hdr"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="small" style="margin-left:10px">Spy · ligações ao vivo</span></div>
-        <div class="calls">
-          <div class="call"><div class="av">C1</div><div>Closer Exemplo 1<div class="meta">Ligação de áudio · 00:36</div></div><span class="tag ok"><span class="live"></span>Ao vivo</span></div>
-          <div class="call"><div class="av">C2</div><div>Closer Exemplo 2<div class="meta">Ligação longa · 10:36</div></div><span class="tag warn">Atenção</span></div>
-          <div class="call"><div class="av">C3</div><div>Closer Exemplo 3<div class="meta">Ligação de áudio · 17:51</div></div><span class="tag">Monitoria</span></div>
+      <div class="stage-visual spy reveal" aria-label="Representação ilustrativa do Locus Spy">
+        <div class="spy-top">
+          <div><div class="spy-kick">Operação em tempo real</div><div class="spy-title">Spy Command Center</div></div>
+          <span class="spy-pill"><b>2</b> ligações ativas</span>
         </div>
-        <div class="sample-note">Representação ilustrativa com nomes fictícios. Sem dados reais de clientes.</div>
+        <div class="spy-station">
+          <span>Estação de supervisão</span>
+          <span class="spy-standby">Standby</span>
+        </div>
+        <div class="spy-grid">
+          <div class="spy-card">
+            <div class="spy-card-h"><span class="spy-live">Ao vivo</span><span class="spy-ouv">0 ouvintes</span><span class="spy-time">00:36</span></div>
+            <div class="spy-who"><span class="spy-av">C1</span><div><b>Closer Exemplo 1</b><small>closer1@exemplo.com</small></div></div>
+            <div class="spy-meta"><div><small>Supervisão</small><b>Supervisor Exemplo</b></div><div><small>Tipo</small><b>Ligação de áudio</b></div></div>
+            <div class="spy-ctx"><small>Contexto da chamada</small><b>Lead 0000001</b><small>ID informado, ainda não localizado na base</small></div>
+            <div class="spy-btns"><span class="spy-btn main">Ouvir ligação</span><span class="spy-btn">Canal privado</span></div>
+          </div>
+          <div class="spy-card">
+            <div class="spy-card-h"><span class="spy-live">Ao vivo</span><span class="spy-ouv">1 ouvinte</span><span class="spy-time">10:36</span></div>
+            <div class="spy-who"><span class="spy-av">C2</span><div><b>Closer Exemplo 2</b><small>closer2@exemplo.com</small></div></div>
+            <div class="spy-meta"><div><small>Supervisão</small><b>Supervisor Exemplo</b></div><div><small>Tipo</small><b>Ligação longa</b></div></div>
+            <div class="spy-ctx"><small>Contexto da chamada</small><b>Lead 0000002</b><small>Gravação sem ID do lead no início</small></div>
+            <div class="spy-btns"><span class="spy-btn main">Ouvir ligação</span><span class="spy-btn">Canal privado</span></div>
+          </div>
+        </div>
+        <div class="sample-note">Tela ilustrativa com nomes e dados fictícios.</div>
       </div>
     </div>
   </div>
