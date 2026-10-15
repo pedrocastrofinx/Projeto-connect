@@ -186,6 +186,13 @@ svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.6;stro
 .loop{display:flex;align-items:center;justify-content:center;gap:12px;margin:18px 0 6px;padding:12px 18px;border-radius:14px;border:1px dashed var(--line2);color:var(--muted);font-size:17px}
 .loop b{color:#fff}
 .loop .i{color:var(--blue2)}
+.mrows{display:flex;flex-direction:column;gap:10px}
+.mrow{display:flex;align-items:center;gap:16px;padding:12px 20px}
+.mrow .num{font-size:24px;font-weight:800;color:var(--blue2)}
+.mrow h3{font-size:18px}
+.mside{display:flex;flex-direction:column;gap:12px;align-self:start}
+.mside .card{padding:16px 20px}
+.mside .card p{font-size:15px;margin-top:10px;color:var(--muted);line-height:1.45}
 /* Prints do Connect (slide 14) */
 .shots{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .shot{margin:0;cursor:zoom-in;border:1px solid var(--line2);border-radius:14px;overflow:hidden;background:#070C18;transition:border-color .2s,transform .2s}
@@ -595,7 +602,7 @@ body.fs .brand{opacity:.6}
 <main id="deck" aria-label="Apresentação Quality Experience">
 
 <!-- ================= 01 · CAPA ================= -->
-<section class="slide" data-section="Introdução" data-title="Capa" aria-label="Slide 1 de 13" data-notes="Receba a pessoa que está entrando sem antecipar o conteúdo. Diga apenas que será uma conversa curta sobre o papel da Qualidade e a ficha de monitoria, e que não existem respostas certas ou erradas.">
+<section class="slide" data-section="Introdução" data-title="Capa" aria-label="Slide 1 de 15" data-notes="Receba a pessoa que está entrando sem antecipar o conteúdo. Diga apenas que será uma conversa curta sobre o papel da Qualidade e a ficha de monitoria, e que não existem respostas certas ou erradas.">
   <div class="inner">
     <div class="cover">
       <div class="orb" aria-hidden="true"></div>
@@ -613,7 +620,7 @@ body.fs .brand{opacity:.6}
   </div>
 </section>
 
-<section class="slide" data-section="Introdução" data-title="Quem faz parte do time de Qualidade" aria-label="Slide 2 de 13" data-notes="Apresente as pessoas e a distribuição atual do time. Abra espaço para dúvidas sobre a quem recorrer.">
+<section class="slide" data-section="Introdução" data-title="Quem faz parte do time de Qualidade" aria-label="Slide 2 de 15" data-notes="Apresente as pessoas e a distribuição atual do time. Abra espaço para dúvidas sobre a quem recorrer.">
   <div class="inner">
     <div class="kicker reveal">Distribuição atual</div>
     <h2 class="reveal">Quem faz parte do time de Qualidade</h2>
@@ -649,7 +656,7 @@ body.fs .brand{opacity:.6}
   </div>
 </section>
 
-<section class="slide" data-section="Introdução" data-title="Uma pergunta para começar" aria-label="Slide 3 de 13" data-notes="Leia a pergunta em voz alta e dê alguns segundos de silêncio. Peça que cada pessoa escolha as palavras que lhe vêm à cabeça. Não comente nem corrija; não reforce nenhuma palavra. Para conversar: O que fez você pensar nessa palavra? Alguma foi diferente do que você esperava?">
+<section class="slide" data-section="Introdução" data-title="Uma pergunta para começar" aria-label="Slide 3 de 15" data-notes="Leia a pergunta em voz alta e dê alguns segundos de silêncio. Peça que cada pessoa escolha as palavras que lhe vêm à cabeça. Não comente nem corrija; não reforce nenhuma palavra. Para conversar: O que fez você pensar nessa palavra? Alguma foi diferente do que você esperava?">
   <div class="inner">
     <div class="kicker reveal">Participação do grupo</div>
     <h2 class="reveal q-big">Quando você ouve falar em monitoria da Qualidade, o que vem à sua cabeça?</h2>
@@ -664,7 +671,7 @@ body.fs .brand{opacity:.6}
   </div>
 </section>
 
-<section class="slide" data-section="O que é a Qualidade" data-title="O que é a Qualidade" aria-label="Slide 4 de 13" data-notes="As palavras do grupo aparecem na faixa do topo. Retome as que apareceram e reconheça as percepções negativas em vez de contradizê-las. Se fiscalização ou cobrança surgiram, este é o momento de olhar o contraste com o que buscamos. A nota é um indicador; o desenvolvimento é o objetivo.">
+<section class="slide" data-section="O que é a Qualidade" data-title="O que é a Qualidade" aria-label="Slide 4 de 15" data-notes="As palavras do grupo aparecem na faixa do topo. Retome as que apareceram e reconheça as percepções negativas em vez de contradizê-las. Se fiscalização ou cobrança surgiram, este é o momento de olhar o contraste com o que buscamos. A nota é um indicador; o desenvolvimento é o objetivo.">
   <div class="inner">
     <div class="kicker reveal">Nosso papel</div>
     <h2 class="reveal">O que a Qualidade realmente é</h2>
@@ -697,7 +704,7 @@ body.fs .brand{opacity:.6}
   </div>
 </section>
 
-<section class="slide" data-section="O que é a Qualidade" data-title="Como transformamos a monitoria em evolução" aria-label="Slide 5 de 13" data-notes="Percorra o ciclo: avaliação pelo checklist, evidência do que aconteceu, feedback em conversa objetiva, ação prática para as próximas ligações, acompanhamento para ver se a prática se repete e evolução, quando o aprendizado vira padrão. Conecte com a ideia de que o feedback vira uma ação prática.">
+<section class="slide" data-section="O que é a Qualidade" data-title="Como transformamos a monitoria em evolução" aria-label="Slide 5 de 15" data-notes="Percorra o ciclo: avaliação pelo checklist, evidência do que aconteceu, feedback em conversa objetiva, ação prática para as próximas ligações, acompanhamento para ver se a prática se repete e evolução, quando o aprendizado vira padrão. Conecte com a ideia de que o feedback vira uma ação prática.">
   <div class="inner">
     <div class="kicker reveal">Melhoria contínua</div>
     <h2 class="reveal">Como transformamos a monitoria em evolução</h2>
@@ -714,7 +721,34 @@ body.fs .brand{opacity:.6}
   </div>
 </section>
 
-<section class="slide" data-section="Acompanhamento" data-title="Como fazemos o acompanhamento" aria-label="Slide 6 de 13" data-notes="Explique de forma simples como acompanhamos. Os botões abrem uma tela de exemplo ou o sistema, só se quiser mostrar; senão siga adiante. SARA: onde vocês gravam as ligações. DryvePro: ligações monitoradas pela IA. Connect: todo o WhatsApp em tempo real. Locus: onde o time de Qualidade acompanha as interações; o Spy mostra a ligação em tempo real.">
+<section class="slide" data-section="Acompanhamento" data-title="O acompanhamento" aria-label="Slide 6 de 15" data-notes="Dê o contexto antes de mostrar onde acompanhamos: o acompanhamento é o primeiro passo do processo. Acompanhamos as interações para estar perto do Closer, apoiar quando necessário e identificar oportunidades de orientação. Em seguida mostre onde isso acontece.">
+  <div class="inner">
+    <div class="kicker reveal">Acompanhamento</div>
+    <h2 class="reveal">O acompanhamento</h2>
+    <p class="lead reveal" style="max-width:900px">É o primeiro passo do processo. A Qualidade acompanha as interações comerciais para entender como o atendimento acontece e, quando necessário, apoiar o Closer durante o contato.</p>
+    <div class="two mt reveal">
+      <div class="card static">
+        <span class="tag">O que acompanhamos</span>
+        <ul class="plain check" style="margin-top:14px">
+          <li><svg class="i"><use href="#i-check"/></svg>Ligações gravadas e monitoradas pela IA.</li>
+          <li><svg class="i"><use href="#i-check"/></svg>Todo o WhatsApp, em tempo real.</li>
+          <li><svg class="i"><use href="#i-check"/></svg>Ligações em tempo real, com apoio durante o contato quando necessário.</li>
+        </ul>
+      </div>
+      <div class="card static">
+        <span class="tag">Para quê</span>
+        <ul class="plain check" style="margin-top:14px">
+          <li><svg class="i"><use href="#i-check"/></svg>Apoiar o Closer durante os contatos.</li>
+          <li><svg class="i"><use href="#i-check"/></svg>Observar a aplicação dos procedimentos.</li>
+          <li><svg class="i"><use href="#i-check"/></svg>Identificar oportunidades de orientação.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="quote reveal">Acompanhar é estar perto para apoiar.</div>
+  </div>
+</section>
+
+<section class="slide" data-section="Acompanhamento" data-title="Como fazemos o acompanhamento" aria-label="Slide 7 de 15" data-notes="Explique de forma simples como acompanhamos. Os botões abrem uma tela de exemplo ou o sistema, só se quiser mostrar; senão siga adiante. SARA: onde vocês gravam as ligações. DryvePro: ligações monitoradas pela IA. Connect: todo o WhatsApp em tempo real. Locus: onde o time de Qualidade acompanha as interações; o Spy mostra a ligação em tempo real.">
   <div class="inner">
     <div class="kicker reveal">Acompanhamento</div>
     <h2 class="reveal">Como fazemos o acompanhamento</h2>
@@ -751,7 +785,35 @@ body.fs .brand{opacity:.6}
   </div>
 </section>
 
-<section class="slide" data-section="Critérios da monitoria" data-title="A ficha de monitoria" aria-label="Slide 7 de 13" data-notes="Mostre os quatro blocos e seus pesos. Os critérios de cada bloco estão nos próximos slides e podem ser consultados conforme as dúvidas. O checklist completo também abre pelo botão deste slide ou pela tecla C.">
+<section class="slide" data-section="Monitoria" data-title="Como funciona a monitoria" aria-label="Slide 8 de 15" data-notes="Explique como a monitoria acontece, passo a passo, e que existem duas formas: a humana, feita pelos monitores, e a por IA, que fica no DryvePro. Os dois modelos se complementam. Depois entramos nos critérios da ficha.">
+  <div class="inner">
+    <div class="kicker reveal">Monitoria</div>
+    <h2 class="reveal">Como funciona a monitoria</h2>
+    <div class="split mt" style="grid-template-columns:1.1fr .9fr;gap:30px">
+      <div class="mrows reveal">
+        <div class="card mrow"><span class="num">01</span><h3>Seleção ou acompanhamento da interação</h3></div>
+        <div class="card mrow"><span class="num">02</span><h3>Escuta atenta da ligação</h3></div>
+        <div class="card mrow"><span class="num">03</span><h3>Análise da condução do atendimento</h3></div>
+        <div class="card mrow"><span class="num">04</span><h3>Avaliação dos critérios do checklist</h3></div>
+        <div class="card mrow"><span class="num">05</span><h3>Registro dos pontos fortes e das oportunidades</h3></div>
+        <div class="card mrow"><span class="num">06</span><h3>Preparação do feedback com exemplos concretos</h3></div>
+      </div>
+      <div class="mside reveal">
+        <div class="card static">
+          <span class="tag">Monitoria humana</span>
+          <p>Feita pelos monitores, com escuta contextualizada, aplicação do checklist e feedback próximo ao Closer.</p>
+        </div>
+        <div class="card static">
+          <span class="tag">Monitoria por IA</span>
+          <p>Análise automatizada das ligações. As monitorias por IA ficam no DryvePro.</p>
+        </div>
+        <p class="small">Os dois modelos se complementam: a IA amplia o acompanhamento e a atuação humana traz contexto e orientação.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-section="Critérios da monitoria" data-title="A ficha de monitoria" aria-label="Slide 9 de 15" data-notes="Mostre os quatro blocos e seus pesos. Os critérios de cada bloco estão nos próximos slides e podem ser consultados conforme as dúvidas. O checklist completo também abre pelo botão deste slide ou pela tecla C.">
   <div class="inner">
     <div class="kicker reveal">Checklist de avaliação</div>
     <h2 class="reveal">A ficha de monitoria</h2>
@@ -760,10 +822,10 @@ body.fs .brand{opacity:.6}
       <p class="lead" style="max-width:640px">Cada bloco avalia uma dimensão diferente da condução comercial, e os critérios devem ser interpretados de acordo com o comportamento observado. Uma monitoria não se resume ao número final: importa entender quais comportamentos contribuíram para o resultado.</p>
     </div>
     <div class="blocks reveal">
-      <button class="block" data-go="7"><div class="card"><span class="sample">Bloco 1</span><h3 style="margin-top:8px">Atendimento</h3><div class="pts" style="margin-top:16px">17<small>pts</small></div><div class="bar" style="margin-top:14px"><i style="width:17%"></i></div><div class="go" style="margin-top:14px">Ver critérios <svg class="i" style="width:16px;height:16px"><use href="#i-right"/></svg></div></div></button>
-      <button class="block" data-go="8"><div class="card"><span class="sample">Bloco 2</span><h3 style="margin-top:8px">Abordagem</h3><div class="pts" style="margin-top:16px">26<small>pts</small></div><div class="bar" style="margin-top:14px"><i style="width:26%"></i></div><div class="go" style="margin-top:14px">Ver critérios <svg class="i" style="width:16px;height:16px"><use href="#i-right"/></svg></div></div></button>
-      <button class="block" data-go="9"><div class="card"><span class="sample">Bloco 3</span><h3 style="margin-top:8px">Negociação</h3><div class="pts" style="margin-top:16px">35<small>pts</small></div><div class="bar" style="margin-top:14px"><i style="width:35%"></i></div><div class="go" style="margin-top:14px">Ver critérios <svg class="i" style="width:16px;height:16px"><use href="#i-right"/></svg></div></div></button>
-      <button class="block" data-go="10"><div class="card"><span class="sample">Bloco 4</span><h3 style="margin-top:8px">Fechamento</h3><div class="pts" style="margin-top:16px">22<small>pts</small></div><div class="bar" style="margin-top:14px"><i style="width:22%"></i></div><div class="go" style="margin-top:14px">Ver critérios <svg class="i" style="width:16px;height:16px"><use href="#i-right"/></svg></div></div></button>
+      <button class="block" data-go="9"><div class="card"><span class="sample">Bloco 1</span><h3 style="margin-top:8px">Atendimento</h3><div class="pts" style="margin-top:16px">17<small>pts</small></div><div class="bar" style="margin-top:14px"><i style="width:17%"></i></div><div class="go" style="margin-top:14px">Ver critérios <svg class="i" style="width:16px;height:16px"><use href="#i-right"/></svg></div></div></button>
+      <button class="block" data-go="10"><div class="card"><span class="sample">Bloco 2</span><h3 style="margin-top:8px">Abordagem</h3><div class="pts" style="margin-top:16px">26<small>pts</small></div><div class="bar" style="margin-top:14px"><i style="width:26%"></i></div><div class="go" style="margin-top:14px">Ver critérios <svg class="i" style="width:16px;height:16px"><use href="#i-right"/></svg></div></div></button>
+      <button class="block" data-go="11"><div class="card"><span class="sample">Bloco 3</span><h3 style="margin-top:8px">Negociação</h3><div class="pts" style="margin-top:16px">35<small>pts</small></div><div class="bar" style="margin-top:14px"><i style="width:35%"></i></div><div class="go" style="margin-top:14px">Ver critérios <svg class="i" style="width:16px;height:16px"><use href="#i-right"/></svg></div></div></button>
+      <button class="block" data-go="12"><div class="card"><span class="sample">Bloco 4</span><h3 style="margin-top:8px">Fechamento</h3><div class="pts" style="margin-top:16px">22<small>pts</small></div><div class="bar" style="margin-top:14px"><i style="width:22%"></i></div><div class="go" style="margin-top:14px">Ver critérios <svg class="i" style="width:16px;height:16px"><use href="#i-right"/></svg></div></div></button>
     </div>
     <p class="stat-line reveal"><b>4 ciclos</b> de monitoria por mês <span>· frequência de referência</span></p>
     <div class="btns reveal">
@@ -772,7 +834,7 @@ body.fs .brand{opacity:.6}
   </div>
 </section>
 
-<section class="slide" data-section="Critérios da monitoria" data-title="Checklist: Atendimento · 17 pontos" aria-label="Slide 8 de 13" data-notes="Use como consulta. Não é preciso ler todos os critérios; pergunte quais geram mais dúvidas.">
+<section class="slide" data-section="Critérios da monitoria" data-title="Checklist: Atendimento · 17 pontos" aria-label="Slide 10 de 15" data-notes="Use como consulta. Não é preciso ler todos os critérios; pergunte quais geram mais dúvidas.">
   <div class="inner">
     <div class="kicker reveal">Bloco 1 · 17 pontos</div>
     <h2 class="reveal">Atendimento <span class="grad">· 17 pontos</span></h2>
@@ -780,7 +842,7 @@ body.fs .brand{opacity:.6}
   </div>
 </section>
 
-<section class="slide" data-section="Critérios da monitoria" data-title="Checklist: Abordagem · 26 pontos" aria-label="Slide 9 de 13" data-notes="Use como consulta. Sondagem é o critério de maior peso do bloco.">
+<section class="slide" data-section="Critérios da monitoria" data-title="Checklist: Abordagem · 26 pontos" aria-label="Slide 11 de 15" data-notes="Use como consulta. Sondagem é o critério de maior peso do bloco.">
   <div class="inner">
     <div class="kicker reveal">Bloco 2 · 26 pontos</div>
     <h2 class="reveal">Abordagem <span class="grad">· 26 pontos</span></h2>
@@ -789,7 +851,7 @@ body.fs .brand{opacity:.6}
   </div>
 </section>
 
-<section class="slide" data-section="Critérios da monitoria" data-title="Checklist: Negociação · 35 pontos" aria-label="Slide 10 de 13" data-notes="Use como consulta. Chame atenção para argumentação e contorno de objeções.">
+<section class="slide" data-section="Critérios da monitoria" data-title="Checklist: Negociação · 35 pontos" aria-label="Slide 12 de 15" data-notes="Use como consulta. Chame atenção para argumentação e contorno de objeções.">
   <div class="inner">
     <div class="kicker reveal">Bloco 3 · 35 pontos</div>
     <h2 class="reveal">Negociação <span class="grad">· 35 pontos</span></h2>
@@ -799,7 +861,7 @@ body.fs .brand{opacity:.6}
   </div>
 </section>
 
-<section class="slide" data-section="Critérios da monitoria" data-title="Checklist: Fechamento · 22 pontos" aria-label="Slide 11 de 13" data-notes="Use como consulta. Lembre que a experiência do cliente não termina quando ele aceita a oferta.">
+<section class="slide" data-section="Critérios da monitoria" data-title="Checklist: Fechamento · 22 pontos" aria-label="Slide 13 de 15" data-notes="Use como consulta. Lembre que a experiência do cliente não termina quando ele aceita a oferta.">
   <div class="inner">
     <div class="kicker reveal">Bloco 4 · 22 pontos</div>
     <h2 class="reveal">Fechamento <span class="grad">· 22 pontos</span></h2>
@@ -815,7 +877,7 @@ body.fs .brand{opacity:.6}
   </div>
 </section>
 
-<section class="slide" data-section="Critérios da monitoria" data-title="Bloco crítico: NCG" aria-label="Slide 12 de 13" data-notes="Explique que os critérios críticos têm atenção especial mesmo sem somar pontos na estrutura apresentada.">
+<section class="slide" data-section="Critérios da monitoria" data-title="Bloco crítico: NCG" aria-label="Slide 14 de 15" data-notes="Explique que os critérios críticos têm atenção especial mesmo sem somar pontos na estrutura apresentada.">
   <div class="inner">
     <div class="kicker reveal" style="color:var(--err)">Erros críticos · NCG</div>
     <h2 class="reveal">Além da pontuação, existem situações que exigem atenção especial.</h2>
@@ -825,7 +887,7 @@ body.fs .brand{opacity:.6}
   </div>
 </section>
 
-<section class="slide" data-section="Encerramento" data-title="Bem-vindo" aria-label="Slide 13 de 13" data-notes="Encerramento acolhedor. Reforce que qualquer monitor pode ser chamado. Se fizer sentido, feche com a pergunta: qual habilidade você gostaria de desenvolver ainda mais nos seus atendimentos?">
+<section class="slide" data-section="Encerramento" data-title="Bem-vindo" aria-label="Slide 15 de 15" data-notes="Encerramento acolhedor. Reforce que qualquer monitor pode ser chamado. Se fizer sentido, feche com a pergunta: qual habilidade você gostaria de desenvolver ainda mais nos seus atendimentos?">
   <div class="inner">
     <div class="cover welcome">
       <div class="orb" aria-hidden="true"></div>
@@ -847,7 +909,7 @@ body.fs .brand{opacity:.6}
     <button class="ctl" id="next" aria-label="Próximo slide (seta direita ou espaço)" title="Próximo (→ ou espaço)"><svg class="i"><use href="#i-right"/></svg></button>
   </div>
   <div class="prog" aria-hidden="false">
-    <div class="meta"><span id="counter" aria-live="polite">01 / 13</span><span id="sectionName"></span></div>
+    <div class="meta"><span id="counter" aria-live="polite">01 / 15</span><span id="sectionName"></span></div>
     <div class="track" role="progressbar" aria-label="Progresso da apresentação" aria-valuemin="1" aria-valuemax="24"><i id="progress"></i></div>
   </div>
   <div class="ctl-group">
@@ -1016,7 +1078,7 @@ body.fs .brand{opacity:.6}
   const N = slides.length;
   let current = 0;
   let lastFocus = null;
-  const sectionOrder = ["Introdução","O que é a Qualidade","Acompanhamento","Critérios da monitoria","Encerramento"];
+  const sectionOrder = ["Introdução","O que é a Qualidade","Acompanhamento","Monitoria","Critérios da monitoria","Encerramento"];
 
   function pad(n){ return String(n).padStart(2,"0"); }
 
