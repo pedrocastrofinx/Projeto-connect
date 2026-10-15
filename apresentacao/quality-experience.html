@@ -638,7 +638,6 @@ body.fs .brand{opacity:.6}
         <h3>Connect</h3>
         <p>Acompanhamento das conversas de WhatsApp, apoio aos Closers e análise de indicadores de comunicação.</p>
         <button class="btn ghost sm" data-go="14">Ver detalhes</button>
-        <button class="btn" data-open-connect>Abrir Connect <span class="ext">↗ externo</span></button>
       </div>
     </div>
   </div>
@@ -794,7 +793,7 @@ body.fs .brand{opacity:.6}
   <div class="inner">
     <div class="kicker reveal">Ferramenta 03</div>
     <h2 class="reveal">Connect: acompanhamento dos WhatsApps</h2>
-    <div class="split mt reveal" style="grid-template-columns:1.1fr .9fr;gap:48px;align-items:start">
+    <div class="split mt reveal" style="grid-template-columns:1fr;gap:24px;align-items:start;max-width:820px">
       <div>
         <p class="small" style="margin-bottom:12px">Permite à Qualidade:</p>
         <ul class="plain check" style="margin-top:0">
@@ -804,20 +803,6 @@ body.fs .brand{opacity:.6}
           <li><svg class="i"><use href="#i-check"/></svg>Consultar relatórios de mensagens.</li>
           <li><svg class="i"><use href="#i-check"/></svg>Identificar padrões de comunicação e oportunidades de melhoria.</li>
         </ul>
-      </div>
-      <div class="card static connect-card">
-        <div class="sub">Acesso</div>
-        <h3>Connect</h3>
-        <p>Acompanhamento das conversas de WhatsApp dos Closers.</p>
-        <button class="btn" data-open-connect id="connectBtn" style="margin-top:18px">Abrir Connect <span class="ext">↗</span></button>
-        <details class="connect-cfg">
-          <summary>Configurar endereço</summary>
-          <div class="conf-box">
-            <input id="connectUrl" type="url" inputmode="url" placeholder="Endereço do Connect (https://…)" aria-label="Endereço do Connect">
-            <button class="btn sm ghost" id="saveConnect">Salvar</button>
-          </div>
-        </details>
-        <p class="small" id="connectStatus" style="margin-top:12px"></p>
       </div>
     </div>
   </div>
@@ -945,13 +930,13 @@ body.fs .brand{opacity:.6}
     <div class="grid g3 mt reveal">
       <div class="card"><div class="ico"><svg class="i"><use href="#i-search"/></svg></div><p style="font-size:17px;color:var(--text);margin-top:0">Quando tiver dúvida sobre um procedimento.</p></div>
       <div class="card"><div class="ico"><svg class="i"><use href="#i-eye"/></svg></div><p style="font-size:17px;color:var(--text);margin-top:0">Quando quiser entender melhor uma oportunidade apontada em monitoria.</p></div>
-      <div class="card"><div class="ico"><svg class="i"><use href="#i-refresh"/></svg></div><p style="font-size:17px;color:var(--text);margin-top:0">Quando precisar rever um comportamento identificado na avaliação.</p></div>
+      <div class="card"><div class="ico"><svg class="i"><use href="#i-reset"/></svg></div><p style="font-size:17px;color:var(--text);margin-top:0">Quando precisar rever um comportamento identificado na avaliação.</p></div>
       <div class="card"><div class="ico"><svg class="i"><use href="#i-alert"/></svg></div><p style="font-size:17px;color:var(--text);margin-top:0">Quando encontrar uma dificuldade recorrente no atendimento.</p></div>
       <div class="card"><div class="ico"><svg class="i"><use href="#i-list"/></svg></div><p style="font-size:17px;color:var(--text);margin-top:0">Quando quiser compreender melhor o checklist.</p></div>
       <div class="card"><div class="ico"><svg class="i"><use href="#i-book"/></svg></div><p style="font-size:17px;color:var(--text);margin-top:0">Quando precisar consultar materiais e orientações disponibilizados pela operação.</p></div>
     </div>
     <p class="note-box reveal">A comunicação com a Qualidade deve ser profissional, aberta e voltada à solução.</p>
-    <p class="note-box reveal" style="color:var(--dim)">[Canais oficiais de contato: a definir pela operação]</p>
+    <p class="note-box reveal">É só chamar qualquer monitor da Qualidade no Teams, no WhatsApp ou pessoalmente: estaremos disponíveis para ajudar.</p>
   </div>
 </section>
 
@@ -1277,32 +1262,6 @@ body.fs .brand{opacity:.6}
     clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove("show"), 4200);
   }
 
-  /* ---------- Links externos ---------- */
-  const CONNECT_KEY = "qe.connectUrl";
-  function getConnectUrl(){ try { return localStorage.getItem(CONNECT_KEY) || ""; } catch(e){ return ""; } }
-  function setConnectUrl(v){ try { localStorage.setItem(CONNECT_KEY, v); return true; } catch(e){ return false; } }
-  function validUrl(v){ try { const u = new URL(v); return u.protocol === "https:"; } catch(e){ return false; } }
-  function syncConnect(){
-    const url = getConnectUrl();
-    const btns = $$("[data-open-connect]");
-    const status = $("#connectStatus");
-    btns.forEach(b => { b.disabled = !validUrl(url); });
-    if (status) status.textContent = validUrl(url) ? "" : "Endereço ainda não configurado neste navegador.";
-  }
-  $$("[data-open-connect]").forEach(b => b.addEventListener("click", () => {
-    const url = getConnectUrl();
-    if (!validUrl(url)) return;
-    window.open(url, "_blank", "noopener,noreferrer");
-  }));
-  $("#saveConnect").addEventListener("click", () => {
-    const v = $("#connectUrl").value.trim();
-    if (!v) { toast("Cole o endereço antes de salvar."); return; }
-    if (!validUrl(v)) { toast("O endereço precisa começar com https://"); return; }
-    if (!setConnectUrl(v)) toast("Não foi possível salvar neste navegador. O endereço vale só nesta sessão.");
-    else toast("Endereço salvo neste navegador.");
-    syncConnect();
-  });
-
   /* ---------- Enquete (sem armazenamento) ---------- */
   $$(".poll .chip").forEach(c => c.addEventListener("click", () => {
     const on = c.getAttribute("aria-pressed") === "true";
@@ -1400,7 +1359,6 @@ body.fs .brand{opacity:.6}
 
   /* ---------- Inicialização ---------- */
   buildMenu();
-  syncConnect();
   const startHash = parseInt(location.hash.slice(1), 10);
   show(Number.isFinite(startHash) ? startHash - 1 : 0, {silent:true});
   wakeControls();
