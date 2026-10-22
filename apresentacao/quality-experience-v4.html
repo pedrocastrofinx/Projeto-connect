@@ -193,6 +193,9 @@ svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.6;stro
 .mside{display:flex;flex-direction:column;gap:12px;align-self:start}
 .mside .card{padding:16px 20px}
 .mside .card p{font-size:15px;margin-top:10px;color:var(--muted);line-height:1.45}
+/* Barras de rolagem escondidas: a rolagem continua funcionando (roda do mouse, toque, setas) */
+*{scrollbar-width:none}
+*::-webkit-scrollbar{display:none;width:0;height:0}
 /* Prints do Connect (slide 14) */
 .shots{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .shot{margin:0;cursor:zoom-in;border:1px solid var(--line2);border-radius:14px;overflow:hidden;background:#070C18;transition:border-color .2s,transform .2s}
